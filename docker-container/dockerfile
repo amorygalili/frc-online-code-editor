@@ -1,0 +1,71 @@
+FROM ubuntu:22.04
+
+# Install desktop environment, VNC, noVNC, Java 17, build 
+
+# 1. Optionally switch to a reliable mirror
+RUN sed -i 's|archive.ubuntu.com|us.archive.ubuntu.com|g' /etc/apt/sources.list
+
+# 2. Clean up any stale caches
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 3. Update package list
+RUN apt-get update
+
+# 4. Install essential tools
+RUN apt-get install -y --no-install-recommends wget ca-certificates
+
+# 5. Install desktop environment
+RUN apt-get install -y --no-install-recommends xfce4 xfce4-goodies
+
+# 6. Install VNC and headless GUI tools
+RUN apt-get install -y --no-install-recommends x11vnc
+RUN apt-get install -y --no-install-recommends xvfb
+RUN apt-get install -y --no-install-recommends novnc websockify
+RUN apt-get install -y --no-install-recommends websockify
+RUN apt-get install -y --no-install-recommends sudo
+RUN apt-get install -y --no-install-recommends openjdk-17-jdk
+
+# 7. Clean up package caches to reduce layer size
+RUN rm -rf /var/lib/apt/lists/*
+
+# RUN apt-get update \
+#  && apt-get install -y --no-install-recommends wget ca-certificates \
+#  && apt-get install -y --no-install-recommends xfce4 xfce4-goodies \
+#  && apt-get install -y --no-install-recommends x11vnc xvfb novnc websockify \
+#  && rm -rf /var/lib/apt/lists/*
+
+# RUN apt-get update && apt-get install -y \
+#     xfce4 xfce4-goodies \
+#     x11vnc xvfb novnc websockify \
+#     wget ca-certificates sudo openjdk-17-jdk build-essential \
+#  && rm -rf /var/lib/apt/lists/*
+
+# Create user
+RUN useradd -ms /bin/bash frc \
+ && echo "frc ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/frc
+
+USER frc
+WORKDIR /home/frc
+
+# Download and unpack WPILib
+RUN wget https://packages.wpilib.workers.dev/installer/v2025.3.2/Linux/WPILib_Linux-2025.3.2.tar.gz \
+ && tar -xf WPILib_Linux-2025.3.2.tar.gz \
+ && rm WPILib_Linux-2025.3.2.tar.gz
+
+# Set executable on installer
+RUN chmod +x /home/frc/WPILib_Linux-2025.3.2/WPILibInstaller
+
+# VNC password (sets password to "password")
+RUN mkdir -p /home/frc/.vnc \
+ && x11vnc -storepasswd password /home/frc/.vnc/passwd
+
+EXPOSE 5901 6901
+
+# Launches VNC, noVNC, and WPILib installer
+# CMD Xvfb :1 -screen 0 1280x720x24 & \
+#     x11vnc -forever -usepw -display :1 -rfbport 5901 & \
+#     websockify --web /usr/share/novnc/ 6901 localhost:5901 & \
+#     cd /home/frc/WPILib_Linux-2025.3.2 && ./WPILibInstaller
+CMD Xvfb :1 -screen 0 1280x720x24 & \
+    x11vnc -forever -usepw -display :1 -rfbport 5901 & \
+    websockify --web /usr/share/novnc/ 6901 localhost:5901
