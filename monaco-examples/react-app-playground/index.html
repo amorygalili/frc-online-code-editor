@@ -1,13 +1,21 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
+    <title>Application Playground</title>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
-  </head>
-  <body>
-    <div id="root"></div>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./resources/styles/views.css">
+</head>
+
+<!-- body style of vscode theme are not applied when embedded in react -->
+<body style="background-color: #1f1f1f; color: #cccccc;">
+    <div class="exampleHeadelineDiv">
+        <b class="exampleHeadeline">Application Playground</b> - [<a href="./index.html">Back to Index</a>] <b>Heads up:</b> This is a prototype and still evolving.
+    </div>
+    <div id="react-root"></div>
     <script type="module" src="/src/main.tsx"></script>
-  </body>
+</body>
+
 </html>
