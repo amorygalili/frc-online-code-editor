@@ -2,14 +2,134 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { spawn } from 'child_process';
 import { createServer } from 'http';
+import path from 'path';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = createServer(app);
 const port = 30003;
 
+// Enable CORS for all routes
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'Eclipse JDT Language Server' });
+});
+
+// Static file server for workspace files
+const workspacePath = path.join(__dirname, 'workspace');
+
+// Get file content endpoint
+app.get('/files/*', async (req, res) => {
+    try {
+        const filePath = req.params[0]; // Get the path after /files/
+        const fullPath = path.join(workspacePath, filePath);
+
+        // Security check: ensure the path is within workspace
+        const resolvedPath = path.resolve(fullPath);
+        const resolvedWorkspace = path.resolve(workspacePath);
+        if (!resolvedPath.startsWith(resolvedWorkspace)) {
+            return res.status(403).json({ error: 'Access denied: path outside workspace' });
+        }
+
+        const content = await fs.readFile(fullPath, 'utf8');
+        res.json({
+            path: filePath,
+            content: content
+        });
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            res.status(404).json({ error: 'File not found' });
+        } else if (error.code === 'EISDIR') {
+            res.status(400).json({ error: 'Path is a directory, not a file' });
+        } else {
+            console.error('Error reading file:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+});
+
+// List directory contents endpoint
+app.get('/files', async (req, res) => {
+    try {
+        const dirPath = req.query.path || '';
+        const fullPath = path.join(workspacePath, dirPath);
+
+        // Security check: ensure the path is within workspace
+        const resolvedPath = path.resolve(fullPath);
+        const resolvedWorkspace = path.resolve(workspacePath);
+        if (!resolvedPath.startsWith(resolvedWorkspace)) {
+            return res.status(403).json({ error: 'Access denied: path outside workspace' });
+        }
+
+        const entries = await fs.readdir(fullPath, { withFileTypes: true });
+        const files = entries.map(entry => ({
+            name: entry.name,
+            type: entry.isDirectory() ? 'directory' : 'file',
+            path: path.posix.join(dirPath, entry.name)
+        }));
+
+        res.json({
+            path: dirPath,
+            files: files
+        });
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            res.status(404).json({ error: 'Directory not found' });
+        } else {
+            console.error('Error reading directory:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+});
+
+// Save file content endpoint
+app.put('/files/*', express.json(), async (req, res) => {
+    try {
+        const filePath = req.params[0]; // Get the path after /files/
+        const fullPath = path.join(workspacePath, filePath);
+        const { content } = req.body;
+
+        if (typeof content !== 'string') {
+            return res.status(400).json({ error: 'Content must be a string' });
+        }
+
+        // Security check: ensure the path is within workspace
+        const resolvedPath = path.resolve(fullPath);
+        const resolvedWorkspace = path.resolve(workspacePath);
+        if (!resolvedPath.startsWith(resolvedWorkspace)) {
+            return res.status(403).json({ error: 'Access denied: path outside workspace' });
+        }
+
+        // Ensure directory exists
+        const dirPath = path.dirname(fullPath);
+        await fs.mkdir(dirPath, { recursive: true });
+
+        await fs.writeFile(fullPath, content, 'utf8');
+        res.json({
+            path: filePath,
+            message: 'File saved successfully'
+        });
+    } catch (error) {
+        console.error('Error saving file:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Create WebSocket server

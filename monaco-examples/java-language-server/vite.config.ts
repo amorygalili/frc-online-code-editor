@@ -10,8 +10,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: resolve(__dirname, "index.html"),
-        javaLanguageServer: resolve(__dirname, "java-language-server.html"),
+        main: resolve("index.html"),
+        javaLanguageServer: resolve("java-language-server.html"),
       },
     },
   },
