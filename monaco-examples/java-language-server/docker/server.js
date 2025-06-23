@@ -40,27 +40,52 @@ wss.on('connection', (ws) => {
         stdio: ['pipe', 'pipe', 'pipe']
     });
 
+    let buffer = '';
+
     // Forward messages from WebSocket to JDT LS
     ws.on('message', (data) => {
         try {
-            const message = data.toString();
-            console.log('Received from client:', message.substring(0, 100) + '...');
-            jdtlsProcess.stdin.write(message);
+            const jsonMessage = data.toString();
+            console.log('Received from client:', jsonMessage.substring(0, 100) + '...');
+
+            // Convert JSON message to LSP format with Content-Length header
+            const lspMessage = `Content-Length: ${Buffer.byteLength(jsonMessage, 'utf8')}\r\n\r\n${jsonMessage}`;
+            jdtlsProcess.stdin.write(lspMessage);
         } catch (error) {
             console.error('Error forwarding message to JDT LS:', error);
         }
     });
 
-    // Forward messages from JDT LS to WebSocket
+    // Parse LSP messages from JDT LS and forward JSON to WebSocket
     jdtlsProcess.stdout.on('data', (data) => {
         try {
-            const message = data.toString();
-            console.log('Sending to client:', message.substring(0, 100) + '...');
-            if (ws.readyState === ws.OPEN) {
-                ws.send(message);
+            buffer += data.toString();
+
+            // Process complete messages
+            while (true) {
+                const contentLengthMatch = buffer.match(/Content-Length: (\d+)\r?\n/);
+                if (!contentLengthMatch) break;
+
+                const contentLength = parseInt(contentLengthMatch[1]);
+                const headerEndIndex = buffer.indexOf('\r\n\r\n');
+                if (headerEndIndex === -1) break;
+
+                const messageStart = headerEndIndex + 4;
+                const messageEnd = messageStart + contentLength;
+
+                if (buffer.length < messageEnd) break;
+
+                const jsonMessage = buffer.substring(messageStart, messageEnd);
+                console.log('Sending to client:', jsonMessage.substring(0, 100) + '...');
+
+                if (ws.readyState === ws.OPEN) {
+                    ws.send(jsonMessage);
+                }
+
+                buffer = buffer.substring(messageEnd);
             }
         } catch (error) {
-            console.error('Error forwarding message to client:', error);
+            console.error('Error parsing LSP message:', error);
         }
     });
 
