@@ -3,6 +3,10 @@
  * Licensed under the MIT License. See LICENSE in the package root for license information.
  * ------------------------------------------------------------------------------------------ */
 
+import { RegisteredFileSystemProvider, RegisteredMemoryFile } from "@codingame/monaco-vscode-files-service-override";
+import { eclipseJdtLsConfig } from "./config";
+import * as vscode from "vscode";
+
 /**
  * Service for interacting with the file server API
  */
@@ -109,4 +113,58 @@ export class FileService {
             return false;
         }
     }
+}
+
+
+
+
+/**
+ * Load files from the workspace and register them with the file system provider
+ */
+export async function loadWorkspaceFiles(
+  fileSystemProvider: RegisteredFileSystemProvider
+): Promise<string[]> {
+  try {
+    // Check if file service is available
+    const isAvailable = await FileService.isAvailable();
+    if (!isAvailable) {
+      console.warn("File service not available, using fallback hello.java");
+      return [];
+    }
+
+    // Get all Java files from the workspace
+    const javaFiles = await FileService.getJavaFiles();
+    const loadedFiles: string[] = [];
+
+    for (const fileInfo of javaFiles) {
+      try {
+        const content = await FileService.getFileContent(fileInfo.path);
+        const uri = vscode.Uri.file(
+          `${eclipseJdtLsConfig.basePath}/${fileInfo.path}`
+        );
+
+        // Only register if not already registered to avoid conflicts
+        try {
+          fileSystemProvider.registerFile(
+            new RegisteredMemoryFile(uri, content)
+          );
+          loadedFiles.push(fileInfo.path);
+          console.log(`Loaded file: ${fileInfo.path}`, uri);
+        } catch (registerError) {
+          // File might already be registered, just add to loaded files
+          console.log(
+            `File ${fileInfo.path} already registered or conflict, skipping registration`
+          );
+          loadedFiles.push(fileInfo.path);
+        }
+      } catch (error) {
+        console.error(`Failed to load file ${fileInfo.path}:`, error);
+      }
+    }
+
+    return loadedFiles;
+  } catch (error) {
+    console.error("Failed to load workspace files:", error);
+    return [];
+  }
 }
