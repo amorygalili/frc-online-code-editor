@@ -30,11 +30,13 @@ interface FileBrowserProps {
 
 export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper }) => {
   const [files, setFiles] = useState<FileInfo[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading true for initial load
   const [error, setError] = useState<string | null>(null);
 
-  const loadFiles = useCallback(async () => {
-    setLoading(true);
+  const loadFiles = useCallback(async (showLoadingSpinner = false) => {
+    if (showLoadingSpinner) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -49,16 +51,18 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper }) => {
       console.error("Failed to load files:", err);
       setError(`Failed to load files: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
-      setLoading(false);
+      if (showLoadingSpinner) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    // Load files initially
-    loadFiles();
+    // Load files initially with loading spinner
+    loadFiles(true);
 
-    // Set up periodic refresh every 5 seconds
-    const interval = setInterval(loadFiles, 5000);
+    // Set up periodic refresh every 5 seconds without loading spinner
+    const interval = setInterval(() => loadFiles(false), 5000);
 
     // Cleanup interval on unmount
     return () => clearInterval(interval);
@@ -106,7 +110,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper }) => {
       </Toolbar>
 
       <Box sx={{ flex: 1, overflow: 'auto' }}>
-        {loading && (
+        {loading && files.length === 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
             <CircularProgress size={24} />
           </Box>
@@ -118,7 +122,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper }) => {
           </Alert>
         )}
 
-        {!loading && !error && files.length > 0 && (
+        {files.length > 0 && (
           <List dense>
             {files.map((file, index) => (
               <ListItem key={index} disablePadding>
