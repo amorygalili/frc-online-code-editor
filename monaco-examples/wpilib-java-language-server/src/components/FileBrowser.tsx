@@ -3,11 +3,10 @@
  * Licensed under the MIT License. See LICENSE in the package root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
-  IconButton,
   List,
   ListItem,
   ListItemButton,
@@ -17,7 +16,7 @@ import {
   Alert,
   Toolbar
 } from '@mui/material';
-import { Close, InsertDriveFile } from '@mui/icons-material';
+import { InsertDriveFile } from '@mui/icons-material';
 import * as vscode from "vscode";
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { FileService, type FileInfo } from '../fileService';
@@ -29,34 +28,41 @@ interface FileBrowserProps {
   onClose: () => void;
 }
 
-export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper, onClose }) => {
+export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper }) => {
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadFiles = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        console.log("Loading file list...");
-        const javaFiles = await FileService.getJavaFiles();
-        setFiles(javaFiles);
-        
-        if (javaFiles.length === 0) {
-          setError("No Java files found in workspace");
-        }
-      } catch (err) {
-        console.error("Failed to load files:", err);
-        setError(`Failed to load files: ${err instanceof Error ? err.message : String(err)}`);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadFiles = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-    loadFiles();
+    try {
+      console.log("Loading file list...");
+      const javaFiles = await FileService.getJavaFiles();
+      setFiles(javaFiles);
+
+      if (javaFiles.length === 0) {
+        setError("No Java files found in workspace");
+      }
+    } catch (err) {
+      console.error("Failed to load files:", err);
+      setError(`Failed to load files: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    // Load files initially
+    loadFiles();
+
+    // Set up periodic refresh every 5 seconds
+    const interval = setInterval(loadFiles, 5000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, [loadFiles]);
 
   const handleFileClick = async (file: FileInfo) => {
     if (!editorWrapper) {
@@ -97,9 +103,6 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper, onClose
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
           Workspace Files
         </Typography>
-        <IconButton onClick={onClose} size="small">
-          <Close />
-        </IconButton>
       </Toolbar>
 
       <Box sx={{ flex: 1, overflow: 'auto' }}>
@@ -125,9 +128,11 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper, onClose
                   </ListItemIcon>
                   <ListItemText
                     primary={file.path}
-                    primaryTypographyProps={{
-                      variant: 'body2',
-                      sx: { fontFamily: 'monospace' }
+                    slotProps={{
+                      primary: {
+                        variant: 'body2',
+                        sx: { fontFamily: 'monospace' }
+                      }
                     }}
                   />
                 </ListItemButton>
