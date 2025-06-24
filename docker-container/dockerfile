@@ -25,7 +25,26 @@ RUN apt-get install -y --no-install-recommends websockify
 RUN apt-get install -y --no-install-recommends sudo
 RUN apt-get install -y --no-install-recommends openjdk-17-jdk
 
-# 7. Clean up package caches to reduce layer size
+# 7. Install additional desktop utilities needed for WPILib
+RUN apt-get install -y --no-install-recommends xdg-utils
+RUN apt-get install -y --no-install-recommends dbus-x11
+RUN apt-get install -y --no-install-recommends at-spi2-core
+RUN apt-get install -y --no-install-recommends dos2unix
+
+# 8. Install graphics libraries needed for VS Code
+RUN apt-get install -y --no-install-recommends libgbm1
+RUN apt-get install -y --no-install-recommends libasound2
+RUN apt-get install -y --no-install-recommends libgtk-3-0
+RUN apt-get install -y --no-install-recommends libxss1
+RUN apt-get install -y --no-install-recommends libgconf-2-4
+RUN apt-get install -y --no-install-recommends libdrm2
+RUN apt-get install -y --no-install-recommends libxcomposite1
+RUN apt-get install -y --no-install-recommends libxdamage1
+RUN apt-get install -y --no-install-recommends libxrandr2
+RUN apt-get install -y --no-install-recommends libnss3
+RUN apt-get install -y --no-install-recommends libatk-bridge2.0-0
+
+# 9. Clean up package caches to reduce layer size
 RUN rm -rf /var/lib/apt/lists/*
 
 # RUN apt-get update \
@@ -55,14 +74,21 @@ RUN wget https://packages.wpilib.workers.dev/installer/v2025.3.2/Linux/WPILib_Li
 # Set executable on installer
 RUN chmod +x /home/frc/WPILib_Linux-2025.3.2/WPILibInstaller
 
+# Copy the installer script into the container and set proper ownership
+USER root
+COPY run-installer.sh /home/frc/run-installer.sh
+RUN chown frc:frc /home/frc/run-installer.sh && chmod +x /home/frc/run-installer.sh
+USER frc
+
 # VNC password (sets password to "password")
 RUN mkdir -p /home/frc/.vnc \
  && x11vnc -storepasswd password /home/frc/.vnc/passwd
 
 EXPOSE 5901 6901
 
-# Set display environment variable
+# Set display environment variable and suppress WSL warnings
 ENV DISPLAY=:1
+ENV DONT_PROMPT_WSL_INSTALL=1
 
 # Launches VNC, noVNC, and WPILib installer
 # CMD Xvfb :1 -screen 0 1280x720x24 & \
@@ -77,6 +103,13 @@ Xvfb :1 -screen 0 1280x720x24 &\n\
 XVFB_PID=$!\n\
 \n\
 # Wait for X server to be ready\n\
+sleep 3\n\
+\n\
+# Start XFCE desktop session\n\
+DISPLAY=:1 startxfce4 &\n\
+XFCE_PID=$!\n\
+\n\
+# Wait a bit more for desktop to initialize\n\
 sleep 2\n\
 \n\
 # Start VNC server\n\
@@ -90,5 +123,20 @@ WEBSOCKIFY_PID=$!\n\
 # Keep container running\n\
 wait\n\
 ' > /home/frc/start.sh && chmod +x /home/frc/start.sh
+
+# Create script to fix WPILib desktop files line endings
+RUN echo '#!/bin/bash\n\
+echo "Fixing WPILib desktop file line endings..."\n\
+if [ -f "/home/frc/Desktop/FRC VS Code 2025.desktop" ]; then\n\
+    dos2unix "/home/frc/Desktop/FRC VS Code 2025.desktop"\n\
+    chmod +x "/home/frc/Desktop/FRC VS Code 2025.desktop"\n\
+    echo "Fixed FRC VS Code desktop file"\n\
+fi\n\
+\n\
+# Fix any other .desktop files that might have been created\n\
+find /home/frc/Desktop -name "*.desktop" -exec dos2unix {} \\;\n\
+find /home/frc/Desktop -name "*.desktop" -exec chmod +x {} \\;\n\
+echo "Desktop files fixed!"\n\
+' > /home/frc/fix-desktop-files.sh && chmod +x /home/frc/fix-desktop-files.sh
 
 CMD ["/home/frc/start.sh"]

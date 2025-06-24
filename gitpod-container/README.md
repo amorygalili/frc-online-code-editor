@@ -15,7 +15,7 @@ docker build -t frc-sim .
 
 ```bash
 # Run container
-docker run -it -p 6901:6901 -p 5901:5901 frc-sim /bin/bash
+docker run -it -p 6901:6901 -p 5901:5901 -p 6080:6080 frc-sim /bin/bash
 docker run -p 6901:6901 -p 5901:5901 frc-sim
 ```
 

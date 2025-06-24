@@ -41,6 +41,10 @@ http://localhost:6901/vnc.html
 ### 4. Run the WPILib Installer
 
 ```bash
+docker exec -it frc-container /home/frc/run-installer.sh
+```
+
+```bash
 # Run the installer directly
 docker exec -it frc-container /home/frc/WPILib_Linux-2025.3.2/WPILibInstaller
 ```
