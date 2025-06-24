@@ -11,7 +11,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve("index.html"),
-        javaLanguageServer: resolve("java-language-server.html"),
       },
     },
   },
