@@ -61,11 +61,34 @@ RUN mkdir -p /home/frc/.vnc \
 
 EXPOSE 5901 6901
 
+# Set display environment variable
+ENV DISPLAY=:1
+
 # Launches VNC, noVNC, and WPILib installer
 # CMD Xvfb :1 -screen 0 1280x720x24 & \
 #     x11vnc -forever -usepw -display :1 -rfbport 5901 & \
 #     websockify --web /usr/share/novnc/ 6901 localhost:5901 & \
 #     cd /home/frc/WPILib_Linux-2025.3.2 && ./WPILibInstaller
-CMD Xvfb :1 -screen 0 1280x720x24 & \
-    x11vnc -forever -usepw -display :1 -rfbport 5901 & \
-    websockify --web /usr/share/novnc/ 6901 localhost:5901
+
+# Create startup script to ensure proper X server initialization
+RUN echo '#!/bin/bash\n\
+# Start Xvfb in background\n\
+Xvfb :1 -screen 0 1280x720x24 &\n\
+XVFB_PID=$!\n\
+\n\
+# Wait for X server to be ready\n\
+sleep 2\n\
+\n\
+# Start VNC server\n\
+x11vnc -forever -usepw -display :1 -rfbport 5901 &\n\
+VNC_PID=$!\n\
+\n\
+# Start noVNC websocket proxy\n\
+websockify --web /usr/share/novnc/ 6901 localhost:5901 &\n\
+WEBSOCKIFY_PID=$!\n\
+\n\
+# Keep container running\n\
+wait\n\
+' > /home/frc/start.sh && chmod +x /home/frc/start.sh
+
+CMD ["/home/frc/start.sh"]

@@ -1,22 +1,46 @@
-## Steps
+# FRC WPILib Docker Container
 
-- Create dockerfile with base image that supports 2025 WPILib on linux
-- Copy latest linux release of WPILib from https://github.com/wpilibsuite/allwpilib/releases/tag/v2025.3.2 to container in dockerfile
-- Enable novnc so installer can be run through browser interface
-- Run installer
+This Docker container provides a complete environment for running the WPILib installer and developing FRC robot code with a graphical interface accessible through your web browser.
 
+## Features
 
-## Installing and running
+- Ubuntu 22.04 base with XFCE desktop environment
+- Java 17 JDK pre-installed
+- WPILib 2025.3.2 installer pre-downloaded
+- VNC server with web-based access (noVNC)
+- Virtual display (Xvfb) for headless GUI applications
+
+## Quick Start
+
+### 1. Build the Docker Image
 
 ```bash
-# Build image
-docker build -t frc-sim .
+docker build -t frc-wpilib .
 ```
+
+### 2. Run the Container
 
 ```bash
-# Run container
-docker run -it -p 6901:6901 -p 5901:5901 frc-sim /bin/bash
-docker run -p 6901:6901 -p 5901:5901 frc-sim
+# Stop and remove any existing container
+docker rm -f frc-container
+
+# Run the container with proper port mapping
+docker run -d -p 5901:5901 -p 6901:6901 --name frc-container frc-wpilib
 ```
 
-Go to http://localhost:6901/vnc.html in browser and enter password "password"
+### 3. Access the Desktop Environment
+
+Open your web browser and go to:
+```
+http://localhost:6901/vnc.html
+```
+
+- **VNC Password**: `password`
+- **Alternative VNC client**: Connect to `localhost:5901`
+
+### 4. Run the WPILib Installer
+
+```bash
+# Run the installer directly
+docker exec -it frc-container /home/frc/WPILib_Linux-2025.3.2/WPILibInstaller
+```
