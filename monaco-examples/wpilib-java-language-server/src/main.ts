@@ -184,6 +184,159 @@ export const runEclipseJdtLsClient = async () => {
           );
         }
       });
+
+    // WPILib projects functionality
+    document
+      .querySelector("#button-wpilib-projects")
+      ?.addEventListener("click", async () => {
+        try {
+          const projectsDiv = document.getElementById("wpilib-projects");
+          const projectList = document.getElementById("project-list");
+
+          if (!projectsDiv || !projectList) return;
+
+          // Toggle visibility
+          if (projectsDiv.style.display === "none") {
+            console.log("Loading WPILib projects...");
+
+            // Clear existing list
+            projectList.innerHTML = "";
+
+            // Load projects
+            const projects = await FileService.listWPILibProjects();
+
+            if (projects.length === 0) {
+              projectList.innerHTML = "<li>No WPILib projects found</li>";
+            } else {
+              projects.forEach((project) => {
+                const li = document.createElement("li");
+                li.innerHTML = `<strong>${project.name}</strong> (Team: ${project.teamNumber}, Year: ${project.projectYear})`;
+                li.style.cursor = "pointer";
+                li.style.padding = "5px";
+                li.style.borderBottom = "1px solid #eee";
+
+                li.addEventListener("click", async () => {
+                  try {
+                    console.log(`Loading project: ${project.name}`);
+                    // TODO: Load project files into editor
+                    // For now, just show the project info
+                    alert(`Selected project: ${project.name}\nPath: ${project.path}`);
+                  } catch (error) {
+                    console.error(`Failed to load project ${project.name}:`, error);
+                    alert(
+                      `Failed to load project: ${
+                        error instanceof Error ? error.message : String(error)
+                      }`
+                    );
+                  }
+                });
+
+                li.addEventListener("mouseenter", () => {
+                  li.style.backgroundColor = "#f0f0f0";
+                });
+                li.addEventListener("mouseleave", () => {
+                  li.style.backgroundColor = "";
+                });
+
+                projectList.appendChild(li);
+              });
+            }
+
+            projectsDiv.style.display = "block";
+          } else {
+            projectsDiv.style.display = "none";
+          }
+        } catch (error) {
+          console.error("Failed to load WPILib projects:", error);
+          alert(
+            `Failed to load WPILib projects: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      });
+
+    // Generate Robot Project functionality
+    document
+      .querySelector("#button-generate-project")
+      ?.addEventListener("click", async () => {
+        try {
+          const generationDiv = document.getElementById("project-generation");
+          if (!generationDiv) return;
+
+          // Toggle visibility
+          if (generationDiv.style.display === "none") {
+            generationDiv.style.display = "block";
+          } else {
+            generationDiv.style.display = "none";
+          }
+        } catch (error) {
+          console.error("Failed to show project generation form:", error);
+        }
+      });
+
+    // Handle project generation form submission
+    document
+      .querySelector("#generate-form")
+      ?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        try {
+          const form = event.target as HTMLFormElement;
+          const formData = new FormData(form);
+
+          const options = {
+            name: formData.get("projectName") as string,
+            teamNumber: parseInt(formData.get("teamNumber") as string) || undefined,
+            packageName: formData.get("packageName") as string || undefined,
+          };
+
+          if (!options.name) {
+            alert("Project name is required");
+            return;
+          }
+
+          const statusDiv = document.getElementById("generation-status");
+          if (statusDiv) {
+            statusDiv.textContent = "Generating project...";
+            statusDiv.style.color = "blue";
+          }
+
+          console.log("Generating WPILib project with options:", options);
+          const result = await FileService.generateWPILibProject(options);
+
+          if (statusDiv) {
+            if (result.success) {
+              statusDiv.textContent = `Project '${result.projectName}' generated successfully!`;
+              statusDiv.style.color = "green";
+
+              // Clear the form
+              form.reset();
+
+              // Optionally hide the form after successful generation
+              setTimeout(() => {
+                const generationDiv = document.getElementById("project-generation");
+                if (generationDiv) {
+                  generationDiv.style.display = "none";
+                }
+              }, 2000);
+            } else {
+              statusDiv.textContent = `Failed to generate project: ${result.message}`;
+              statusDiv.style.color = "red";
+            }
+          }
+        } catch (error) {
+          console.error("Failed to generate project:", error);
+          const statusDiv = document.getElementById("generation-status");
+          if (statusDiv) {
+            statusDiv.textContent = `Error: ${
+              error instanceof Error ? error.message : String(error)
+            }`;
+            statusDiv.style.color = "red";
+          }
+        }
+      });
+
   } catch (e) {
     console.error(e);
   }
