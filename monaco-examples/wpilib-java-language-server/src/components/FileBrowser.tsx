@@ -18,17 +18,18 @@ import {
 } from '@mui/material';
 import { InsertDriveFile } from '@mui/icons-material';
 import * as vscode from "vscode";
-import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { FileService, type FileInfo } from '../fileService';
 import { eclipseJdtLsConfig } from '../config';
 import { createModelReference } from "@codingame/monaco-vscode-api/monaco";
+import { useEditor } from '../contexts/EditorContext';
 
 interface FileBrowserProps {
-  editorWrapper: MonacoEditorLanguageClientWrapper | null;
   onClose: () => void;
+  onFileOpen?: (filePath: string) => Promise<void>;
 }
 
-export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper }) => {
+export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
+  const { editorWrapper } = useEditor();
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [loading, setLoading] = useState(true); // Start with loading true for initial load
   const [error, setError] = useState<string | null>(null);
@@ -69,13 +70,20 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper }) => {
   }, [loadFiles]);
 
   const handleFileClick = async (file: FileInfo) => {
-    if (!editorWrapper) {
-      alert("Editor not initialized");
-      return;
-    }
-
     try {
       console.log(`Loading file: ${file.path}`);
+
+      // Use the onFileOpen prop if available (for tab management)
+      if (onFileOpen) {
+        await onFileOpen(file.path);
+        return;
+      }
+
+      // Fallback to the original behavior if no onFileOpen prop
+      if (!editorWrapper) {
+        alert("Editor not initialized");
+        return;
+      }
 
       // Create a unique URI for this file to avoid conflicts
       const uri = vscode.Uri.file(

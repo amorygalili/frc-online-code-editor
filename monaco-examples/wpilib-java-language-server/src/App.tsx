@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See LICENSE in the package root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from "react";
 import {
   ThemeProvider,
   createTheme,
@@ -11,102 +11,73 @@ import {
   AppBar,
   Toolbar,
   Typography,
-  Button,
   Box,
-  Drawer
-} from '@mui/material';
-import {
-  PlayArrow,
-  Stop
-} from '@mui/icons-material';
-import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
-import { WPILibEditorWrapper } from './components/WPILibEditorWrapper.tsx';
-import { FileBrowser } from './components/FileBrowser.tsx';
-import './App.css';
+  Drawer,
+} from "@mui/material";
+import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
+import { FileBrowser } from "./components/FileBrowser.tsx";
+import { EditorTabs } from "./components/EditorTabs.tsx";
+import { EditorProvider, useEditor } from "./contexts/EditorContext";
+import "./App.css";
 
 const theme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: "dark",
     primary: {
-      main: '#1976d2',
+      main: "#1976d2",
     },
     secondary: {
-      main: '#dc004e',
+      main: "#dc004e",
     },
   },
 });
 
 const DRAWER_WIDTH = 320;
 
-function App() {
-  const [isEditorStarted, setIsEditorStarted] = useState(false);
-  const [editorWrapper, setEditorWrapper] = useState<MonacoEditorLanguageClientWrapper | null>(null);
+// Main app content that uses the editor context
+function AppContent() {
+  const { openFiles, openFile, closeFile, setActiveFile } = useEditor();
 
-  const handleEditorLoad = useCallback((wrapper: MonacoEditorLanguageClientWrapper) => {
-    setEditorWrapper(wrapper);
-  }, []);
+  const handleFileOpen = useCallback(
+    async (filePath: string) => {
+      await openFile(filePath);
+    },
+    [openFile]
+  );
 
-  const handleStart = useCallback(async () => {
-    if (editorWrapper) {
-      try {
-        await editorWrapper.start();
-        setIsEditorStarted(true);
-        console.log("Language server started...");
-      } catch (error) {
-        console.error("Failed to start language server:", error);
+  const handleFileClose = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < openFiles.length) {
+        const fileToClose = openFiles[index];
+        closeFile(fileToClose.path);
       }
-    }
-  }, [editorWrapper]);
+    },
+    [openFiles, closeFile]
+  );
 
-  const handleDispose = useCallback(async () => {
-    if (editorWrapper) {
-      try {
-        await editorWrapper.dispose();
-        setIsEditorStarted(false);
-        console.log("Language server disposed...");
-      } catch (error) {
-        console.error("Failed to dispose language server:", error);
+  const handleFileSwitch = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < openFiles.length) {
+        const fileToSwitch = openFiles[index];
+        setActiveFile(fileToSwitch.path);
       }
-    }
-  }, [editorWrapper]);
-
-
+    },
+    [openFiles, setActiveFile]
+  );
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
         <AppBar position="static" elevation={1}>
           <Toolbar>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               WPILib Java Language Client & Language Server
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                color="inherit"
-                startIcon={<PlayArrow />}
-                onClick={handleStart}
-                disabled={!editorWrapper || isEditorStarted}
-                variant="outlined"
-                size="small"
-              >
-                Start
-              </Button>
-              <Button
-                color="inherit"
-                startIcon={<Stop />}
-                onClick={handleDispose}
-                disabled={!editorWrapper || !isEditorStarted}
-                variant="outlined"
-                size="small"
-              >
-                Stop
-              </Button>
-            </Box>
           </Toolbar>
         </AppBar>
 
-        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
           <Drawer
             variant="persistent"
             anchor="left"
@@ -114,33 +85,43 @@ function App() {
             sx={{
               width: DRAWER_WIDTH,
               flexShrink: 0,
-              '& .MuiDrawer-paper': {
+              "& .MuiDrawer-paper": {
                 width: DRAWER_WIDTH,
-                boxSizing: 'border-box',
-                position: 'relative',
+                boxSizing: "border-box",
+                position: "relative",
               },
             }}
           >
-            <FileBrowser
-              editorWrapper={editorWrapper}
-              onClose={() => {}}
-            />
+            <FileBrowser onClose={() => {}} onFileOpen={handleFileOpen} />
           </Drawer>
 
           <Box
             component="main"
             sx={{
               flexGrow: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden'
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
           >
-            <WPILibEditorWrapper onLoad={handleEditorLoad} />
+            <EditorTabs
+              onFileClose={handleFileClose}
+              onFileSwitch={handleFileSwitch}
+            />
+            <WPILibEditorWrapper />
           </Box>
         </Box>
       </Box>
     </ThemeProvider>
+  );
+}
+
+// Main App component with context provider
+function App() {
+  return (
+    <EditorProvider>
+      <AppContent />
+    </EditorProvider>
   );
 }
 
