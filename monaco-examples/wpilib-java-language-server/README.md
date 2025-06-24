@@ -1,6 +1,6 @@
-# Java Language Server with Monaco Editor
+# WPILib Java Language Server with Monaco Editor
 
-This project demonstrates how to use the Eclipse JDT Language Server with Monaco Editor for Java development in the browser. It provides a complete setup with Docker containerization for easy deployment and development.
+This project demonstrates how to use the Eclipse JDT Language Server with Monaco Editor for WPILib FRC robot development in the browser. It provides a complete setup with Docker containerization, WPILib integration, and robot project generation capabilities for easy FRC development and education.
 
 ## 🚀 Quick Start
 

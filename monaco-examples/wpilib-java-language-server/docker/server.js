@@ -5,9 +5,13 @@ import { createServer } from 'http';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import { WPILibUtils } from './wpilib-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize WPILib utilities
+const wpilibUtils = new WPILibUtils();
 
 const app = express();
 const server = createServer(app);
@@ -128,6 +132,76 @@ app.put('/files/*', express.json(), async (req, res) => {
         });
     } catch (error) {
         console.error('Error saving file:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// WPILib project management endpoints
+
+// Generate new robot project
+app.post('/wpilib/generate-project', express.json(), async (req, res) => {
+    try {
+        const { name, teamNumber, packageName } = req.body;
+
+        if (!name) {
+            return res.status(400).json({ error: 'Project name is required' });
+        }
+
+        const result = await wpilibUtils.generateRobotProject({
+            name,
+            teamNumber: teamNumber || 0,
+            packageName: packageName || 'frc.robot'
+        });
+
+        if (result.success) {
+            // Create Eclipse project files for better LSP support
+            await wpilibUtils.createEclipseProjectFiles(result.projectPath, result.projectName);
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error generating robot project:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error',
+            message: error.message
+        });
+    }
+});
+
+// List robot projects
+app.get('/wpilib/projects', async (req, res) => {
+    try {
+        const projects = await wpilibUtils.listRobotProjects();
+        res.json({ projects });
+    } catch (error) {
+        console.error('Error listing robot projects:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get project information
+app.get('/wpilib/projects/:projectName', async (req, res) => {
+    try {
+        const { projectName } = req.params;
+        const projectPath = path.join(workspacePath, projectName);
+
+        const isWPILibProject = await wpilibUtils.isWPILibProject(projectPath);
+        if (!isWPILibProject) {
+            return res.status(404).json({ error: 'WPILib project not found' });
+        }
+
+        const projectInfo = await wpilibUtils.getProjectInfo(projectPath);
+        const classpath = await wpilibUtils.getWPILibClasspath(projectPath);
+
+        res.json({
+            name: projectName,
+            path: projectPath,
+            ...projectInfo,
+            classpath
+        });
+    } catch (error) {
+        console.error('Error getting project info:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

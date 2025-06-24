@@ -29,6 +29,31 @@ export interface FileContent {
     content: string;
 }
 
+export interface WPILibProject {
+    name: string;
+    path: string;
+    teamNumber: number;
+    projectYear: string;
+    language: string;
+    classpath?: string[];
+}
+
+export interface ProjectGenerationOptions {
+    name: string;
+    teamNumber?: number;
+    packageName?: string;
+}
+
+export interface ProjectGenerationResult {
+    success: boolean;
+    projectName?: string;
+    projectPath?: string;
+    teamNumber?: number;
+    packageName?: string;
+    message: string;
+    error?: string;
+}
+
 export class FileService {
     /**
      * Get the content of a file
@@ -111,6 +136,76 @@ export class FileService {
             return response.ok;
         } catch {
             return false;
+        }
+    }
+
+    /**
+     * Generate a new WPILib robot project
+     */
+    static async generateWPILibProject(options: ProjectGenerationOptions): Promise<ProjectGenerationResult> {
+        try {
+            const response = await fetch(`${FILE_SERVER_BASE_URL}/wpilib/generate-project`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(options),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(`Failed to generate project: ${error.error || response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            return {
+                success: false,
+                message: `Failed to generate WPILib project: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    }
+
+    /**
+     * List all WPILib robot projects in the workspace
+     */
+    static async listWPILibProjects(): Promise<WPILibProject[]> {
+        try {
+            const response = await fetch(`${FILE_SERVER_BASE_URL}/wpilib/projects`);
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(`Failed to list projects: ${error.error || response.statusText}`);
+            }
+
+            const data = await response.json();
+            return data.projects || [];
+        } catch (error) {
+            console.error('Failed to list WPILib projects:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Get information about a specific WPILib project
+     */
+    static async getWPILibProjectInfo(projectName: string): Promise<WPILibProject | null> {
+        try {
+            const response = await fetch(`${FILE_SERVER_BASE_URL}/wpilib/projects/${projectName}`);
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    return null;
+                }
+                const error = await response.json();
+                throw new Error(`Failed to get project info: ${error.error || response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error(`Failed to get WPILib project info for ${projectName}:`, error);
+            return null;
         }
     }
 }

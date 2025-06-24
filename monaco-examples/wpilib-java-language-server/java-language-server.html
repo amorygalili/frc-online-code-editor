@@ -10,23 +10,201 @@
 
 <body>
     <div class="exampleHeadelineDiv">
-        <b class="exampleHeadeline">Java Language Client & Language Server (Web Socket)</b>
+        <b class="exampleHeadeline">WPILib Java Language Client & Language Server</b>
         <br>
         <button type="button" id="button-start">Start</button>
         <button type="button" id="button-dispose">Dispose</button>
         <button type="button" id="button-browse-files">Browse Files</button>
+        <button type="button" id="button-wpilib-projects">WPILib Projects</button>
+        <button type="button" id="button-generate-project">Generate Robot Project</button>
         <br>
         Launch backend with: <b><code>docker compose up -d</code></b><br>
+
+        <!-- File Browser -->
         <div id="file-browser" style="display:none; margin-top: 10px; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow-y: auto;">
             <h4>Workspace Files:</h4>
             <ul id="file-list"></ul>
+        </div>
+
+        <!-- WPILib Projects -->
+        <div id="wpilib-projects" style="display:none; margin-top: 10px; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow-y: auto;">
+            <h4>WPILib Robot Projects:</h4>
+            <ul id="project-list"></ul>
+        </div>
+
+        <!-- Project Generation Form -->
+        <div id="project-generation" style="display:none; margin-top: 10px; padding: 10px; border: 1px solid #ccc;">
+            <h4>Generate New Robot Project:</h4>
+            <form id="generate-project-form">
+                <div style="margin-bottom: 10px;">
+                    <label for="project-name">Project Name:</label>
+                    <input type="text" id="project-name" name="name" required placeholder="MyRobotProject" style="margin-left: 10px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label for="team-number">Team Number:</label>
+                    <input type="number" id="team-number" name="teamNumber" placeholder="0" style="margin-left: 10px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label for="package-name">Package Name:</label>
+                    <input type="text" id="package-name" name="packageName" placeholder="frc.robot" style="margin-left: 10px;">
+                </div>
+                <button type="submit">Generate Project</button>
+                <button type="button" id="cancel-generation">Cancel</button>
+            </form>
+            <div id="generation-status" style="margin-top: 10px; font-weight: bold;"></div>
         </div>
     </div>
 	<div id="monaco-editor-root" style="width:800px;height:600px;border:1px solid grey"></div>
     <script type="module">
         import { runEclipseJdtLsClient } from "./src/main.ts";
+        import { FileService } from "./src/fileService.ts";
 
-        runEclipseJdtLsClient().catch(console.error);
+        let wrapper = null;
+
+        // Start the language client
+        document.getElementById('button-start').addEventListener('click', async () => {
+            try {
+                wrapper = await runEclipseJdtLsClient();
+                console.log('Language client started successfully');
+            } catch (error) {
+                console.error('Failed to start language client:', error);
+            }
+        });
+
+        // Dispose the language client
+        document.getElementById('button-dispose').addEventListener('click', () => {
+            if (wrapper) {
+                wrapper.dispose();
+                wrapper = null;
+                console.log('Language client disposed');
+            }
+        });
+
+        // Browse files functionality
+        document.getElementById('button-browse-files').addEventListener('click', async () => {
+            const fileBrowser = document.getElementById('file-browser');
+            const fileList = document.getElementById('file-list');
+
+            if (fileBrowser.style.display === 'none') {
+                try {
+                    const files = await FileService.getJavaFiles();
+                    fileList.innerHTML = '';
+
+                    files.forEach(file => {
+                        const li = document.createElement('li');
+                        li.textContent = file.path;
+                        li.style.cursor = 'pointer';
+                        li.addEventListener('click', () => {
+                            console.log('Selected file:', file.path);
+                            // TODO: Open file in editor
+                        });
+                        fileList.appendChild(li);
+                    });
+
+                    fileBrowser.style.display = 'block';
+                } catch (error) {
+                    console.error('Failed to load files:', error);
+                    fileList.innerHTML = '<li>Error loading files</li>';
+                    fileBrowser.style.display = 'block';
+                }
+            } else {
+                fileBrowser.style.display = 'none';
+            }
+        });
+
+        // WPILib projects functionality
+        document.getElementById('button-wpilib-projects').addEventListener('click', async () => {
+            const projectsDiv = document.getElementById('wpilib-projects');
+            const projectList = document.getElementById('project-list');
+
+            if (projectsDiv.style.display === 'none') {
+                try {
+                    const projects = await FileService.listWPILibProjects();
+                    projectList.innerHTML = '';
+
+                    if (projects.length === 0) {
+                        projectList.innerHTML = '<li>No WPILib projects found</li>';
+                    } else {
+                        projects.forEach(project => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<strong>${project.name}</strong> (Team: ${project.teamNumber}, Year: ${project.projectYear})`;
+                            li.style.cursor = 'pointer';
+                            li.addEventListener('click', () => {
+                                console.log('Selected project:', project.name);
+                                // TODO: Load project files
+                            });
+                            projectList.appendChild(li);
+                        });
+                    }
+
+                    projectsDiv.style.display = 'block';
+                } catch (error) {
+                    console.error('Failed to load WPILib projects:', error);
+                    projectList.innerHTML = '<li>Error loading projects</li>';
+                    projectsDiv.style.display = 'block';
+                }
+            } else {
+                projectsDiv.style.display = 'none';
+            }
+        });
+
+        // Generate project functionality
+        document.getElementById('button-generate-project').addEventListener('click', () => {
+            const generationDiv = document.getElementById('project-generation');
+            generationDiv.style.display = generationDiv.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Cancel project generation
+        document.getElementById('cancel-generation').addEventListener('click', () => {
+            document.getElementById('project-generation').style.display = 'none';
+            document.getElementById('generation-status').textContent = '';
+        });
+
+        // Handle project generation form
+        document.getElementById('generate-project-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const options = {
+                name: formData.get('name'),
+                teamNumber: parseInt(formData.get('teamNumber')) || 0,
+                packageName: formData.get('packageName') || 'frc.robot'
+            };
+
+            const statusDiv = document.getElementById('generation-status');
+            statusDiv.textContent = 'Generating project...';
+            statusDiv.style.color = 'blue';
+
+            try {
+                const result = await FileService.generateWPILibProject(options);
+
+                if (result.success) {
+                    statusDiv.textContent = `Project '${result.projectName}' generated successfully!`;
+                    statusDiv.style.color = 'green';
+
+                    // Reset form
+                    e.target.reset();
+
+                    // Hide form after 3 seconds
+                    setTimeout(() => {
+                        document.getElementById('project-generation').style.display = 'none';
+                        statusDiv.textContent = '';
+                    }, 3000);
+                } else {
+                    statusDiv.textContent = `Error: ${result.message}`;
+                    statusDiv.style.color = 'red';
+                }
+            } catch (error) {
+                statusDiv.textContent = `Error: ${error.message}`;
+                statusDiv.style.color = 'red';
+            }
+        });
+
+        // Auto-start the language client
+        runEclipseJdtLsClient().then(w => {
+            wrapper = w;
+            console.log('Language client auto-started');
+        }).catch(console.error);
     </script>
 </body>
 
