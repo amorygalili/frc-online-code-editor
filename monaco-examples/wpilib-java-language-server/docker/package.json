@@ -1,0 +1,14 @@
+{
+  "name": "eclipse-jdt-ls-server",
+  "version": "1.0.0",
+  "description": "Eclipse JDT Language Server with WebSocket support",
+  "main": "server.js",
+  "type": "module",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.14.2"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

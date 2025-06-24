@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Server Test</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>File Server API Test</h1>
+    
+    <div class="section">
+        <h2>Health Check</h2>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>List Files</h2>
+        <button onclick="listFiles()">List Workspace Files</button>
+        <div id="files-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Get File Content</h2>
+        <input type="text" id="file-path" placeholder="Enter file path (e.g., hello.java)" value="hello.java">
+        <button onclick="getFileContent()">Get File Content</button>
+        <div id="content-result"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Save File Content</h2>
+        <input type="text" id="save-path" placeholder="Enter file path" value="test.java">
+        <br><br>
+        <textarea id="save-content" rows="10" cols="80" placeholder="Enter file content">public class Test {
+    public static void main(String[] args) {
+        System.out.println("Hello from test file!");
+    }
+}</textarea>
+        <br>
+        <button onclick="saveFileContent()">Save File</button>
+        <div id="save-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:30003';
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✓ Health check passed</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Health check failed: ${error.message}</div>`;
+            }
+        }
+
+        async function listFiles() {
+            const resultDiv = document.getElementById('files-result');
+            try {
+                const response = await fetch(`${API_BASE}/files`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✓ Files listed successfully</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Failed to list files: ${error.message}</div>`;
+            }
+        }
+
+        async function getFileContent() {
+            const filePath = document.getElementById('file-path').value;
+            const resultDiv = document.getElementById('content-result');
+            
+            if (!filePath) {
+                resultDiv.innerHTML = '<div class="error">Please enter a file path</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/files/${filePath}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✓ File content retrieved</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">✗ Failed to get file: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Failed to get file content: ${error.message}</div>`;
+            }
+        }
+
+        async function saveFileContent() {
+            const filePath = document.getElementById('save-path').value;
+            const content = document.getElementById('save-content').value;
+            const resultDiv = document.getElementById('save-result');
+            
+            if (!filePath || !content) {
+                resultDiv.innerHTML = '<div class="error">Please enter both file path and content</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/files/${filePath}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✓ File saved successfully</div><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">✗ Failed to save file: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Failed to save file: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
