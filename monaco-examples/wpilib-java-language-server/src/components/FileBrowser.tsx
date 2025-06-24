@@ -4,6 +4,20 @@
  * ------------------------------------------------------------------------------------------ */
 
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  CircularProgress,
+  Alert,
+  Toolbar
+} from '@mui/material';
+import { Close, InsertDriveFile } from '@mui/icons-material';
 import * as vscode from "vscode";
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { FileService, type FileInfo } from '../fileService';
@@ -78,31 +92,50 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ editorWrapper, onClose
   };
 
   return (
-    <div className="file-browser">
-      <div className="file-browser-header">
-        <h4>Workspace Files:</h4>
-        <button onClick={onClose} className="close-button">×</button>
-      </div>
-      
-      <div className="file-browser-content">
-        {loading && <div className="loading">Loading files...</div>}
-        
-        {error && <div className="error">{error}</div>}
-        
-        {!loading && !error && files.length > 0 && (
-          <ul className="file-list">
-            {files.map((file, index) => (
-              <li 
-                key={index}
-                className="file-item"
-                onClick={() => handleFileClick(file)}
-              >
-                {file.path}
-              </li>
-            ))}
-          </ul>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          Workspace Files
+        </Typography>
+        <IconButton onClick={onClose} size="small">
+          <Close />
+        </IconButton>
+      </Toolbar>
+
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
         )}
-      </div>
-    </div>
+
+        {error && (
+          <Alert severity="error" sx={{ m: 1 }}>
+            {error}
+          </Alert>
+        )}
+
+        {!loading && !error && files.length > 0 && (
+          <List dense>
+            {files.map((file, index) => (
+              <ListItem key={index} disablePadding>
+                <ListItemButton onClick={() => handleFileClick(file)}>
+                  <ListItemIcon>
+                    <InsertDriveFile fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={file.path}
+                    primaryTypographyProps={{
+                      variant: 'body2',
+                      sx: { fontFamily: 'monospace' }
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+    </Box>
   );
 };

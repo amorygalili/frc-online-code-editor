@@ -4,6 +4,18 @@
  * ------------------------------------------------------------------------------------------ */
 
 import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
+  IconButton,
+  TextField,
+  Button,
+  Alert,
+  Toolbar,
+  Stack,
+  CircularProgress
+} from '@mui/material';
+import { Close, Add } from '@mui/icons-material';
 import { FileService, type ProjectGenerationOptions, type ProjectGenerationResult } from '../fileService';
 
 interface ProjectGeneratorProps {
@@ -96,79 +108,85 @@ export const ProjectGenerator: React.FC<ProjectGeneratorProps> = ({ onClose }) =
   };
 
   return (
-    <div className="project-generator">
-      <div className="project-generator-header">
-        <h4>Generate New Robot Project:</h4>
-        <button onClick={onClose} className="close-button">×</button>
-      </div>
-      
-      <div className="project-generator-content">
-        <form onSubmit={handleSubmit} className="generation-form">
-          <div className="form-group">
-            <label htmlFor="name">Project Name:</label>
-            <input
-              type="text"
-              id="name"
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          Generate Robot Project
+        </Typography>
+        <IconButton onClick={onClose} size="small">
+          <Close />
+        </IconButton>
+      </Toolbar>
+
+      <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+        <Box component="form" onSubmit={handleSubmit}>
+          <Stack spacing={2}>
+            <TextField
+              label="Project Name"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
               required
               placeholder="MyRobotProject"
               disabled={isGenerating}
+              fullWidth
+              size="small"
             />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="teamNumber">Team Number:</label>
-            <input
-              type="number"
-              id="teamNumber"
+
+            <TextField
+              label="Team Number"
               name="teamNumber"
+              type="number"
               value={formData.teamNumber || ''}
               onChange={handleInputChange}
               placeholder="0"
               disabled={isGenerating}
+              fullWidth
+              size="small"
             />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="packageName">Package Name:</label>
-            <input
-              type="text"
-              id="packageName"
+
+            <TextField
+              label="Package Name"
               name="packageName"
               value={formData.packageName}
               onChange={handleInputChange}
               placeholder="frc.robot"
               disabled={isGenerating}
+              fullWidth
+              size="small"
             />
-          </div>
-          
-          <div className="form-actions">
-            <button 
-              type="submit" 
-              disabled={isGenerating || !formData.name.trim()}
-              className="generate-button"
-            >
-              {isGenerating ? 'Generating...' : 'Generate Project'}
-            </button>
-            <button 
-              type="button" 
-              onClick={handleCancel}
-              disabled={isGenerating}
-              className="cancel-button"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-        
+
+            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={isGenerating ? <CircularProgress size={16} /> : <Add />}
+                disabled={isGenerating || !formData.name.trim()}
+                fullWidth
+              >
+                {isGenerating ? 'Generating...' : 'Generate Project'}
+              </Button>
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={handleCancel}
+                disabled={isGenerating}
+              >
+                Cancel
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+
         {status && (
-          <div className={`status-message ${status.type}`}>
+          <Alert
+            severity={status.type === 'error' ? 'error' : status.type === 'success' ? 'success' : 'info'}
+            sx={{ mt: 2 }}
+          >
             {status.message}
-          </div>
+          </Alert>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };

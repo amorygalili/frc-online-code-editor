@@ -4,6 +4,20 @@
  * ------------------------------------------------------------------------------------------ */
 
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  CircularProgress,
+  Alert,
+  Toolbar,
+  Chip
+} from '@mui/material';
+import { Close, AccountTree } from '@mui/icons-material';
 import { FileService, type WPILibProject } from '../fileService';
 
 interface ProjectBrowserProps {
@@ -56,36 +70,69 @@ export const ProjectBrowser: React.FC<ProjectBrowserProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="project-browser">
-      <div className="project-browser-header">
-        <h4>WPILib Robot Projects:</h4>
-        <button onClick={onClose} className="close-button">×</button>
-      </div>
-      
-      <div className="project-browser-content">
-        {loading && <div className="loading">Loading projects...</div>}
-        
-        {error && <div className="error">{error}</div>}
-        
-        {!loading && !error && projects.length > 0 && (
-          <ul className="project-list">
-            {projects.map((project, index) => (
-              <li 
-                key={index}
-                className="project-item"
-                onClick={() => handleProjectClick(project)}
-              >
-                <div className="project-name">
-                  <strong>{project.name}</strong>
-                </div>
-                <div className="project-details">
-                  Team: {project.teamNumber}, Year: {project.projectYear}
-                </div>
-              </li>
-            ))}
-          </ul>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Toolbar variant="dense" sx={{ minHeight: 48 }}>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          WPILib Projects
+        </Typography>
+        <IconButton onClick={onClose} size="small">
+          <Close />
+        </IconButton>
+      </Toolbar>
+
+      <Box sx={{ flex: 1, overflow: 'auto' }}>
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+            <CircularProgress size={24} />
+          </Box>
         )}
-      </div>
-    </div>
+
+        {error && (
+          <Alert severity="error" sx={{ m: 1 }}>
+            {error}
+          </Alert>
+        )}
+
+        {!loading && !error && projects.length > 0 && (
+          <List dense>
+            {projects.map((project, index) => (
+              <ListItem key={index} disablePadding>
+                <ListItemButton onClick={() => handleProjectClick(project)}>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AccountTree fontSize="small" />
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          {project.name}
+                        </Typography>
+                      </Box>
+                    }
+                    secondary={
+                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                        <Chip
+                          label={`Team ${project.teamNumber}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={project.projectYear}
+                          size="small"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={project.language}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Box>
+                    }
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+    </Box>
   );
 };

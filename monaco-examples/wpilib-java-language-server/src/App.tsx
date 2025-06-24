@@ -4,12 +4,45 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { useState, useCallback } from 'react';
+import {
+  ThemeProvider,
+  createTheme,
+  CssBaseline,
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  Drawer,
+  Alert
+} from '@mui/material';
+import {
+  PlayArrow,
+  Stop,
+  FolderOpen,
+  AccountTree,
+  Add
+} from '@mui/icons-material';
 import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { WPILibEditorWrapper } from './components/WPILibEditorWrapper.tsx';
 import { FileBrowser } from './components/FileBrowser.tsx';
 import { ProjectBrowser } from './components/ProjectBrowser.tsx';
 import { ProjectGenerator } from './components/ProjectGenerator.tsx';
 import './App.css';
+
+const theme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
+
+const DRAWER_WIDTH = 320;
 
 function App() {
   const [isEditorStarted, setIsEditorStarted] = useState(false);
@@ -46,74 +79,133 @@ function App() {
     }
   }, [editorWrapper]);
 
+  const closeSidebars = () => {
+    setShowFileBrowser(false);
+    setShowProjectBrowser(false);
+    setShowProjectGenerator(false);
+  };
+
   return (
-    <div className="wpilib-editor-app">
-      <div className="header">
-        <h1 className="title">WPILib Java Language Client & Language Server</h1>
-        <div className="controls">
-          <button
-            type="button"
-            onClick={handleStart}
-            disabled={!editorWrapper || isEditorStarted}
-          >
-            Start
-          </button>
-          <button
-            type="button"
-            onClick={handleDispose}
-            disabled={!editorWrapper || !isEditorStarted}
-          >
-            Dispose
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowFileBrowser(!showFileBrowser)}
-          >
-            Browse Files
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowProjectBrowser(!showProjectBrowser)}
-          >
-            WPILib Projects
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowProjectGenerator(!showProjectGenerator)}
-          >
-            Generate Robot Project
-          </button>
-        </div>
-        <div className="info">
-          Launch backend with: <strong><code>docker compose up -d</code></strong>
-        </div>
-      </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <AppBar position="static" elevation={1}>
+          <Toolbar>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              WPILib Java Language Client & Language Server
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                color="inherit"
+                startIcon={<PlayArrow />}
+                onClick={handleStart}
+                disabled={!editorWrapper || isEditorStarted}
+                variant="outlined"
+                size="small"
+              >
+                Start
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<Stop />}
+                onClick={handleDispose}
+                disabled={!editorWrapper || !isEditorStarted}
+                variant="outlined"
+                size="small"
+              >
+                Stop
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<FolderOpen />}
+                onClick={() => {
+                  closeSidebars();
+                  setShowFileBrowser(!showFileBrowser);
+                }}
+                variant={showFileBrowser ? "contained" : "outlined"}
+                size="small"
+              >
+                Files
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<AccountTree />}
+                onClick={() => {
+                  closeSidebars();
+                  setShowProjectBrowser(!showProjectBrowser);
+                }}
+                variant={showProjectBrowser ? "contained" : "outlined"}
+                size="small"
+              >
+                Projects
+              </Button>
+              <Button
+                color="inherit"
+                startIcon={<Add />}
+                onClick={() => {
+                  closeSidebars();
+                  setShowProjectGenerator(!showProjectGenerator);
+                }}
+                variant={showProjectGenerator ? "contained" : "outlined"}
+                size="small"
+              >
+                Generate
+              </Button>
+            </Box>
+          </Toolbar>
+        </AppBar>
 
-      <div className="content">
-        <div className="sidebar">
-          {showFileBrowser && (
-            <FileBrowser
-              editorWrapper={editorWrapper}
-              onClose={() => setShowFileBrowser(false)}
-            />
-          )}
-          {showProjectBrowser && (
-            <ProjectBrowser
-              onClose={() => setShowProjectBrowser(false)}
-            />
-          )}
-          {showProjectGenerator && (
-            <ProjectGenerator
-              onClose={() => setShowProjectGenerator(false)}
-            />
-          )}
-        </div>
+        <Alert severity="info" sx={{ borderRadius: 0 }}>
+          Launch backend with: <strong>docker compose up -d</strong>
+        </Alert>
 
-        <div className="editor-container">
-          <WPILibEditorWrapper onLoad={handleEditorLoad} />
-        </div>
-      </div>
-    </div>
+        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <Drawer
+            variant="persistent"
+            anchor="left"
+            open={showFileBrowser || showProjectBrowser || showProjectGenerator}
+            sx={{
+              width: DRAWER_WIDTH,
+              flexShrink: 0,
+              '& .MuiDrawer-paper': {
+                width: DRAWER_WIDTH,
+                boxSizing: 'border-box',
+                position: 'relative',
+              },
+            }}
+          >
+            {showFileBrowser && (
+              <FileBrowser
+                editorWrapper={editorWrapper}
+                onClose={() => setShowFileBrowser(false)}
+              />
+            )}
+            {showProjectBrowser && (
+              <ProjectBrowser
+                onClose={() => setShowProjectBrowser(false)}
+              />
+            )}
+            {showProjectGenerator && (
+              <ProjectGenerator
+                onClose={() => setShowProjectGenerator(false)}
+              />
+            )}
+          </Drawer>
+
+          <Box
+            component="main"
+            sx={{
+              flexGrow: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            <WPILibEditorWrapper onLoad={handleEditorLoad} />
+          </Box>
+        </Box>
+      </Box>
+    </ThemeProvider>
   );
 }
 
