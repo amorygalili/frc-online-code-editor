@@ -11,5 +11,11 @@
 }
 
 
+.monaco-workbench-part {
+  display: none;
+}
 
 
+#wpilib-code-editor {
+  position: relative;
+}

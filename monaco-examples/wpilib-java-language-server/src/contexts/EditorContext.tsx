@@ -30,12 +30,12 @@ export interface EditorContextType {
   activeFileIndex: number;
 
   // File operations
-  openFile: (filePath: string) => Promise<void>;
-  closeFile: (filePath: string) => void;
-  setActiveFile: (filePath: string) => void;
+  openFile: (uri: vscode.Uri) => Promise<void>;
+  closeFile: (uri: vscode.Uri) => void;
+  setActiveFile: (uri: vscode.Uri) => void;
 
   // Utility functions
-  isFileOpen: (filePath: string) => boolean;
+  isFileOpen: (uri: vscode.Uri) => boolean;
   getActiveFile: () => OpenFile | null;
 }
 
@@ -51,13 +51,21 @@ export const useEditor = (): EditorContextType => {
   return context;
 };
 
-// Utility function to create OpenFile from file path
-const createOpenFile = (filePath: string): OpenFile => {
-  const fileName = filePath.split("/").pop() || filePath;
-  const uri = vscode.Uri.file(`${eclipseJdtLsConfig.basePath}/${filePath}`);
+// Utility function to create OpenFile from URI
+const createOpenFile = (uri: vscode.Uri): OpenFile => {
+  const fileName = uri.path.split("/").pop() || uri.path;
+  // Extract relative path from the URI by removing the base path
+  const basePath = eclipseJdtLsConfig.basePath;
+  let relativePath = uri.path;
+  if (uri.path.startsWith(basePath)) {
+    relativePath = uri.path.substring(basePath.length);
+    if (relativePath.startsWith("/")) {
+      relativePath = relativePath.substring(1);
+    }
+  }
 
   return {
-    path: filePath,
+    path: relativePath,
     name: fileName,
     uri: uri,
   };
@@ -74,12 +82,12 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({ children }) => {
 
   // Open a file and add it to tabs
   const openFile = useCallback(
-    async (filePath: string): Promise<void> => {
+    async (uri: vscode.Uri): Promise<void> => {
       try {
         // Check if file is already open
-        const existingIndex = openFiles.findIndex((f) => f.path === filePath);
+        const existingIndex = openFiles.findIndex((f) => f.uri.toString() === uri.toString());
 
-        const file = existingIndex >= 0 ? openFiles[existingIndex] : createOpenFile(filePath);
+        const file = existingIndex >= 0 ? openFiles[existingIndex] : createOpenFile(uri);
 
         console.log("OPEN FILE:", file);
 
@@ -104,9 +112,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({ children }) => {
         });
 
 
-        console.log(`Opened file in tab: ${filePath}`);
+        console.log(`Opened file in tab: ${uri.toString()}`);
       } catch (error) {
-        console.error(`Failed to open file ${filePath}:`, error);
+        console.error(`Failed to open file ${uri.toString()}:`, error);
       }
     },
     [openFiles]
@@ -114,11 +122,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({ children }) => {
 
   // Close a file
   const closeFile = useCallback(
-    (filePath: string) => {
-      const fileIndex = openFiles.findIndex((f) => f.path === filePath);
+    (uri: vscode.Uri) => {
+      const fileIndex = openFiles.findIndex((f) => f.uri.toString() === uri.toString());
       if (fileIndex === -1) return;
 
-      const newOpenFiles = openFiles.filter((f) => f.path !== filePath);
+      const newOpenFiles = openFiles.filter((f) => f.uri.toString() !== uri.toString());
       setOpenFiles(newOpenFiles);
 
       // Adjust active file index
@@ -136,18 +144,18 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({ children }) => {
       }
       // If closing a file after the active one, no change needed
 
-      console.log(`Closed file: ${filePath}`);
+      console.log(`Closed file: ${uri.toString()}`);
     },
     [openFiles, activeFileIndex]
   );
 
-  // Set active file by path
+  // Set active file by URI
   const setActiveFile = useCallback(
-    async (filePath: string) => {
-      const fileIndex = openFiles.findIndex((f) => f.path === filePath);
+    async (uri: vscode.Uri) => {
+      const fileIndex = openFiles.findIndex((f) => f.uri.toString() === uri.toString());
       if (fileIndex === -1) {
         // File not open, open it first
-        await openFile(filePath);
+        await openFile(uri);
         return;
       }
 
@@ -163,7 +171,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({ children }) => {
 
         setActiveFileIndex(fileIndex);
       } catch (error) {
-        console.error(`Failed to set active file ${filePath}:`, error);
+        console.error(`Failed to set active file ${uri.toString()}:`, error);
       }
     },
     [openFiles, openFile]
@@ -171,8 +179,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({ children }) => {
 
   // Check if a file is open
   const isFileOpen = useCallback(
-    (filePath: string): boolean => {
-      return openFiles.some((f) => f.path === filePath);
+    (uri: vscode.Uri): boolean => {
+      return openFiles.some((f) => f.uri.toString() === uri.toString());
     },
     [openFiles]
   );

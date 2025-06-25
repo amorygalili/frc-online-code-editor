@@ -14,10 +14,11 @@ import {
   Box,
   Drawer,
 } from "@mui/material";
+import * as vscode from "vscode";
 import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
 import { FileBrowser } from "./components/FileBrowser.tsx";
-import { EditorTabs } from "./components/EditorTabs.tsx";
 import { EditorProvider, useEditor } from "./contexts/EditorContext";
+import { eclipseJdtLsConfig } from "./config";
 import "./App.css";
 
 const theme = createTheme({
@@ -40,7 +41,9 @@ function AppContent() {
 
   const handleFileOpen = useCallback(
     async (filePath: string) => {
-      await openFile(filePath);
+      // Convert file path to URI
+      const uri = vscode.Uri.file(`${eclipseJdtLsConfig.basePath}/${filePath}`);
+      await openFile(uri);
     },
     [openFile]
   );
@@ -49,7 +52,7 @@ function AppContent() {
     (index: number) => {
       if (index >= 0 && index < openFiles.length) {
         const fileToClose = openFiles[index];
-        closeFile(fileToClose.path);
+        closeFile(fileToClose.uri);
       }
     },
     [openFiles, closeFile]
@@ -59,7 +62,7 @@ function AppContent() {
     (index: number) => {
       if (index >= 0 && index < openFiles.length) {
         const fileToSwitch = openFiles[index];
-        setActiveFile(fileToSwitch.path);
+        setActiveFile(fileToSwitch.uri);
       }
     },
     [openFiles, setActiveFile]
@@ -104,10 +107,6 @@ function AppContent() {
               overflow: "hidden",
             }}
           >
-            <EditorTabs
-              onFileClose={handleFileClose}
-              onFileSwitch={handleFileSwitch}
-            />
             <WPILibEditorWrapper />
           </Box>
         </Box>
