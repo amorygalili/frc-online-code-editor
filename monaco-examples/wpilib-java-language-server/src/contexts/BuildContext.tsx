@@ -44,6 +44,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
   const [buildStatus, setBuildStatus] = useState<BuildStatus>('idle');
   const [buildOutput, setBuildOutput] = useState<BuildOutputMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [currentOperationType, setCurrentOperationType] = useState<'build' | 'simulation' | null>(null);
 
   // WebSocket reference
   const wsRef = useRef<WebSocket | null>(null);
@@ -140,54 +141,56 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
   const handleWebSocketMessage = useCallback((message: any) => {
     console.log('Received WebSocket message:', {message, currentBuildId});
 
-    // Check if this is a build output message by looking for buildId
-    if (message.buildId) {
-      console.log('Message has buildId:', message.buildId);
+    // Check if this is a build or simulation output message by looking for buildId or simulationId
+    const messageId = message.buildId || message.simulationId;
+    if (messageId) {
+      console.log('Message has ID:', messageId, 'type:', message.buildId ? 'build' : 'simulation');
 
       // If we don't have a current build ID, but we're getting messages,
-      // it might be that the build started but we missed setting the ID
+      // it might be that the build/simulation started but we missed setting the ID
       if (!currentBuildId) {
-        console.log('No current buildId, but received message with buildId. Setting current buildId to:', message.buildId);
-        setCurrentBuildId(message.buildId);
+        console.log('No current buildId, but received message with ID. Setting current buildId to:', messageId);
+        setCurrentBuildId(messageId);
       }
 
-      // Process the message if it matches our current build or if we just set it
-      if (!currentBuildId || message.buildId === currentBuildId) {
-      console.log('Processing build output for current build:', currentBuildId);
+      // Process the message if it matches our current build/simulation or if we just set it
+      if (!currentBuildId || messageId === currentBuildId) {
+        console.log('Processing output for ID:', messageId);
 
-      // The server spreads the message object, so the final structure is:
-      // { buildId: '...', type: 'stdout'/'stderr'/'status'/'error', content: '...', ... }
-      const outputMessage: BuildOutputMessage = {
-        type: message.type || 'stdout',
-        content: message.content || '',
-        status: message.status,
-        exitCode: message.exitCode,
-        error: message.error,
-        timestamp: message.timestamp || new Date().toISOString()
-      };
+        // The server spreads the message object, so the final structure is:
+        // { buildId/simulationId: '...', type: 'stdout'/'stderr'/'status'/'error', content: '...', ... }
+        const outputMessage: BuildOutputMessage = {
+          type: message.type || 'stdout',
+          content: message.content || '',
+          status: message.status,
+          exitCode: message.exitCode,
+          error: message.error,
+          timestamp: message.timestamp || new Date().toISOString()
+        };
 
-      console.log('Adding output message:', outputMessage);
-      setBuildOutput(prev => [...prev, outputMessage]);
+        console.log('Adding output message:', outputMessage);
+        setBuildOutput(prev => [...prev, outputMessage]);
 
-      // Update build status if it's a status message
-      if (message.status) {
-        console.log('Updating build status to:', message.status);
-        setBuildStatus(message.status);
-        if (message.status === 'success' || message.status === 'failed' || message.status === 'error') {
-          console.log('Build completed, clearing currentBuildId');
-          setCurrentBuildId(null);
+        // Update status if it's a status message
+        if (message.status) {
+          console.log('Updating status to:', message.status);
+          setBuildStatus(message.status);
+          if (message.status === 'success' || message.status === 'failed' || message.status === 'error' || message.status === 'stopped') {
+            console.log('Process completed, clearing currentBuildId and operation type');
+            setCurrentBuildId(null);
+            setCurrentOperationType(null);
+          }
         }
-      }
       } else {
-        console.log('Ignoring message for different build:', message.buildId, 'current:', currentBuildId);
+        console.log('Ignoring message for different ID:', messageId, 'current:', currentBuildId);
       }
-    } else if (message.type === 'build_history') {
-      console.log('Received build history with', message.output?.length, 'messages');
+    } else if (message.type === 'build_history' || message.type === 'simulation_history') {
+      console.log('Received history with', message.output?.length, 'messages');
       if (message.output) {
         setBuildOutput(message.output);
       }
     } else {
-      console.log('Unknown message type or no buildId:', message);
+      console.log('Unknown message type or no ID:', message);
     }
   }, [currentBuildId]);
 
@@ -214,6 +217,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
         setCurrentBuildId(result.buildId);
         setBuildStatus('running');
         setBuildOutput([]); // Clear previous output
+        setCurrentOperationType('build');
 
         // Subscribe to build output
         subscribeToBuild(result.buildId);
@@ -246,6 +250,86 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
   }, [currentBuildId]);
 
   /**
+   * Start a simulation
+   */
+  const startSimulation = useCallback(async (projectName: string, simulationType: string = 'debug'): Promise<string | null> => {
+    try {
+      const response = await fetch(`http://localhost:30003/wpilib/simulate/${projectName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ simulationType }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.simulationId) {
+        setCurrentBuildId(result.simulationId);
+        setBuildStatus('running');
+        setBuildOutput([]); // Clear previous output
+        setCurrentOperationType('simulation');
+
+        // Subscribe to simulation output (with retry if WebSocket not ready)
+        const trySubscribe = () => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            subscribeToSimulation(result.simulationId);
+          } else {
+            console.log('WebSocket not ready, retrying subscription in 100ms');
+            setTimeout(trySubscribe, 100);
+          }
+        };
+        trySubscribe();
+
+        return result.simulationId;
+      } else {
+        throw new Error(result.error || 'Failed to start simulation');
+      }
+    } catch (error) {
+      console.error('Error starting simulation:', error);
+      setBuildStatus('error');
+      return null;
+    }
+  }, []);
+
+  /**
+   * Stop a simulation
+   */
+  const stopSimulation = useCallback(async (simulationId?: string): Promise<boolean> => {
+    const idToStop = simulationId || currentBuildId;
+    if (!idToStop) {
+      console.warn('No simulation ID provided to stop');
+      return false;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:30003/wpilib/simulate/${idToStop}/stop`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setBuildStatus('success');
+        return true;
+      } else {
+        throw new Error(result.error || 'Failed to stop simulation');
+      }
+    } catch (error) {
+      console.error('Error stopping simulation:', error);
+      return false;
+    }
+  }, [currentBuildId]);
+
+  /**
    * Clear build output
    */
   const clearOutput = useCallback(() => {
@@ -260,6 +344,18 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
       wsRef.current.send(JSON.stringify({
         type: 'subscribe',
         buildId
+      }));
+    }
+  }, []);
+
+  /**
+   * Subscribe to a specific simulation
+   */
+  const subscribeToSimulation = useCallback((simulationId: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'subscribe',
+        simulationId
       }));
     }
   }, []);
@@ -296,8 +392,11 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     currentBuildId,
     buildStatus,
     buildOutput,
+    currentOperationType,
     startBuild,
     stopBuild,
+    startSimulation,
+    stopSimulation,
     clearOutput,
     isConnected,
     connect,

@@ -20,6 +20,7 @@ import {
   Rocket as DeployIcon,
   Stop as StopIcon,
   MoreVert as MoreIcon,
+  PlayArrow as SimulateIcon,
 } from '@mui/icons-material';
 import { BuildControlsProps, BuildTask } from '../types/build';
 import { useBuild } from '../contexts/BuildContext';
@@ -37,15 +38,18 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
   const {
     currentBuildId,
     buildStatus,
+    currentOperationType,
     startBuild,
     stopBuild,
+    startSimulation,
+    stopSimulation,
     isConnected
   } = useBuild();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(anchorEl);
-  const isBuilding = buildStatus === 'running';
-  const canBuild = !disabled && isConnected && projectName && !isBuilding;
+  const isRunning = buildStatus === 'running';
+  const canBuild = !disabled && isConnected && projectName && !isRunning;
 
   const handleBuildTask = async (task: BuildTask) => {
     if (!projectName || !canBuild) return;
@@ -66,6 +70,29 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
         await stopBuild(currentBuildId);
       } catch (error) {
         console.error('Failed to stop build:', error);
+      }
+    }
+  };
+
+  const handleStartSimulation = async () => {
+    if (!projectName || !canBuild) return;
+
+    try {
+      const simulationId = await startSimulation(projectName, 'debug');
+      if (simulationId) {
+        console.log('Simulation started with ID:', simulationId);
+      }
+    } catch (error) {
+      console.error('Failed to start simulation:', error);
+    }
+  };
+
+  const handleStopSimulation = async () => {
+    if (currentBuildId) {
+      try {
+        await stopSimulation(currentBuildId);
+      } catch (error) {
+        console.error('Failed to stop simulation:', error);
       }
     }
   };
@@ -100,13 +127,13 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
   const getStatusText = () => {
     switch (buildStatus) {
       case 'running':
-        return 'Building...';
+        return currentOperationType === 'simulation' ? 'Simulating...' : 'Building...';
       case 'success':
-        return 'Build Successful';
+        return currentOperationType === 'simulation' ? 'Simulation Complete' : 'Build Successful';
       case 'failed':
-        return 'Build Failed';
+        return currentOperationType === 'simulation' ? 'Simulation Failed' : 'Build Failed';
       case 'error':
-        return 'Build Error';
+        return currentOperationType === 'simulation' ? 'Simulation Error' : 'Build Error';
       default:
         return 'Ready';
     }
@@ -126,7 +153,7 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
       <ButtonGroup variant="contained" disabled={!canBuild}>
         <Tooltip title="Build project">
           <Button
-            startIcon={isBuilding ? <CircularProgress size={16} /> : <BuildIcon />}
+            startIcon={isRunning ? <CircularProgress size={16} /> : <BuildIcon />}
             onClick={() => handleBuildTask('build')}
             disabled={!canBuild}
           >
@@ -154,14 +181,31 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
         </Tooltip>
       </ButtonGroup>
 
-      {/* Stop button (only shown when building) */}
-      {isBuilding && (
-        <Tooltip title="Stop build">
+      {/* Simulation button */}
+      <Tooltip title="Start robot simulation">
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<SimulateIcon />}
+          onClick={handleStartSimulation}
+          disabled={!canBuild}
+        >
+          Simulate
+        </Button>
+      </Tooltip>
+
+      {/* Stop button (only shown when building/simulating) */}
+      {isRunning && (
+        <Tooltip title="Stop build/simulation">
           <Button
             variant="outlined"
             color="error"
             startIcon={<StopIcon />}
-            onClick={handleStopBuild}
+            onClick={() => {
+              // Try to stop both build and simulation
+              handleStopBuild();
+              handleStopSimulation();
+            }}
           >
             Stop
           </Button>
@@ -173,7 +217,7 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
         label={getStatusText()}
         color={getStatusColor()}
         size="small"
-        icon={isBuilding ? <CircularProgress size={16} /> : undefined}
+        icon={isRunning ? <CircularProgress size={16} /> : undefined}
       />
 
       {/* Connection status */}

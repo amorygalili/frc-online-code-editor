@@ -18,6 +18,12 @@ export class WPILibUtils {
         this.buildClients = new Set();
         this.buildProcesses = new Map(); // buildId -> process info
         this.buildSubscriptions = new Map(); // buildId -> Set of WebSocket clients
+        this.builds = new Map(); // buildId -> build info
+
+        // Simulation management
+        this.simulationClients = new Set();
+        this.simulations = new Map(); // simulationId -> simulation info
+        this.simulationSubscriptions = new Map(); // simulationId -> Set of WebSocket clients
     }
 
     /**
@@ -521,6 +527,291 @@ export class WPILibUtils {
                 }
             } else {
                 console.log('Client WebSocket not open, readyState:', client.readyState);
+            }
+        }
+    }
+
+    /**
+     * Start robot simulation
+     * @param {string} projectPath - Path to the WPILib project
+     * @param {string} simulationType - Type of simulation ('debug', 'release', 'external-debug', 'external-release')
+     * @param {string} simulationId - Unique identifier for this simulation
+     * @returns {Promise<Object>} Simulation result
+     */
+    async startSimulation(projectPath, simulationType = 'debug', simulationId) {
+        console.log(`Starting simulation for project: ${projectPath}, type: ${simulationType}, id: ${simulationId}`);
+
+        // Map simulation types to Gradle tasks
+        const taskMap = {
+            'debug': 'simulateJavaDebug',
+            'release': 'simulateJavaRelease',
+            'external-debug': 'simulateExternalJavaDebug',
+            'external-release': 'simulateExternalJavaRelease',
+            'basic': 'simulateJava'
+        };
+
+        const gradleTask = taskMap[simulationType] || 'simulateJavaDebug';
+
+        try {
+            // Check if project exists and is a WPILib project
+            if (!await this.isWPILibProject(projectPath)) {
+                return {
+                    success: false,
+                    error: 'Not a valid WPILib project'
+                };
+            }
+
+            // Create simulation info object
+            const simulationInfo = {
+                id: simulationId,
+                projectPath,
+                simulationType,
+                gradleTask,
+                status: 'starting',
+                startTime: new Date().toISOString(),
+                output: [],
+                process: null
+            };
+
+            this.simulations.set(simulationId, simulationInfo);
+
+            // Start the simulation process
+            const simulationProcess = spawn('./gradlew', [gradleTask], {
+                cwd: projectPath,
+                stdio: ['pipe', 'pipe', 'pipe'],
+                env: {
+                    ...process.env,
+                    DISPLAY: ':1' // Use the virtual display for GUI
+                }
+            });
+
+            simulationInfo.process = simulationProcess;
+            simulationInfo.status = 'running';
+
+            // Handle simulation output
+            simulationProcess.stdout.on('data', (data) => {
+                const output = data.toString();
+                simulationInfo.output.push({ type: 'stdout', content: output, timestamp: new Date().toISOString() });
+                this.broadcastSimulationOutput(simulationId, { type: 'stdout', content: output, timestamp: new Date().toISOString() });
+            });
+
+            simulationProcess.stderr.on('data', (data) => {
+                const output = data.toString();
+                simulationInfo.output.push({ type: 'stderr', content: output, timestamp: new Date().toISOString() });
+                this.broadcastSimulationOutput(simulationId, { type: 'stderr', content: output, timestamp: new Date().toISOString() });
+            });
+
+            simulationProcess.on('close', (code) => {
+                simulationInfo.status = code === 0 ? 'stopped' : 'failed';
+                simulationInfo.exitCode = code;
+                simulationInfo.endTime = new Date().toISOString();
+
+                this.broadcastSimulationOutput(simulationId, {
+                    type: 'status',
+                    status: simulationInfo.status,
+                    exitCode: code,
+                    timestamp: new Date().toISOString()
+                });
+
+                console.log(`Simulation ${simulationId} ended with code ${code}`);
+            });
+
+            simulationProcess.on('error', (error) => {
+                simulationInfo.status = 'error';
+                simulationInfo.error = error.message;
+                simulationInfo.endTime = new Date().toISOString();
+
+                this.broadcastSimulationOutput(simulationId, {
+                    type: 'error',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                });
+
+                console.error(`Simulation ${simulationId} error:`, error);
+            });
+
+            return {
+                success: true,
+                simulationId,
+                message: 'Simulation started successfully'
+            };
+
+        } catch (error) {
+            console.error('Error starting simulation:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Stop robot simulation
+     * @param {string} simulationId - Simulation identifier
+     * @returns {Promise<Object>} Stop result
+     */
+    async stopSimulation(simulationId) {
+        console.log(`Stopping simulation: ${simulationId}`);
+
+        const simulationInfo = this.simulations.get(simulationId);
+        if (!simulationInfo) {
+            return {
+                success: false,
+                error: 'Simulation not found'
+            };
+        }
+
+        try {
+            if (simulationInfo.process && !simulationInfo.process.killed) {
+                simulationInfo.process.kill('SIGTERM');
+
+                // Force kill after 5 seconds if it doesn't stop gracefully
+                setTimeout(() => {
+                    if (simulationInfo.process && !simulationInfo.process.killed) {
+                        simulationInfo.process.kill('SIGKILL');
+                    }
+                }, 5000);
+            }
+
+            simulationInfo.status = 'stopped';
+            simulationInfo.endTime = new Date().toISOString();
+
+            this.broadcastSimulationOutput(simulationId, {
+                type: 'status',
+                status: 'stopped',
+                timestamp: new Date().toISOString()
+            });
+
+            return {
+                success: true,
+                message: 'Simulation stopped successfully'
+            };
+
+        } catch (error) {
+            console.error('Error stopping simulation:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Get simulation status
+     * @param {string} simulationId - Simulation identifier
+     * @returns {Object|null} Simulation information or null if not found
+     */
+    getSimulationStatus(simulationId) {
+        const simulation = this.simulations.get(simulationId);
+        if (!simulation) {
+            return null;
+        }
+
+        // Return simulation info without the process object (not serializable)
+        return {
+            id: simulation.id,
+            projectPath: simulation.projectPath,
+            simulationType: simulation.simulationType,
+            gradleTask: simulation.gradleTask,
+            status: simulation.status,
+            startTime: simulation.startTime,
+            endTime: simulation.endTime,
+            exitCode: simulation.exitCode,
+            error: simulation.error,
+            output: simulation.output
+        };
+    }
+
+    /**
+     * Broadcast simulation output to subscribed clients
+     * @param {string} simulationId - Simulation identifier
+     * @param {Object} message - Message to broadcast
+     */
+    broadcastSimulationOutput(simulationId, message) {
+        const clients = this.simulationSubscriptions.get(simulationId);
+        console.log(`Broadcasting simulation output to ${clients ? clients.size : 0} clients for simulation ${simulationId}:`, message);
+
+        if (!clients) {
+            console.log(`No clients subscribed to simulation ${simulationId}`);
+            return;
+        }
+
+        const broadcastMessage = JSON.stringify({
+            type: 'simulation_output',
+            simulationId,
+            ...message
+        });
+
+        console.log(`Sending simulation message to ${clients.size} clients:`, broadcastMessage);
+
+        for (const client of clients) {
+            if (client.readyState === client.OPEN) {
+                try {
+                    client.send(broadcastMessage);
+                    console.log('Simulation message sent successfully to client');
+                } catch (error) {
+                    console.error('Error sending simulation output to client:', error);
+                    this.removeSimulationClient(client);
+                }
+            } else {
+                console.log('Client connection not open, removing from simulation subscriptions');
+                this.removeSimulationClient(client);
+            }
+        }
+    }
+
+    /**
+     * Subscribe a client to simulation output
+     * @param {string} simulationId - Simulation identifier
+     * @param {WebSocket} client - WebSocket client
+     */
+    subscribeToSimulation(simulationId, client) {
+        if (!this.simulationSubscriptions.has(simulationId)) {
+            this.simulationSubscriptions.set(simulationId, new Set());
+        }
+
+        this.simulationSubscriptions.get(simulationId).add(client);
+        console.log(`Client subscribed to simulation ${simulationId}. Total subscribers: ${this.simulationSubscriptions.get(simulationId).size}`);
+
+        // Send existing output if simulation exists
+        const simulationInfo = this.simulations.get(simulationId);
+        if (simulationInfo && simulationInfo.output.length > 0) {
+            console.log(`Sending existing simulation output (${simulationInfo.output.length} messages) to new subscriber`);
+
+            try {
+                client.send(JSON.stringify({
+                    type: 'simulation_history',
+                    simulationId,
+                    output: simulationInfo.output
+                }));
+            } catch (error) {
+                console.error('Error sending simulation history to client:', error);
+            }
+        } else {
+            console.log(`No existing output for simulation ${simulationId}`);
+        }
+    }
+
+    /**
+     * Add a WebSocket client for simulation output streaming
+     * @param {WebSocket} ws - WebSocket client
+     */
+    addSimulationClient(ws) {
+        this.simulationClients.add(ws);
+    }
+
+    /**
+     * Remove a WebSocket client from simulation subscriptions
+     * @param {WebSocket} ws - WebSocket client
+     */
+    removeSimulationClient(ws) {
+        this.simulationClients.delete(ws);
+
+        // Remove from all simulation subscriptions
+        for (const [simulationId, clients] of this.simulationSubscriptions.entries()) {
+            clients.delete(ws);
+            if (clients.size === 0) {
+                this.simulationSubscriptions.delete(simulationId);
             }
         }
     }

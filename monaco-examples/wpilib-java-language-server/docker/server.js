@@ -247,11 +247,78 @@ app.get('/wpilib/build/:buildId/status', async (req, res) => {
     }
 });
 
+// Start simulation endpoint
+app.post('/wpilib/simulate/:projectName', express.json(), async (req, res) => {
+    try {
+        const { projectName } = req.params;
+        const { simulationType = 'debug' } = req.body;
+
+        const projectPath = path.join(workspacePath, projectName);
+
+        const isWPILibProject = await wpilibUtils.isWPILibProject(projectPath);
+        if (!isWPILibProject) {
+            return res.status(404).json({ error: 'WPILib project not found' });
+        }
+
+        // Start simulation process
+        const simulationId = Date.now().toString();
+        const result = await wpilibUtils.startSimulation(projectPath, simulationType, simulationId);
+
+        res.json({
+            simulationId,
+            projectName,
+            simulationType,
+            ...result
+        });
+    } catch (error) {
+        console.error('Error starting simulation:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: error.message
+        });
+    }
+});
+
+// Stop simulation endpoint
+app.post('/wpilib/simulate/:simulationId/stop', async (req, res) => {
+    try {
+        const { simulationId } = req.params;
+        const result = await wpilibUtils.stopSimulation(simulationId);
+        res.json(result);
+    } catch (error) {
+        console.error('Error stopping simulation:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: error.message
+        });
+    }
+});
+
+// Get simulation status endpoint
+app.get('/wpilib/simulate/:simulationId/status', async (req, res) => {
+    try {
+        const { simulationId } = req.params;
+        const status = wpilibUtils.getSimulationStatus(simulationId);
+
+        if (!status) {
+            return res.status(404).json({ error: 'Simulation not found' });
+        }
+
+        res.json(status);
+    } catch (error) {
+        console.error('Error getting simulation status:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: error.message
+        });
+    }
+});
+
 // Create single WebSocket server with path-based routing
 const wss = new WebSocketServer({
     server,
     verifyClient: (info) => {
-        // Accept connections for both /jdtls and /build paths
+        // Accept connections for /jdtls and /build paths (build handles both builds and simulations)
         const pathname = new URL(info.req.url, 'http://localhost').pathname;
         return pathname === '/jdtls' || pathname === '/build';
     }
@@ -266,7 +333,7 @@ wss.on('connection', (ws, req) => {
     if (pathname === '/jdtls') {
         handleJdtlsConnection(ws);
     } else if (pathname === '/build') {
-        handleBuildConnection(ws);
+        handleBuildConnection(ws); // This now handles both builds and simulations
     } else {
         console.log('Unknown WebSocket path:', pathname);
         ws.close();
@@ -373,33 +440,41 @@ function handleJdtlsConnection(ws) {
 }
 
 function handleBuildConnection(ws) {
-    console.log('Client connected to build WebSocket');
+    console.log('Client connected to build/simulation WebSocket');
 
-    // Store client connection for build output streaming
+    // Store client connection for both build and simulation output streaming
     wpilibUtils.addBuildClient(ws);
+    wpilibUtils.addSimulationClient(ws);
 
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data.toString());
-            console.log('Build WebSocket message:', message);
+            console.log('Build/Simulation WebSocket message:', message);
 
-            // Handle build commands if needed
-            if (message.type === 'subscribe' && message.buildId) {
-                wpilibUtils.subscribeToBuild(ws, message.buildId);
+            // Handle build and simulation commands
+            if (message.type === 'subscribe') {
+                if (message.buildId) {
+                    wpilibUtils.subscribeToBuild(ws, message.buildId);
+                }
+                if (message.simulationId) {
+                    wpilibUtils.subscribeToSimulation(message.simulationId, ws);
+                }
             }
         } catch (error) {
-            console.error('Error parsing build WebSocket message:', error);
+            console.error('Error parsing build/simulation WebSocket message:', error);
         }
     });
 
     ws.on('close', () => {
-        console.log('Client disconnected from build WebSocket');
+        console.log('Client disconnected from build/simulation WebSocket');
         wpilibUtils.removeBuildClient(ws);
+        wpilibUtils.removeSimulationClient(ws);
     });
 
     ws.on('error', (error) => {
-        console.error('Build WebSocket error:', error);
+        console.error('Build/Simulation WebSocket error:', error);
         wpilibUtils.removeBuildClient(ws);
+        wpilibUtils.removeSimulationClient(ws);
     });
 }
 
@@ -407,6 +482,6 @@ server.listen(port, () => {
     console.log(`Eclipse JDT Language Server running on port ${port}`);
     console.log(`WebSocket endpoints:`);
     console.log(`  - JDT LS: ws://localhost:${port}/jdtls`);
-    console.log(`  - Build: ws://localhost:${port}/build`);
+    console.log(`  - Build/Simulation: ws://localhost:${port}/build`);
     console.log(`Health check: http://localhost:${port}/health`);
 });

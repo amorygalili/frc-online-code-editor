@@ -57,7 +57,7 @@ export const BuildConsole: React.FC<BuildConsoleProps> = ({
   autoScroll = true,
   className
 }) => {
-  const { buildOutput, buildStatus, clearOutput, isConnected } = useBuild();
+  const { buildOutput, buildStatus, clearOutput, isConnected, currentOperationType } = useBuild();
   const outputRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = React.useState(true);
 
@@ -137,7 +137,7 @@ export const BuildConsole: React.FC<BuildConsoleProps> = ({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-            Build Console
+            {currentOperationType === 'simulation' ? 'Simulation Console' : 'Build Console'}
           </Typography>
           <Box
             sx={{

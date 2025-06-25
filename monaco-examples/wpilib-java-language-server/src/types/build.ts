@@ -104,17 +104,20 @@ export interface BuildContextType {
   currentBuildId: string | null;
   buildStatus: BuildStatus;
   buildOutput: BuildOutputMessage[];
-  
+  currentOperationType: 'build' | 'simulation' | null;
+
   // Build actions
   startBuild: (projectName: string, task: BuildTask) => Promise<string | null>;
   stopBuild: (buildId: string) => Promise<void>;
+  startSimulation: (projectName: string, simulationType?: string) => Promise<string | null>;
+  stopSimulation: (simulationId?: string) => Promise<boolean>;
   clearOutput: () => void;
-  
+
   // WebSocket connection
   isConnected: boolean;
   connect: () => void;
   disconnect: () => void;
-  
+
   // Build history
   subscribeToBuild: (buildId: string) => void;
   getBuildStatus: (buildId: string) => Promise<BuildStatusResponse | null>;
