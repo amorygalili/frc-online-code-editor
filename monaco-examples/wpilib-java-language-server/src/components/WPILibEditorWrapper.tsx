@@ -56,7 +56,7 @@ async function initEditor(
   try {
     const fileSystemProvider = new RegisteredFileSystemProvider(false);
     const workspaceFileUri = vscode.Uri.file(
-      `/home/jdtls/workspace.code-workspace`
+      `/home/frcuser/workspace.code-workspace`
     );
     fileSystemProvider.registerFile(
       new RegisteredMemoryFile(

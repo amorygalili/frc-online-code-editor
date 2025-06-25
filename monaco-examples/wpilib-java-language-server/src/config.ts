@@ -5,5 +5,5 @@
 export const eclipseJdtLsConfig = {
     port: 30003,
     path: '/jdtls',
-    basePath: '/home/jdtls/workspace'
+    basePath: '/home/frcuser/workspace'
 };

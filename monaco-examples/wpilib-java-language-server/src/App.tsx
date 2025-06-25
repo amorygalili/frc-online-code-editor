@@ -119,11 +119,11 @@ function AppContent() {
 // Main App component with context providers
 function App() {
   return (
-    <NT4Provider serverAddress="localhost">
+    // <NT4Provider serverAddress="localhost">
       <EditorProvider>
         <AppContent />
       </EditorProvider>
-    </NT4Provider>
+    // </NT4Provider>
   );
 }
 

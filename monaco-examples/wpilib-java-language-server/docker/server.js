@@ -227,9 +227,9 @@ wss.on('connection', (ws) => {
         '--add-modules=ALL-SYSTEM',
         '--add-opens', 'java.base/java.util=ALL-UNNAMED',
         '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-        '-jar', '/home/jdtls/eclipse-jdt-ls/plugins/org.eclipse.equinox.launcher_1.6.900.v20240613-2009.jar',
-        '-configuration', '/home/jdtls/eclipse-jdt-ls/config_linux',
-        '-data', '/home/jdtls/workspace'
+        '-jar', '/home/frcuser/eclipse-jdt-ls/plugins/org.eclipse.equinox.launcher_1.6.900.v20240613-2009.jar',
+        '-configuration', '/home/frcuser/eclipse-jdt-ls/config_linux',
+        '-data', '/home/frcuser/workspace'
     ], {
         stdio: ['pipe', 'pipe', 'pipe']
     });

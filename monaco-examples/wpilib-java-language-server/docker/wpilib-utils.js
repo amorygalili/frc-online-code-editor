@@ -9,10 +9,10 @@ const execAsync = promisify(exec);
  * WPILib utilities for managing robot projects and workspace
  */
 export class WPILibUtils {
-    constructor(workspaceDir = '/home/jdtls/workspace', wpilibHome = '/home/jdtls/wpilib/2025') {
+    constructor(workspaceDir = '/home/frcuser/workspace', wpilibHome = '/home/frcuser/wpilib/2025') {
         this.workspaceDir = workspaceDir;
         this.wpilibHome = wpilibHome;
-        this.scriptsDir = '/home/jdtls/scripts';
+        this.scriptsDir = '/home/frcuser/scripts';
     }
 
     /**
@@ -192,9 +192,9 @@ export class WPILibUtils {
             console.error('Error getting WPILib classpath:', error);
             // Return default WPILib classpath entries
             return [
-                '/home/jdtls/wpilib/2025/maven/edu/wpi/first/wpilibj/wpilibj-java/2025.3.1/wpilibj-java-2025.3.1.jar',
-                '/home/jdtls/wpilib/2025/maven/edu/wpi/first/wpiutil/wpiutil-java/2025.3.1/wpiutil-java-2025.3.1.jar',
-                '/home/jdtls/wpilib/2025/maven/edu/wpi/first/wpimath/wpimath-java/2025.3.1/wpimath-java-2025.3.1.jar'
+                '/home/frcuser/wpilib/2025/maven/edu/wpi/first/wpilibj/wpilibj-java/2025.3.1/wpilibj-java-2025.3.1.jar',
+                '/home/frcuser/wpilib/2025/maven/edu/wpi/first/wpiutil/wpiutil-java/2025.3.1/wpiutil-java-2025.3.1.jar',
+                '/home/frcuser/wpilib/2025/maven/edu/wpi/first/wpimath/wpimath-java/2025.3.1/wpimath-java-2025.3.1.jar'
             ];
         }
     }
