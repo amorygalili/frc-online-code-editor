@@ -21,7 +21,7 @@ import {
 
 export const NetworkTablesDemo: React.FC = () => {
   const connected = useNTConnection();
-  const client = useNt4Client();
+  const _client = useNt4Client();
   const keys = useNTKeys();
   
   // Example NetworkTables values

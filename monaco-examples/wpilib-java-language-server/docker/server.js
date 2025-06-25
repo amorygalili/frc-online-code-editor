@@ -206,15 +206,74 @@ app.get('/wpilib/projects/:projectName', async (req, res) => {
     }
 });
 
-// Create WebSocket server
-const wss = new WebSocketServer({ 
+// Build project endpoint
+app.post('/wpilib/build/:projectName', express.json(), async (req, res) => {
+    try {
+        const { projectName } = req.params;
+        const { task = 'build' } = req.body; // 'build', 'clean', 'deploy', etc.
+
+        const projectPath = path.join(workspacePath, projectName);
+
+        const isWPILibProject = await wpilibUtils.isWPILibProject(projectPath);
+        if (!isWPILibProject) {
+            return res.status(404).json({ error: 'WPILib project not found' });
+        }
+
+        // Start build process
+        const buildId = Date.now().toString();
+        const result = await wpilibUtils.buildProject(projectPath, task, buildId);
+
+        res.json({
+            buildId,
+            projectName,
+            task,
+            ...result
+        });
+    } catch (error) {
+        console.error('Error building project:', error);
+        res.status(500).json({ error: 'Internal server error', message: error.message });
+    }
+});
+
+// Get build status endpoint
+app.get('/wpilib/build/:buildId/status', async (req, res) => {
+    try {
+        const { buildId } = req.params;
+        const status = await wpilibUtils.getBuildStatus(buildId);
+        res.json(status);
+    } catch (error) {
+        console.error('Error getting build status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Create single WebSocket server with path-based routing
+const wss = new WebSocketServer({
     server,
-    path: '/jdtls'
+    verifyClient: (info) => {
+        // Accept connections for both /jdtls and /build paths
+        const pathname = new URL(info.req.url, 'http://localhost').pathname;
+        return pathname === '/jdtls' || pathname === '/build';
+    }
 });
 
 console.log('Starting Eclipse JDT Language Server...');
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+    const pathname = new URL(req.url, 'http://localhost').pathname;
+    console.log("PATHNAME:", pathname);
+
+    if (pathname === '/jdtls') {
+        handleJdtlsConnection(ws);
+    } else if (pathname === '/build') {
+        handleBuildConnection(ws);
+    } else {
+        console.log('Unknown WebSocket path:', pathname);
+        ws.close();
+    }
+});
+
+function handleJdtlsConnection(ws) {
     console.log('Client connected to JDT LS WebSocket');
 
     // Start Eclipse JDT LS process
@@ -311,10 +370,43 @@ wss.on('connection', (ws) => {
             jdtlsProcess.kill();
         }
     });
-});
+}
+
+function handleBuildConnection(ws) {
+    console.log('Client connected to build WebSocket');
+
+    // Store client connection for build output streaming
+    wpilibUtils.addBuildClient(ws);
+
+    ws.on('message', (data) => {
+        try {
+            const message = JSON.parse(data.toString());
+            console.log('Build WebSocket message:', message);
+
+            // Handle build commands if needed
+            if (message.type === 'subscribe' && message.buildId) {
+                wpilibUtils.subscribeToBuild(ws, message.buildId);
+            }
+        } catch (error) {
+            console.error('Error parsing build WebSocket message:', error);
+        }
+    });
+
+    ws.on('close', () => {
+        console.log('Client disconnected from build WebSocket');
+        wpilibUtils.removeBuildClient(ws);
+    });
+
+    ws.on('error', (error) => {
+        console.error('Build WebSocket error:', error);
+        wpilibUtils.removeBuildClient(ws);
+    });
+}
 
 server.listen(port, () => {
     console.log(`Eclipse JDT Language Server running on port ${port}`);
-    console.log(`WebSocket endpoint: ws://localhost:${port}/jdtls`);
+    console.log(`WebSocket endpoints:`);
+    console.log(`  - JDT LS: ws://localhost:${port}/jdtls`);
+    console.log(`  - Build: ws://localhost:${port}/build`);
     console.log(`Health check: http://localhost:${port}/health`);
 });

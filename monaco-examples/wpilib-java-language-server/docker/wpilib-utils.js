@@ -13,6 +13,11 @@ export class WPILibUtils {
         this.workspaceDir = workspaceDir;
         this.wpilibHome = wpilibHome;
         this.scriptsDir = '/home/frcuser/scripts';
+
+        // Build management
+        this.buildClients = new Set();
+        this.buildProcesses = new Map(); // buildId -> process info
+        this.buildSubscriptions = new Map(); // buildId -> Set of WebSocket clients
     }
 
     /**
@@ -308,6 +313,215 @@ export class WPILibUtils {
         } catch (error) {
             console.error('Error creating Eclipse project files:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Build a WPILib project
+     * @param {string} projectPath - Path to the project
+     * @param {string} task - Gradle task to run (build, clean, deploy, etc.)
+     * @param {string} buildId - Unique build identifier
+     * @returns {Promise<Object>} Build result
+     */
+    async buildProject(projectPath, task = 'build', buildId) {
+        try {
+            console.log(`Starting build for project at ${projectPath}, task: ${task}, buildId: ${buildId}`);
+
+            const gradlewPath = path.join(projectPath, './gradlew');
+            const gradlewExists = await this.fileExists(gradlewPath);
+
+            if (!gradlewExists) {
+                throw new Error('Gradle wrapper not found in project');
+            }
+
+            // Start build process
+            const buildProcess = spawn('./gradlew', [task, '--console=plain'], {
+                cwd: projectPath,
+                stdio: ['pipe', 'pipe', 'pipe']
+            });
+
+            const buildInfo = {
+                buildId,
+                projectPath,
+                task,
+                process: buildProcess,
+                status: 'running',
+                startTime: new Date().toISOString(),
+                output: []
+            };
+
+            this.buildProcesses.set(buildId, buildInfo);
+
+            // Handle build output
+            buildProcess.stdout.on('data', (data) => {
+                const output = data.toString();
+                buildInfo.output.push({ type: 'stdout', content: output, timestamp: new Date().toISOString() });
+                this.broadcastBuildOutput(buildId, { type: 'stdout', content: output, timestamp: new Date().toISOString() });
+            });
+
+            buildProcess.stderr.on('data', (data) => {
+                const output = data.toString();
+                buildInfo.output.push({ type: 'stderr', content: output, timestamp: new Date().toISOString() });
+                this.broadcastBuildOutput(buildId, { type: 'stderr', content: output, timestamp: new Date().toISOString() });
+            });
+
+            buildProcess.on('close', (code) => {
+                buildInfo.status = code === 0 ? 'success' : 'failed';
+                buildInfo.exitCode = code;
+                buildInfo.endTime = new Date().toISOString();
+
+                this.broadcastBuildOutput(buildId, {
+                    type: 'status',
+                    status: buildInfo.status,
+                    exitCode: code,
+                    timestamp: new Date().toISOString()
+                });
+
+                console.log(`Build ${buildId} completed with code ${code}`);
+            });
+
+            buildProcess.on('error', (error) => {
+                buildInfo.status = 'error';
+                buildInfo.error = error.message;
+                buildInfo.endTime = new Date().toISOString();
+
+                this.broadcastBuildOutput(buildId, {
+                    type: 'error',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                });
+
+                console.error(`Build ${buildId} error:`, error);
+            });
+
+            return {
+                success: true,
+                buildId,
+                status: 'started',
+                message: `Build started for task: ${task}`
+            };
+
+        } catch (error) {
+            console.error('Error starting build:', error);
+            return {
+                success: false,
+                error: error.message,
+                message: `Failed to start build: ${error.message}`
+            };
+        }
+    }
+
+    /**
+     * Get build status
+     * @param {string} buildId - Build identifier
+     * @returns {Promise<Object>} Build status
+     */
+    async getBuildStatus(buildId) {
+        const buildInfo = this.buildProcesses.get(buildId);
+        if (!buildInfo) {
+            return { error: 'Build not found' };
+        }
+
+        return {
+            buildId,
+            status: buildInfo.status,
+            task: buildInfo.task,
+            startTime: buildInfo.startTime,
+            endTime: buildInfo.endTime,
+            exitCode: buildInfo.exitCode,
+            error: buildInfo.error,
+            outputLines: buildInfo.output.length
+        };
+    }
+
+    /**
+     * Add a WebSocket client for build output streaming
+     * @param {WebSocket} ws - WebSocket client
+     */
+    addBuildClient(ws) {
+        this.buildClients.add(ws);
+    }
+
+    /**
+     * Remove a WebSocket client
+     * @param {WebSocket} ws - WebSocket client
+     */
+    removeBuildClient(ws) {
+        this.buildClients.delete(ws);
+
+        // Remove from all build subscriptions
+        for (const [buildId, clients] of this.buildSubscriptions.entries()) {
+            clients.delete(ws);
+            if (clients.size === 0) {
+                this.buildSubscriptions.delete(buildId);
+            }
+        }
+    }
+
+    /**
+     * Subscribe a client to a specific build
+     * @param {WebSocket} ws - WebSocket client
+     * @param {string} buildId - Build identifier
+     */
+    subscribeToBuild(ws, buildId) {
+        console.log(`Subscribing client to build ${buildId}`);
+
+        if (!this.buildSubscriptions.has(buildId)) {
+            this.buildSubscriptions.set(buildId, new Set());
+            console.log(`Created new subscription set for build ${buildId}`);
+        }
+        this.buildSubscriptions.get(buildId).add(ws);
+
+        console.log(`Client subscribed to build ${buildId}. Total subscribers: ${this.buildSubscriptions.get(buildId).size}`);
+
+        // Send existing output if build exists
+        const buildInfo = this.buildProcesses.get(buildId);
+        if (buildInfo && buildInfo.output.length > 0) {
+            console.log(`Sending ${buildInfo.output.length} existing output lines to client`);
+            ws.send(JSON.stringify({
+                type: 'build_history',
+                buildId,
+                output: buildInfo.output
+            }));
+        } else {
+            console.log(`No existing output for build ${buildId}`);
+        }
+    }
+
+    /**
+     * Broadcast build output to subscribed clients
+     * @param {string} buildId - Build identifier
+     * @param {Object} message - Message to broadcast
+     */
+    broadcastBuildOutput(buildId, message) {
+        const clients = this.buildSubscriptions.get(buildId);
+        console.log(`Broadcasting to ${clients ? clients.size : 0} clients for build ${buildId}:`, message);
+
+        if (!clients) {
+            console.log(`No clients subscribed to build ${buildId}`);
+            return;
+        }
+
+        const broadcastMessage = JSON.stringify({
+            type: 'build_output',
+            buildId,
+            ...message
+        });
+
+        console.log(`Sending message to ${clients.size} clients:`, broadcastMessage);
+
+        for (const client of clients) {
+            if (client.readyState === client.OPEN) {
+                try {
+                    client.send(broadcastMessage);
+                    console.log('Message sent successfully to client');
+                } catch (error) {
+                    console.error('Error sending build output to client:', error);
+                    this.removeBuildClient(client);
+                }
+            } else {
+                console.log('Client WebSocket not open, readyState:', client.readyState);
+            }
         }
     }
 }

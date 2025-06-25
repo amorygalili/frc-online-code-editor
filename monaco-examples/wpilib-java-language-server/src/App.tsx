@@ -17,7 +17,10 @@ import {
 import * as vscode from "vscode";
 import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
 import { FileBrowser } from "./components/FileBrowser.tsx";
+import { BuildConsole } from "./components/BuildConsole.tsx";
+import { BuildControls } from "./components/BuildControls.tsx";
 import { EditorProvider, useEditor } from "./contexts/EditorContext";
+import { BuildProvider } from "./contexts/BuildContext.tsx";
 import { NT4Provider } from "./nt4/useNetworktables";
 import { eclipseJdtLsConfig } from "./config";
 import "./App.css";
@@ -69,6 +72,9 @@ function AppContent() {
     [openFiles, setActiveFile]
   );
 
+  // TODO: Use these handlers in EditorTabs component
+  console.log('File handlers available:', { handleFileClose, handleFileSwitch });
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -78,6 +84,11 @@ function AppContent() {
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
               WPILib Java Language Client & Language Server
             </Typography>
+            <Box sx={{ ml: 2 }}>
+              <BuildControls
+                projectName="RobotProject" // TODO: Get from current project
+              />
+            </Box>
           </Toolbar>
         </AppBar>
 
@@ -108,7 +119,30 @@ function AppContent() {
               overflow: "hidden",
             }}
           >
-            <WPILibEditorWrapper />
+            {/* Editor area */}
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0, // Allow shrinking
+              }}
+            >
+              <WPILibEditorWrapper />
+            </Box>
+
+            {/* Build console area */}
+            <Box
+              sx={{
+                height: 300,
+                borderTop: 1,
+                borderColor: "divider",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <BuildConsole />
+            </Box>
           </Box>
         </Box>
       </Box>
@@ -119,11 +153,13 @@ function AppContent() {
 // Main App component with context providers
 function App() {
   return (
-    // <NT4Provider serverAddress="localhost">
+    <NT4Provider serverAddress="localhost">
       <EditorProvider>
-        <AppContent />
+        <BuildProvider>
+          <AppContent />
+        </BuildProvider>
       </EditorProvider>
-    // </NT4Provider>
+    </NT4Provider>
   );
 }
 

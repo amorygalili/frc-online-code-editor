@@ -20,7 +20,6 @@ import {
 import {
   InsertDriveFile,
   Folder,
-  FolderOpen,
   ExpandMore,
   ChevronRight
 } from '@mui/icons-material';

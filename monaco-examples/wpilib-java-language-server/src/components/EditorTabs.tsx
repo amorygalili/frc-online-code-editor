@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See LICENSE in the package root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import React, { useState, useCallback } from "react";
+import React, { useCallback } from "react";
 import { Box, Tabs, Tab, IconButton, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import * as vscode from "vscode";
