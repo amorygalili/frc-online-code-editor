@@ -9,8 +9,8 @@ set -e
 PROJECT_NAME="RobotProject"
 TEAM_NUMBER="0"
 PACKAGE_NAME="frc.robot"
-WORKSPACE_DIR="/home/jdtls/workspace"
-WPILIB_HOME="/home/jdtls/wpilib/2025"
+WORKSPACE_DIR="/home/frcuser/workspace"
+WPILIB_HOME="/home/frcuser/wpilib/2025"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -37,7 +37,7 @@ while [[ $# -gt 0 ]]; do
             echo "  -n, --name NAME        Project name (default: RobotProject)"
             echo "  -t, --team NUMBER      Team number (default: 0)"
             echo "  -p, --package PACKAGE  Java package name (default: frc.robot)"
-            echo "  -w, --workspace DIR    Workspace directory (default: /home/jdtls/workspace)"
+            echo "  -w, --workspace DIR    Workspace directory (default: /home/frcuser/workspace)"
             echo "  -h, --help            Show this help message"
             exit 0
             ;;

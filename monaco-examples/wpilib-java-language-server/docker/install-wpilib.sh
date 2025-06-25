@@ -5,7 +5,7 @@
 
 set -e
 
-HOME_DIR="/home/jdtls"
+HOME_DIR="/home/frcuser"
 WPILIB_VERSION="2025.3.2"
 WPILIB_DIR="${HOME_DIR}/wpilib/WPILib_Linux-${WPILIB_VERSION}"
 INSTALL_DIR="${HOME_DIR}/wpilib/2025"
@@ -45,7 +45,7 @@ cat > "${INSTALL_DIR}/setup_env.sh" << 'EOF'
 #!/bin/bash
 # WPILib Environment Setup
 
-export WPILIB_HOME="/home/jdtls/wpilib/2025"
+export WPILIB_HOME="/home/frcuser/wpilib/2025"
 export JAVA_HOME="/opt/java/openjdk"
 export PATH="${WPILIB_HOME}/tools:${JAVA_HOME}/bin:${PATH}"
 

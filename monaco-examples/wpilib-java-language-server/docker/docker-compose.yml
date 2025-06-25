@@ -6,8 +6,10 @@ services:
     container_name: eclipse-jdt-ls
     ports:
       - "30003:30003"
+      - "5901:5901"
+      - "6901:6901"
     volumes:
-      - ./workspace:/home/jdtls/workspace
+      - ./workspace:/home/frcuser/workspace
     environment:
       - JAVA_OPTS=-Xmx2g
     restart: unless-stopped
