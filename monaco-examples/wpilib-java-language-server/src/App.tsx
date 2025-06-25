@@ -18,6 +18,7 @@ import * as vscode from "vscode";
 import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
 import { FileBrowser } from "./components/FileBrowser.tsx";
 import { EditorProvider, useEditor } from "./contexts/EditorContext";
+import { NT4Provider } from "./nt4/useNetworktables";
 import { eclipseJdtLsConfig } from "./config";
 import "./App.css";
 
@@ -115,12 +116,14 @@ function AppContent() {
   );
 }
 
-// Main App component with context provider
+// Main App component with context providers
 function App() {
   return (
-    <EditorProvider>
-      <AppContent />
-    </EditorProvider>
+    <NT4Provider serverAddress="localhost">
+      <EditorProvider>
+        <AppContent />
+      </EditorProvider>
+    </NT4Provider>
   );
 }
 
