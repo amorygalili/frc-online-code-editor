@@ -79,12 +79,12 @@ function AppContent() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-        <AppBar position="static" elevation={1}>
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              WPILib Java Language Client & Language Server
+        <AppBar position="static" elevation={1} sx={{ minHeight: 48 }}>
+          <Toolbar variant="dense" sx={{ minHeight: 48, py: 0.5 }}>
+            <Typography variant="subtitle1" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
+              WPILib Java Language Server
             </Typography>
-            <Box sx={{ ml: 2 }}>
+            <Box sx={{ ml: 1 }}>
               <BuildControls
                 projectName="RobotProject" // TODO: Get from current project
               />

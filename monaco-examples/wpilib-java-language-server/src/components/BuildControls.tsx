@@ -145,17 +145,18 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: 2,
-        p: 1,
+        gap: 1, // Reduced from 2
+        p: 0, // Removed padding
       }}
     >
       {/* Main build buttons */}
-      <ButtonGroup variant="contained" disabled={!canBuild}>
+      <ButtonGroup variant="contained" size="small" disabled={!canBuild}>
         <Tooltip title="Build project">
           <Button
-            startIcon={isRunning ? <CircularProgress size={16} /> : <BuildIcon />}
+            startIcon={isRunning ? <CircularProgress size={14} /> : <BuildIcon fontSize="small" />}
             onClick={() => handleBuildTask('build')}
             disabled={!canBuild}
+            sx={{ px: 1.5 }}
           >
             Build
           </Button>
@@ -163,9 +164,10 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
 
         <Tooltip title="Clean project">
           <Button
-            startIcon={<CleanIcon />}
+            startIcon={<CleanIcon fontSize="small" />}
             onClick={() => handleBuildTask('clean')}
             disabled={!canBuild}
+            sx={{ px: 1.5 }}
           >
             Clean
           </Button>
@@ -175,8 +177,9 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
           <Button
             onClick={handleMenuOpen}
             disabled={!canBuild}
+            sx={{ px: 1 }}
           >
-            <MoreIcon />
+            <MoreIcon fontSize="small" />
           </Button>
         </Tooltip>
       </ButtonGroup>
@@ -186,9 +189,11 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
         <Button
           variant="outlined"
           color="secondary"
-          startIcon={<SimulateIcon />}
+          size="small"
+          startIcon={<SimulateIcon fontSize="small" />}
           onClick={handleStartSimulation}
           disabled={!canBuild}
+          sx={{ px: 1.5 }}
         >
           Simulate
         </Button>
@@ -200,12 +205,14 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
           <Button
             variant="outlined"
             color="error"
-            startIcon={<StopIcon />}
+            size="small"
+            startIcon={<StopIcon fontSize="small" />}
             onClick={() => {
               // Try to stop both build and simulation
               handleStopBuild();
               handleStopSimulation();
             }}
+            sx={{ px: 1.5 }}
           >
             Stop
           </Button>
