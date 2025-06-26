@@ -8,11 +8,14 @@ import {
 import {
   Build,
   NetworkCheck,
+  Memory,
 } from '@mui/icons-material';
 import { BuildConsole } from './BuildConsole';
 import { NetworkTablesViewer } from './NetworkTablesViewer';
+import { HalSimViewer } from './HalSimViewer';
 import { useBuild } from '../contexts/BuildContext';
 import { useNTConnection, useNTKeys } from '../nt4/useNetworktables';
+import { useHalSimData } from '../contexts/HalSimContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -46,17 +49,20 @@ function a11yProps(index: number) {
 
 export const OutputTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const { buildOutput, buildStatus } = useBuild();
+  const { buildStatus } = useBuild();
   const ntConnected = useNTConnection();
   const ntKeys = useNTKeys();
+  const { halSimData, connected: halSimConnected } = useHalSimData();
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
   // Count unread build messages (you could implement a more sophisticated system)
-  const buildMessageCount = buildOutput.length;
   const hasActiveBuild = buildStatus === 'running';
+
+  // Count HAL simulation devices
+  const halSimDeviceCount = Object.values(halSimData).reduce((sum, devices) => sum + Object.keys(devices).length, 0);
 
   return (
     <Box
@@ -73,11 +79,12 @@ export const OutputTabs: React.FC = () => {
           onChange={handleTabChange}
           aria-label="output tabs"
           sx={{
-            minHeight: 40,
+            minHeight: 32,
             '& .MuiTab-root': {
-              minHeight: 40,
+              minHeight: 32,
               textTransform: 'none',
-              fontSize: '0.875rem',
+              fontSize: '0.75rem',
+              padding: '4px 8px',
             },
           }}
         >
@@ -90,7 +97,7 @@ export const OutputTabs: React.FC = () => {
                 variant="dot"
                 invisible={!hasActiveBuild}
               >
-                Build Console
+                Console
               </Badge>
             }
             iconPosition="start"
@@ -102,14 +109,45 @@ export const OutputTabs: React.FC = () => {
               <Badge
                 badgeContent={ntKeys.length}
                 color="secondary"
-                max={999}
+                max={99}
                 invisible={!ntConnected || ntKeys.length === 0}
+                sx={{
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.6rem',
+                    height: 16,
+                    minWidth: 16,
+                    padding: '0 4px',
+                  }
+                }}
               >
                 NetworkTables
               </Badge>
             }
             iconPosition="start"
             {...a11yProps(1)}
+          />
+          <Tab
+            icon={<Memory fontSize="small" />}
+            label={
+              <Badge
+                badgeContent={halSimDeviceCount}
+                color="info"
+                max={99}
+                invisible={!halSimConnected || halSimDeviceCount === 0}
+                sx={{
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.6rem',
+                    height: 16,
+                    minWidth: 16,
+                    padding: '0 4px',
+                  }
+                }}
+              >
+                Simulation
+              </Badge>
+            }
+            iconPosition="start"
+            {...a11yProps(2)}
           />
         </Tabs>
       </Box>
@@ -121,6 +159,9 @@ export const OutputTabs: React.FC = () => {
         </TabPanel>
         <TabPanel value={activeTab} index={1}>
           <NetworkTablesViewer />
+        </TabPanel>
+        <TabPanel value={activeTab} index={2}>
+          <HalSimViewer />
         </TabPanel>
       </Box>
     </Box>

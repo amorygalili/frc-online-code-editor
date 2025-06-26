@@ -1,12 +1,42 @@
 import React, { createContext, useContext, useRef, useState, useEffect, ReactNode } from 'react';
-import { WPILibWebSocketClient, DriverStationPayload } from '@frc-web-components/node-wpilib-ws';
+import {
+  WPILibWebSocketClient,
+  DriverStationPayload,
+  AccelPayload,
+  AddressableLEDPayload,
+  AIPayload,
+  DIOPayload,
+  dPWMPayload,
+  DutyCyclePayload,
+  EncoderPayload,
+  GyroPayload,
+  JoystickPayload,
+  PWMPayload,
+  RelayPayload,
+  RoboRIOPayload,
+  SimDevicePayload
+} from '@frc-web-components/node-wpilib-ws';
 
 // Robot modes enum for better type safety
 export enum RobotMode {
   DISABLED = 'disabled',
-  AUTONOMOUS = 'autonomous', 
+  AUTONOMOUS = 'autonomous',
   TELEOP = 'teleop',
   TEST = 'test'
+}
+
+// HAL Simulation data structures
+export interface HalSimDeviceData {
+  type: string;
+  device: string;
+  data: any;
+  timestamp: number;
+}
+
+export interface HalSimDataMap {
+  [deviceType: string]: {
+    [deviceId: string]: HalSimDeviceData;
+  };
 }
 
 // Context types
@@ -14,6 +44,7 @@ interface HalSimContextType {
   client: WPILibWebSocketClient | null;
   connected: boolean;
   driverStationData: DriverStationPayload;
+  halSimData: HalSimDataMap;
   setRobotMode: (mode: RobotMode) => void;
   setRobotEnabled: (enabled: boolean) => void;
 }
@@ -46,6 +77,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
     '>match_time': 0,
     '>new_data': false
   });
+  const [halSimData, setHalSimData] = useState<HalSimDataMap>({});
 
   useEffect(() => {
 
@@ -93,6 +125,85 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
         ...prevData,
         ...payload
       }));
+    });
+
+    // Helper function to update HAL simulation data
+    const updateHalSimData = (type: string, device: string, data: any) => {
+      setHalSimData(prevData => ({
+        ...prevData,
+        [type]: {
+          ...prevData[type],
+          [device]: {
+            type,
+            device,
+            data,
+            timestamp: Date.now()
+          }
+        }
+      }));
+    };
+
+    // Listen for various HAL simulation events
+    client.on('analogInEvent', (channel: number, payload: AIPayload) => {
+      updateHalSimData('AI', channel.toString(), payload);
+    });
+
+    client.on('dioEvent', (channel: number, payload: DIOPayload) => {
+      updateHalSimData('DIO', channel.toString(), payload);
+    });
+
+    client.on('pwmEvent', (channel: number, payload: PWMPayload) => {
+      updateHalSimData('PWM', channel.toString(), payload);
+    });
+
+    client.on('encoderEvent', (channel: number, payload: EncoderPayload) => {
+      updateHalSimData('Encoder', channel.toString(), payload);
+    });
+
+    client.on('gyroEvent', (deviceName: string, deviceChannel: number | null, payload: GyroPayload) => {
+      const deviceId = deviceChannel !== null ? `${deviceName}[${deviceChannel}]` : deviceName;
+      updateHalSimData('Gyro', deviceId, payload);
+    });
+
+    client.on('accelEvent', (deviceName: string, deviceChannel: number | null, payload: AccelPayload) => {
+      const deviceId = deviceChannel !== null ? `${deviceName}[${deviceChannel}]` : deviceName;
+      updateHalSimData('Accel', deviceId, payload);
+    });
+
+    client.on('relayEvent', (channel: number, payload: RelayPayload) => {
+      updateHalSimData('Relay', channel.toString(), payload);
+    });
+
+    client.on('dpwmEvent', (channel: number, payload: dPWMPayload) => {
+      updateHalSimData('dPWM', channel.toString(), payload);
+    });
+
+    client.on('dutyCycleEvent', (channel: number, payload: DutyCyclePayload) => {
+      updateHalSimData('DutyCycle', channel.toString(), payload);
+    });
+
+    client.on('joystickEvent', (channel: number, payload: JoystickPayload) => {
+      updateHalSimData('Joystick', channel.toString(), payload);
+    });
+
+    client.on('roboRioEvent', (payload: RoboRIOPayload) => {
+      updateHalSimData('RoboRIO', 'main', payload);
+    });
+
+    client.on('addressableLEDEvent', (payload: AddressableLEDPayload) => {
+      updateHalSimData('AddressableLED', 'main', payload);
+    });
+
+    client.on('simDeviceEvent', (deviceName: string, deviceIndex: number | null, deviceChannel: number | null, payload: SimDevicePayload) => {
+      let deviceId = deviceName;
+      if (deviceIndex !== null) {
+        if (deviceChannel !== null) {
+          deviceId += `[${deviceIndex},${deviceChannel}]`;
+        } else {
+          deviceId += `[${deviceIndex}]`;
+        }
+      }
+      updateHalSimData('SimDevice', deviceId, payload);
     });
 
     // // Start the client
@@ -145,6 +256,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
     client: clientRef.current,
     connected,
     driverStationData,
+    halSimData,
     setRobotMode,
     setRobotEnabled,
   };
@@ -168,7 +280,7 @@ export const useHalSim = (): HalSimContextType => {
 // Custom hook specifically for driver station data
 export const useDriverStation = () => {
   const { driverStationData, setRobotMode, setRobotEnabled, connected } = useHalSim();
-  
+
   // Derive current robot mode from driver station data
   const getCurrentMode = (): RobotMode => {
     if (driverStationData['>test']) return RobotMode.TEST;
@@ -184,5 +296,18 @@ export const useDriverStation = () => {
     isConnected: connected,
     setRobotMode,
     setRobotEnabled
+  };
+};
+
+// Custom hook for HAL simulation data
+export const useHalSimData = () => {
+  const { halSimData, connected } = useHalSim();
+
+  return {
+    halSimData,
+    connected,
+    deviceTypes: Object.keys(halSimData),
+    getDeviceData: (type: string, device: string) => halSimData[type]?.[device],
+    getAllDevicesOfType: (type: string) => halSimData[type] || {}
   };
 };

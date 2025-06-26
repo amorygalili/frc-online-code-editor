@@ -7,7 +7,6 @@ import {
   TextField,
   InputAdornment,
   IconButton,
-  Tooltip,
   Table,
   TableBody,
   TableCell,
@@ -15,11 +14,9 @@ import {
   TableHead,
   TableRow,
   Switch,
-  FormControlLabel,
   List,
   ListItem,
   ListItemButton,
-  ListItemText,
   Collapse,
 } from '@mui/material';
 import {
@@ -27,7 +24,6 @@ import {
   ChevronRight,
   Search,
   Clear,
-  Refresh,
   TableChart,
   AccountTree,
 } from '@mui/icons-material';
@@ -127,7 +123,7 @@ export const NetworkTablesViewer: React.FC<NetworkTablesViewerProps> = ({
       let hasMatchingChild = false;
       const filteredChildren = new Map<string, TreeNode>();
       
-      for (const [childName, childNode] of node.children) {
+      for (const [, childNode] of node.children) {
         if (addNodeIfMatches(childNode, filteredChildren)) {
           hasMatchingChild = true;
         }
@@ -144,7 +140,7 @@ export const NetworkTablesViewer: React.FC<NetworkTablesViewerProps> = ({
       return false;
     };
     
-    for (const [name, node] of treeData) {
+    for (const [, node] of treeData) {
       addNodeIfMatches(node, filtered);
     }
     
@@ -279,43 +275,76 @@ export const NetworkTablesViewer: React.FC<NetworkTablesViewerProps> = ({
       {/* Header */}
       <Box
         sx={{
-          p: 1,
+          px: 1,
+          py: 0.25,
           borderBottom: 1,
           borderColor: 'divider',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'flex-end',
           gap: 1,
           backgroundColor: 'background.paper',
+          minHeight: 32,
         }}
       >
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          NetworkTables
-        </Typography>
-        
         <Chip
           label={connected ? 'Connected' : 'Disconnected'}
           color={connected ? 'success' : 'error'}
           size="small"
+          sx={{ height: 18, fontSize: '0.65rem' }}
         />
-        
-        <FormControlLabel
-          control={
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            <AccountTree
+              fontSize="small"
+              sx={{
+                color: viewMode === 'tree' ? 'primary.main' : 'text.secondary',
+                fontSize: '16px'
+              }}
+            />
             <Switch
               checked={viewMode === 'table'}
               onChange={(e) => setViewMode(e.target.checked ? 'table' : 'tree')}
               size="small"
+              sx={{
+                width: 32,
+                height: 16,
+                padding: 0,
+                '& .MuiSwitch-switchBase': {
+                  padding: 0,
+                  margin: '2px',
+                  '&.Mui-checked': {
+                    transform: 'translateX(16px)',
+                  }
+                },
+                '& .MuiSwitch-thumb': {
+                  width: 12,
+                  height: 12,
+                  backgroundColor: 'white',
+                },
+                '& .MuiSwitch-track': {
+                  borderRadius: 8,
+                  backgroundColor: 'rgba(255,255,255,0.3)',
+                  opacity: 1,
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  '.Mui-checked.Mui-checked + &': {
+                    backgroundColor: 'primary.main',
+                    opacity: 0.7,
+                  }
+                }
+              }}
             />
-          }
-          label={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              {viewMode === 'tree' ? <AccountTree fontSize="small" /> : <TableChart fontSize="small" />}
-              <Typography variant="body2">
-                {viewMode === 'tree' ? 'Tree' : 'Table'}
-              </Typography>
-            </Box>
-          }
-        />
-        
+            <TableChart
+              fontSize="small"
+              sx={{
+                color: viewMode === 'table' ? 'primary.main' : 'text.secondary',
+                fontSize: '16px'
+              }}
+            />
+          </Box>
+        </Box>
+
         <TextField
           size="small"
           placeholder="Search..."
@@ -335,7 +364,16 @@ export const NetworkTablesViewer: React.FC<NetworkTablesViewerProps> = ({
               </InputAdornment>
             ),
           }}
-          sx={{ width: 200 }}
+          sx={{
+            width: 140,
+            '& .MuiOutlinedInput-root': {
+              fontSize: '0.75rem',
+              height: 28,
+            },
+            '& .MuiInputBase-input': {
+              padding: '4px 8px',
+            }
+          }}
         />
       </Box>
 
