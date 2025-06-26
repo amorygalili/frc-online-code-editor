@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See LICENSE in the package root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import {
   ThemeProvider,
   createTheme,
@@ -23,6 +23,7 @@ import { BuildControls } from "./components/BuildControls.tsx";
 import { EditorProvider, useEditor } from "./contexts/EditorContext";
 import { BuildProvider } from "./contexts/BuildContext.tsx";
 import { NT4Provider } from "./nt4/useNetworktables";
+import { HalSimProvider } from "./contexts/HalSimContext";
 import { eclipseJdtLsConfig } from "./config";
 import "./App.css";
 
@@ -149,11 +150,13 @@ function AppContent() {
 function App() {
   return (
     <NT4Provider serverAddress="localhost">
-      <EditorProvider>
-        <BuildProvider>
-          <AppContent />
-        </BuildProvider>
-      </EditorProvider>
+      <HalSimProvider hostname="localhost" port={3300}>
+        <EditorProvider>
+          <BuildProvider>
+            <AppContent />
+          </BuildProvider>
+        </EditorProvider>
+      </HalSimProvider>
     </NT4Provider>
   );
 }

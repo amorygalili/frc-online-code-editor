@@ -3,16 +3,8 @@ import {
   Box,
   Typography,
   Paper,
-  Button,
-  Chip,
-  Grid,
 } from '@mui/material';
-import {
-  PlayArrow,
-  Stop,
-  Refresh,
-  Settings,
-} from '@mui/icons-material';
+import RobotModeSelector from './RobotModeSelector';
 
 export const SimulationVisualization: React.FC = () => {
   return (
@@ -41,60 +33,11 @@ export const SimulationVisualization: React.FC = () => {
         <Typography variant="h6" component="h2">
           Robot Simulation
         </Typography>
-        <Chip
-          label="Not Running"
-          color="default"
-          size="small"
-          variant="outlined"
-        />
       </Box>
 
-      {/* Control Buttons */}
+      {/* Robot Mode Selector */}
       <Box sx={{ mb: 2 }}>
-        <Grid container spacing={1}>
-          <Grid item>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<PlayArrow />}
-              size="small"
-              disabled // TODO: Implement simulation start
-            >
-              Start Sim
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              color="secondary"
-              startIcon={<Stop />}
-              size="small"
-              disabled // TODO: Implement simulation stop
-            >
-              Stop
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              startIcon={<Refresh />}
-              size="small"
-              disabled // TODO: Implement simulation reset
-            >
-              Reset
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="outlined"
-              startIcon={<Settings />}
-              size="small"
-              disabled // TODO: Implement simulation settings
-            >
-              Settings
-            </Button>
-          </Grid>
-        </Grid>
+        <RobotModeSelector />
       </Box>
 
       {/* Visualization Area - Placeholder */}
