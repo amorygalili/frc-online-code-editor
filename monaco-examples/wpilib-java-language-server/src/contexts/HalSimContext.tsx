@@ -53,16 +53,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
       return;
     }
 
-    // Create WPILib WebSocket client
-    // const client = new WPILibWebSocketClient({
-    //   hostname,
-    //   port,
-    //   uri: '', // Try connecting to root path first
-    //   connectOnCreate: false,
-    //   verbose: true // Enable verbose logging to debug connection issues
-    // });
     const client = new WPILibWebSocketClient();
-
 
     console.log("HAL Sim WebSocket client created");
 
@@ -104,15 +95,15 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
       }));
     });
 
-    // Start the client
+    // // Start the client
     client.start();
 
-    return () => {
-      if (clientRef.current) {
-        // Clean up the client connection
-        clientRef.current.removeAllListeners();
-      }
-    };
+    // return () => {
+    //   if (clientRef.current) {
+    //     // Clean up the client connection
+    //     clientRef.current.removeAllListeners();
+    //   }
+    // };
   }, [hostname, port]);
 
   const setRobotMode = (mode: RobotMode) => {
@@ -155,7 +146,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
     connected,
     driverStationData,
     setRobotMode,
-    setRobotEnabled
+    setRobotEnabled,
   };
 
   return (

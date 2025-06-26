@@ -15,7 +15,7 @@ export default class WPILibWebSocketClient extends WPILibWSInterface {
     private _uri: string = "/wpilibws";
     private _hostname: string = "localhost";
     private _port: number = 3300;
-    private _ws!: WebSocket;
+    private _ws!: ReconnectingWebSocket;
 
     constructor(config?: WPILibWSClientConfig) {
         super();
@@ -44,7 +44,7 @@ export default class WPILibWebSocketClient extends WPILibWSInterface {
         }
 
         const url = `ws://${this._hostname}:${this._port}${this._uri}`;
-        this._ws = new WebSocket(url);
+        this._ws = new ReconnectingWebSocket(url);
 
         this._ws.addEventListener("open", () => {
             this._ready = true;
@@ -60,13 +60,14 @@ export default class WPILibWebSocketClient extends WPILibWSInterface {
         });
 
         this._ws.addEventListener("error", (error) => {
-            // console.error(`WS Error ${error.message}`);
-            console.error(`WS Error ${error}`);
+            console.error(`WS Error ${error.message}`);
+            // console.error(`WS Error ${error}`);
             this._ready = false;
-            // this.emit("error", -1, error.message);
+            this.emit("error", -1, error.message);
         });
 
         this._ws.addEventListener("message", msg => {
+            console.log("HAL SIM MESSAGE:", msg);
             const { data } = msg;
             try {
                 const msgObj = JSON.parse(data.toString());
