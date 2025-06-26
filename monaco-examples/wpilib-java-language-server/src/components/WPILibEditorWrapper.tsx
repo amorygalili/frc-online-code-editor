@@ -180,7 +180,6 @@ export const WPILibEditorWrapper = memo(() => {
         height: "100%",
         minHeight: "400px",
         maxHeight: "100%",
-        border: "1px solid #ccc",
         overflow: "hidden",
       }}
     />

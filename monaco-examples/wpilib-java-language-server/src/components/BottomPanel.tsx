@@ -27,8 +27,8 @@ function TabPanel(props: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`bottom-panel-tabpanel-${index}`}
-      aria-labelledby={`bottom-panel-tab-${index}`}
+      id={`output-tabs-tabpanel-${index}`}
+      aria-labelledby={`output-tabs-tab-${index}`}
       style={{ height: '100%', display: value === index ? 'flex' : 'none', flexDirection: 'column' }}
       {...other}
     >
@@ -39,12 +39,12 @@ function TabPanel(props: TabPanelProps) {
 
 function a11yProps(index: number) {
   return {
-    id: `bottom-panel-tab-${index}`,
-    'aria-controls': `bottom-panel-tabpanel-${index}`,
+    id: `output-tabs-tab-${index}`,
+    'aria-controls': `output-tabs-tabpanel-${index}`,
   };
 }
 
-export const BottomPanel: React.FC = () => {
+export const OutputTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const { buildOutput, buildStatus } = useBuild();
   const ntConnected = useNTConnection();
@@ -64,8 +64,6 @@ export const BottomPanel: React.FC = () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        borderTop: 1,
-        borderColor: 'divider',
       }}
     >
       {/* Tab Headers */}
@@ -73,7 +71,7 @@ export const BottomPanel: React.FC = () => {
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
-          aria-label="bottom panel tabs"
+          aria-label="output tabs"
           sx={{
             minHeight: 40,
             '& .MuiTab-root': {
@@ -129,4 +127,4 @@ export const BottomPanel: React.FC = () => {
   );
 };
 
-export default BottomPanel;
+export default OutputTabs;

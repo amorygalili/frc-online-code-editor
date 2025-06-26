@@ -17,7 +17,7 @@ import {
 import * as vscode from "vscode";
 import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
 import { FileBrowser } from "./components/FileBrowser.tsx";
-import { BottomPanel } from "./components/BottomPanel.tsx";
+import { SimulationView } from "./components/SimulationView.tsx";
 import { BuildControls } from "./components/BuildControls.tsx";
 import { EditorProvider, useEditor } from "./contexts/EditorContext";
 import { BuildProvider } from "./contexts/BuildContext.tsx";
@@ -115,32 +115,25 @@ function AppContent() {
             sx={{
               flexGrow: 1,
               display: "flex",
-              flexDirection: "column",
+              flexDirection: "row", // Changed to horizontal layout
               overflow: "hidden",
             }}
           >
-            {/* Editor area */}
+            {/* Editor area - now takes remaining space on the left */}
             <Box
               sx={{
                 flex: 1,
                 display: "flex",
                 flexDirection: "column",
                 minHeight: 0, // Allow shrinking
+                overflow: "hidden",
               }}
             >
               <WPILibEditorWrapper />
             </Box>
 
-            {/* Bottom panel area */}
-            <Box
-              sx={{
-                height: 300,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <BottomPanel />
-            </Box>
+            {/* Simulation view on the right */}
+            <SimulationView />
           </Box>
         </Box>
       </Box>
