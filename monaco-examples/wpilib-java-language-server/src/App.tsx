@@ -37,7 +37,7 @@ const theme = createTheme({
   },
 });
 
-const DRAWER_WIDTH = 320;
+const DRAWER_WIDTH = 240; // Reduced from 320 to make more compact
 
 // Main app content that uses the editor context
 function AppContent() {

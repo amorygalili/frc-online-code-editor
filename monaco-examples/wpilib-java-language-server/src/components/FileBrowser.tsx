@@ -266,26 +266,27 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
       <>
         <ListItem
           disablePadding
-          sx={{ pl: level * 2 }}
+          sx={{ pl: level * 1.5 }} // Reduced indentation
         >
           <ListItemButton
             onClick={() => handleNodeClick(node)}
             sx={{
-              minHeight: 32,
+              minHeight: 28, // Reduced from 32
+              py: 0.25, // Reduced vertical padding
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.08)'
               }
             }}
           >
-            <ListItemIcon sx={{ minWidth: 32 }}>
+            <ListItemIcon sx={{ minWidth: 24 }}> {/* Reduced from 32 */}
               {node.type === 'directory' ? (
                 hasChildren ? (
-                  isExpanded ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />
+                  isExpanded ? <ExpandMore sx={{ fontSize: 16 }} /> : <ChevronRight sx={{ fontSize: 16 }} />
                 ) : (
-                  <Folder fontSize="small" />
+                  <Folder sx={{ fontSize: 16 }} />
                 )
               ) : (
-                <InsertDriveFile fontSize="small" />
+                <InsertDriveFile sx={{ fontSize: 16 }} />
               )}
             </ListItemIcon>
             <ListItemText
@@ -295,8 +296,9 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
                   variant: 'body2',
                   sx: {
                     fontFamily: 'monospace',
-                    fontSize: '0.875rem',
-                    fontWeight: node.type === 'directory' ? 500 : 400
+                    fontSize: '0.8rem', // Reduced from 0.875rem
+                    fontWeight: node.type === 'directory' ? 500 : 400,
+                    lineHeight: 1.2 // Tighter line height
                   }
                 }
               }}
@@ -306,7 +308,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
 
         {node.type === 'directory' && hasChildren && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding>
+            <List component="div" disablePadding sx={{ py: 0 }}> {/* Remove vertical padding */}
               {node.children!.map((child, index) => (
                 <TreeNodeComponent
                   key={`${child.path}-${index}`}
@@ -323,9 +325,9 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Toolbar variant="dense" sx={{ minHeight: 48 }}>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          Workspace Files
+      <Toolbar variant="dense" sx={{ minHeight: 36, px: 1 }}>
+        <Typography variant="subtitle2" sx={{ flexGrow: 1, fontWeight: 600 }}>
+          Files
         </Typography>
       </Toolbar>
 
@@ -343,7 +345,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
         )}
 
         {fileTree.length > 0 && (
-          <List dense>
+          <List dense sx={{ py: 0.5 }}> {/* Reduced vertical padding */}
             {fileTree.map((node, index) => (
               <TreeNodeComponent
                 key={`${node.path}-${index}`}
