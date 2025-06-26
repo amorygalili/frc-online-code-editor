@@ -17,7 +17,7 @@ import {
 import * as vscode from "vscode";
 import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
 import { FileBrowser } from "./components/FileBrowser.tsx";
-import { BuildConsole } from "./components/BuildConsole.tsx";
+import { BottomPanel } from "./components/BottomPanel.tsx";
 import { BuildControls } from "./components/BuildControls.tsx";
 import { EditorProvider, useEditor } from "./contexts/EditorContext";
 import { BuildProvider } from "./contexts/BuildContext.tsx";
@@ -131,17 +131,15 @@ function AppContent() {
               <WPILibEditorWrapper />
             </Box>
 
-            {/* Build console area */}
+            {/* Bottom panel area */}
             <Box
               sx={{
                 height: 300,
-                borderTop: 1,
-                borderColor: "divider",
                 display: "flex",
                 flexDirection: "column",
               }}
             >
-              <BuildConsole />
+              <BottomPanel />
             </Box>
           </Box>
         </Box>

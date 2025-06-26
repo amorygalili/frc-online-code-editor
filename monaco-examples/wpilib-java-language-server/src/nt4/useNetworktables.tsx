@@ -83,6 +83,7 @@ export const NT4Provider: React.FC<NT4ProviderProps> = ({
 
         clientRef.current = client;
         client.connect();
+        client.subscribe(['/'], true, true);
 
         return () => {
             client.disconnect();
