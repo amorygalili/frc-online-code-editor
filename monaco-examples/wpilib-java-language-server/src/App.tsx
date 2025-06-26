@@ -84,7 +84,7 @@ function AppContent() {
         <AppBar position="static" elevation={1} sx={{ minHeight: 48 }}>
           <Toolbar variant="dense" sx={{ minHeight: 48, py: 0.5 }}>
             <Typography variant="subtitle1" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-              WPILib Java Language Server
+              FRC Simulator
             </Typography>
             <Box sx={{ ml: 1 }}>
               <BuildControls

@@ -5,8 +5,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
-  Typography,
   SelectChangeEvent,
 } from '@mui/material';
 import {
@@ -18,7 +16,7 @@ import {
 import { useDriverStation, RobotMode } from '../contexts/HalSimContext';
 
 const RobotModeSelector: React.FC = () => {
-  const { currentMode, isEnabled, isConnected, setRobotMode, setRobotEnabled } = useDriverStation();
+  const { currentMode, isConnected, setRobotMode, setRobotEnabled } = useDriverStation();
 
   const handleModeChange = (event: SelectChangeEvent<string>) => {
     const newMode = event.target.value as RobotMode;
@@ -33,82 +31,19 @@ const RobotModeSelector: React.FC = () => {
     }
   };
 
-  const getModeIcon = (mode: RobotMode) => {
-    switch (mode) {
-      case RobotMode.DISABLED:
-        return <RadioButtonUnchecked fontSize="small" />;
-      case RobotMode.AUTONOMOUS:
-        return <SmartToy fontSize="small" />;
-      case RobotMode.TELEOP:
-        return <SportsEsports fontSize="small" />;
-      case RobotMode.TEST:
-        return <BugReport fontSize="small" />;
-      default:
-        return <RadioButtonUnchecked fontSize="small" />;
-    }
-  };
-
-  const getModeColor = (mode: RobotMode) => {
-    switch (mode) {
-      case RobotMode.DISABLED:
-        return 'default';
-      case RobotMode.AUTONOMOUS:
-        return 'warning';
-      case RobotMode.TELEOP:
-        return 'success';
-      case RobotMode.TEST:
-        return 'info';
-      default:
-        return 'default';
-    }
-  };
-
-  const getModeLabel = (mode: RobotMode) => {
-    switch (mode) {
-      case RobotMode.DISABLED:
-        return 'Disabled';
-      case RobotMode.AUTONOMOUS:
-        return 'Autonomous';
-      case RobotMode.TELEOP:
-        return 'Teleop';
-      case RobotMode.TEST:
-        return 'Test';
-      default:
-        return 'Unknown';
-    }
-  };
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Connection Status */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="subtitle2" color="text.secondary">
-          HAL Simulation
-        </Typography>
-        <Chip
-          label={isConnected ? 'Connected' : 'Disconnected'}
-          color={isConnected ? 'success' : 'error'}
-          size="small"
-          variant="outlined"
-        />
-      </Box>
-
-      {/* Current Mode Display */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="body2" color="text.secondary">
-          Current Mode:
-        </Typography>
-        <Chip
-          icon={getModeIcon(currentMode)}
-          label={getModeLabel(currentMode)}
-          color={getModeColor(currentMode) as any}
-          size="small"
-          variant={isEnabled ? 'filled' : 'outlined'}
-        />
-      </Box>
-
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
       {/* Mode Selector */}
-      <FormControl fullWidth size="small" disabled={!isConnected}>
+      <FormControl
+        size="small"
+        disabled={!isConnected}
+        sx={{
+          minWidth: 140,
+          '& .MuiInputBase-root': {
+            fontSize: '0.8rem', // Slightly smaller text
+          },
+        }}
+      >
         <InputLabel id="robot-mode-select-label">Robot Mode</InputLabel>
         <Select
           labelId="robot-mode-select-label"
@@ -143,15 +78,6 @@ const RobotModeSelector: React.FC = () => {
           </MenuItem>
         </Select>
       </FormControl>
-
-      {/* Additional Info */}
-      {isConnected && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            Select a robot mode to control the simulation state
-          </Typography>
-        </Box>
-      )}
     </Box>
   );
 };

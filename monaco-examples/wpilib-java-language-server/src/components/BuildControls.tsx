@@ -24,6 +24,8 @@ import {
 } from '@mui/icons-material';
 import { BuildControlsProps, BuildTask } from '../types/build';
 import { useBuild } from '../contexts/BuildContext';
+import { useNTConnection } from '../nt4/useNetworktables';
+import { useHalSimData } from '../contexts/HalSimContext';
 
 /**
  * BuildControls component for build actions and status
@@ -45,6 +47,10 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
     stopSimulation,
     isConnected
   } = useBuild();
+
+  // Connection status hooks
+  const ntConnected = useNTConnection();
+  const { connected: halSimConnected } = useHalSimData();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isMenuOpen = Boolean(anchorEl);
@@ -236,6 +242,24 @@ export const BuildControls: React.FC<BuildControlsProps> = ({
           variant="outlined"
         />
       )}
+
+      {/* NT4 Connection Status */}
+      <Chip
+        label={`NT4: ${ntConnected ? 'Connected' : 'Disconnected'}`}
+        color={ntConnected ? 'success' : 'error'}
+        size="small"
+        variant="outlined"
+        sx={{ fontSize: '0.65rem', height: 20 }}
+      />
+
+      {/* HAL Simulation Connection Status */}
+      <Chip
+        label={`HAL: ${halSimConnected ? 'Connected' : 'Disconnected'}`}
+        color={halSimConnected ? 'success' : 'error'}
+        size="small"
+        variant="outlined"
+        sx={{ fontSize: '0.65rem', height: 20 }}
+      />
 
       {/* More options menu */}
       <Menu

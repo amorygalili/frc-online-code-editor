@@ -1,13 +1,12 @@
 import React from "react";
-import { Box, Typography, Paper } from "@mui/material";
+import { Box, Paper } from "@mui/material";
 import RobotModeSelector from "./RobotModeSelector";
 import { Field, FieldRobot } from "@frc-web-components/react";
-import { useNTValue, useNTConnection } from "../nt4/useNetworktables";
+import { useNTValue } from "../nt4/useNetworktables";
 
 export const SimulationVisualization: React.FC = () => {
   // Get robot pose from NetworkTables
   const [robotPose] = useNTValue<[number, number, number]>("/SmartDashboard/Field/Robot", [0, 0, 0]);
-  const connected = useNTConnection();
   return (
     <Paper
       elevation={1}
@@ -19,28 +18,8 @@ export const SimulationVisualization: React.FC = () => {
         backgroundColor: "background.paper",
       }}
     >
-      {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 2,
-          pb: 1,
-          borderBottom: 1,
-          borderColor: "divider",
-        }}
-      >
-        <Typography variant="h6" component="h2">
-          Robot Simulation
-        </Typography>
-        <Typography variant="caption" color={connected ? "success.main" : "error.main"}>
-          NT4: {connected ? "Connected" : "Disconnected"}
-        </Typography>
-      </Box>
-
       {/* Robot Mode Selector */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 1 }}>
         <RobotModeSelector />
       </Box>
 
