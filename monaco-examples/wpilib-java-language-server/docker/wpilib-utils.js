@@ -541,6 +541,9 @@ export class WPILibUtils {
     async startSimulation(projectPath, simulationType = 'debug', simulationId) {
         console.log(`Starting simulation for project: ${projectPath}, type: ${simulationType}, id: ${simulationId}`);
 
+        // Clean up any existing simulations first
+        await this.cleanupAllSimulations();
+
         // Map simulation types to Gradle tasks
         const taskMap = {
             'debug': 'simulateJavaDebug',
@@ -694,6 +697,105 @@ export class WPILibUtils {
                 error: error.message
             };
         }
+    }
+
+    /**
+     * Clean up all running simulations and related processes
+     * @returns {Promise<void>}
+     */
+    async cleanupAllSimulations() {
+        console.log('Cleaning up all existing simulations...');
+
+        // Stop all tracked simulations
+        const simulationIds = Array.from(this.simulations.keys());
+        const stopPromises = simulationIds.map(id => this.stopSimulation(id));
+        await Promise.all(stopPromises);
+
+        // Kill any remaining Java processes that might be simulation-related
+        try {
+            // Kill any remaining Gradle daemon processes
+            await this.killProcessByPattern('gradle.*daemon');
+            await this.killProcessByPattern('GradleDaemon');
+
+            // Kill any remaining robot simulation processes
+            await this.killProcessByPattern('frc.robot.Main');
+            await this.killProcessByPattern('edu.wpi.first.wpilibj');
+            await this.killProcessByPattern('halsim');
+
+            // Kill processes using simulation ports
+            await this.killProcessByPort(3300); // HAL WebSocket
+            await this.killProcessByPort(5810); // NT4
+            await this.killProcessByPort(1735); // NT3
+
+            console.log('Simulation cleanup completed');
+
+            // Wait a moment for processes to fully terminate
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+        } catch (error) {
+            console.error('Error during simulation cleanup:', error);
+        }
+    }
+
+    /**
+     * Kill processes matching a pattern
+     * @param {string} pattern - Process name pattern
+     * @returns {Promise<void>}
+     */
+    async killProcessByPattern(pattern) {
+        return new Promise((resolve) => {
+            const { spawn } = require('child_process');
+            const pkill = spawn('pkill', ['-f', pattern]);
+
+            pkill.on('close', () => {
+                // pkill returns 1 if no processes were found, which is fine
+                resolve();
+            });
+
+            pkill.on('error', () => {
+                console.log(`No processes found matching pattern: ${pattern}`);
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * Kill processes using a specific port
+     * @param {number} port - Port number
+     * @returns {Promise<void>}
+     */
+    async killProcessByPort(port) {
+        return new Promise((resolve) => {
+            const { spawn } = require('child_process');
+
+            // Use lsof to find processes using the port, then kill them
+            const lsof = spawn('lsof', ['-ti', `:${port}`]);
+            let pids = '';
+
+            lsof.stdout.on('data', (data) => {
+                pids += data.toString();
+            });
+
+            lsof.on('close', () => {
+                if (pids.trim()) {
+                    const pidList = pids.trim().split('\n').filter(pid => pid);
+                    pidList.forEach(pid => {
+                        try {
+                            process.kill(parseInt(pid), 'SIGKILL');
+                            console.log(`Killed process ${pid} using port ${port}`);
+                        } catch (error) {
+                            // Process might already be dead
+                        }
+                    });
+                }
+                resolve();
+            });
+
+            lsof.on('error', () => {
+                // lsof might not be available or no processes found
+                resolve();
+            });
+        });
     }
 
     /**

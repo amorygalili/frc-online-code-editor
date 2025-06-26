@@ -48,19 +48,39 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
   });
 
   useEffect(() => {
+
+    if (clientRef.current) {
+      return;
+    }
+
     // Create WPILib WebSocket client
-    const client = new WPILibWebSocketClient({
-      hostname,
-      port,
-      connectOnCreate: false,
-      verbose: false
-    });
+    // const client = new WPILibWebSocketClient({
+    //   hostname,
+    //   port,
+    //   uri: '', // Try connecting to root path first
+    //   connectOnCreate: false,
+    //   verbose: true // Enable verbose logging to debug connection issues
+    // });
+    const client = new WPILibWebSocketClient();
+
+
+    console.log("HAL Sim WebSocket client created");
 
     clientRef.current = client;
 
+    client.on('closeConnection', () => {
+      console.log('HAL Sim WebSocket connection closed');
+      setConnected(false);
+    });
+
     // Set up event listeners
     client.on('ready', () => {
-      console.log('HAL Sim WebSocket connected');
+      console.log(`HAL Sim WebSocket connected to ws://${hostname}:${port}/wpilibws`);
+      setConnected(true);
+    });
+
+    client.on('openConnection', () => {
+      console.log('HAL Sim WebSocket connection opened');
       setConnected(true);
     });
 
@@ -70,12 +90,14 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
     });
 
     client.on('error', (code: number, reason: string) => {
-      console.error('HAL Sim WebSocket error:', code, reason);
+      console.error(`HAL Sim WebSocket error [${code}]:`, reason);
+      console.error(`Attempted connection to: ws://${hostname}:${port}/wpilibws`);
       setConnected(false);
     });
 
     // Listen for driver station events
     client.on('driverStationEvent', (payload: DriverStationPayload) => {
+      console.log("driverStationEvent:", payload);
       setDriverStationData(prevData => ({
         ...prevData,
         ...payload

@@ -10,6 +10,7 @@ services:
       - "6901:6901"
       - "1735:1735"   # NetworkTables NT3 port
       - "5810:5810"   # NetworkTables NT4 port
+      - "3300:3300"   # HAL Simulation WebSocket port
     volumes:
       - ./workspace:/home/frcuser/workspace
     environment:
