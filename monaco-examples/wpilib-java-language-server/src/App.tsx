@@ -18,6 +18,7 @@ import * as vscode from "vscode";
 import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
 import { FileBrowser } from "./components/FileBrowser.tsx";
 import { SimulationView } from "./components/SimulationView.tsx";
+import { ResizableSplitter } from "./components/ResizableSplitter.tsx";
 import { BuildControls } from "./components/BuildControls.tsx";
 import { EditorProvider, useEditor } from "./contexts/EditorContext";
 import { BuildProvider } from "./contexts/BuildContext.tsx";
@@ -114,26 +115,29 @@ function AppContent() {
             component="main"
             sx={{
               flexGrow: 1,
-              display: "flex",
-              flexDirection: "row", // Changed to horizontal layout
               overflow: "hidden",
             }}
           >
-            {/* Editor area - now takes remaining space on the left */}
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0, // Allow shrinking
-                overflow: "hidden",
-              }}
+            <ResizableSplitter
+              direction="horizontal"
+              initialSizes={[70, 30]} // 70% for editor, 30% for simulation
+              minSizes={[400, 300]} // Minimum widths in pixels
             >
-              <WPILibEditorWrapper />
-            </Box>
+              {/* Editor area */}
+              <Box
+                sx={{
+                  height: '100%',
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                }}
+              >
+                <WPILibEditorWrapper />
+              </Box>
 
-            {/* Simulation view on the right */}
-            <SimulationView />
+              {/* Simulation view */}
+              <SimulationView />
+            </ResizableSplitter>
           </Box>
         </Box>
       </Box>

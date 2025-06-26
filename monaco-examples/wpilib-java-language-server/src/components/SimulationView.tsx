@@ -5,53 +5,57 @@ import {
 } from '@mui/material';
 import { SimulationVisualization } from './SimulationVisualization';
 import { OutputTabs } from './BottomPanel';
+import { ResizableSplitter } from './ResizableSplitter';
 
 export const SimulationView: React.FC = () => {
   return (
     <Box
       sx={{
-        width: 400, // Fixed width for simulation panel
+        width: '100%', // Take full width from splitter
         height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
         borderLeft: 1,
         borderColor: 'divider',
         backgroundColor: 'background.default',
       }}
     >
-      {/* Simulation Visualization Area */}
-      <Box
-        sx={{
-          height: 300, // Fixed height for visualization
-          p: 1,
-        }}
+      <ResizableSplitter
+        direction="vertical"
+        initialSizes={[45, 55]} // 45% for visualization, 55% for output tabs
+        minSizes={[200, 150]} // Minimum heights in pixels
       >
-        <SimulationVisualization />
-      </Box>
+        {/* Simulation Visualization Area */}
+        <Box
+          sx={{
+            p: 1,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <SimulationVisualization />
+        </Box>
 
-      {/* Output Tabs Area */}
-      <Box
-        sx={{
-          flex: 1, // Take remaining space
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0, // Allow shrinking
-        }}
-      >
-        <Paper
-          elevation={0}
+        {/* Output Tabs Area */}
+        <Box
           sx={{
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            borderRadius: 0,
-            borderTop: 1,
-            borderColor: 'divider',
           }}
         >
-          <OutputTabs />
-        </Paper>
-      </Box>
+          <Paper
+            elevation={0}
+            sx={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: 0,
+            }}
+          >
+            <OutputTabs />
+          </Paper>
+        </Box>
+      </ResizableSplitter>
     </Box>
   );
 };
