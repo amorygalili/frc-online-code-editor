@@ -13,17 +13,33 @@ cleanup_processes() {
     pkill -f "edu.wpi.first.wpilibj" || true
     pkill -f "halsim" || true
 
-    # Kill processes using port 3300 (HAL WebSocket)
-    lsof -ti:3300 | xargs -r kill -9 || true
+    # Kill HAL simulation related processes more aggressively
+    pkill -f "wpilibws" || true
+    pkill -f "WPILibWebSocket" || true
+    pkill -f "HALSim" || true
+    pkill -f "SimulationExtension" || true
+    pkill -f "NetworkTablesExtension" || true
 
-    # Kill processes using port 5810 (NT4)
-    lsof -ti:5810 | xargs -r kill -9 || true
+    # Kill any Java processes that might be HAL simulation clients
+    pkill -f "java.*halsim" || true
+    pkill -f "java.*wpilibws" || true
+    pkill -f "java.*simulation" || true
 
-    # Kill processes using port 1735 (NT3)
+    # Kill processes using simulation ports (more comprehensive)
+    for port in 3300 3301 3302 3303 3304 3305 3306 3307 3308 3309 3310; do
+        lsof -ti:$port | xargs -r kill -9 || true
+    done
+
+    # Kill processes using NT4 port range
+    for port in 5800 5801 5802 5803 5804 5805 5806 5807 5808 5809 5810 5811 5812 5813 5814 5815 5816 5817 5818 5819 5820; do
+        lsof -ti:$port | xargs -r kill -9 || true
+    done
+
+    # Kill processes using NT3 port
     lsof -ti:1735 | xargs -r kill -9 || true
 
-    # Wait a moment for processes to terminate
-    sleep 2
+    # Wait longer for processes to terminate
+    sleep 3
 
     echo "Process cleanup completed"
 }

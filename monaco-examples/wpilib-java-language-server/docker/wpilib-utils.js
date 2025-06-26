@@ -722,15 +722,32 @@ export class WPILibUtils {
             await this.killProcessByPattern('edu.wpi.first.wpilibj');
             await this.killProcessByPattern('halsim');
 
-            // Kill processes using simulation ports
-            await this.killProcessByPort(3300); // HAL WebSocket
-            await this.killProcessByPort(5810); // NT4
-            await this.killProcessByPort(1735); // NT3
+            // Kill HAL simulation related processes more aggressively (matching start.sh)
+            await this.killProcessByPattern('wpilibws');
+            await this.killProcessByPattern('WPILibWebSocket');
+            await this.killProcessByPattern('HALSim');
+            await this.killProcessByPattern('SimulationExtension');
+            await this.killProcessByPattern('NetworkTablesExtension');
+
+            // Kill any Java processes that might be HAL simulation clients (matching start.sh)
+            await this.killProcessByPattern('java.*halsim');
+            await this.killProcessByPattern('java.*wpilibws');
+            await this.killProcessByPattern('java.*simulation');
+
+            // Kill processes using simulation ports (comprehensive range matching start.sh)
+            // HAL WebSocket port range (3300-3310)
+            await this.killProcessesByPortRange(3300, 3310);
+
+            // NT4 port range (5800-5820)
+            await this.killProcessesByPortRange(5800, 5820);
+
+            // NT3 port
+            await this.killProcessByPort(1735);
 
             console.log('Simulation cleanup completed');
 
-            // Wait a moment for processes to fully terminate
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait longer for processes to fully terminate (matching start.sh)
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
         } catch (error) {
             console.error('Error during simulation cleanup:', error);
@@ -745,16 +762,41 @@ export class WPILibUtils {
     async killProcessByPattern(pattern) {
         return new Promise((resolve) => {
             const { spawn } = require('child_process');
-            const pkill = spawn('pkill', ['-f', pattern]);
 
-            pkill.on('close', () => {
-                // pkill returns 1 if no processes were found, which is fine
-                resolve();
+            // First, let's see what processes match the pattern
+            const pgrep = spawn('pgrep', ['-f', pattern]);
+            let matchingPids = '';
+
+            pgrep.stdout.on('data', (data) => {
+                matchingPids += data.toString();
             });
 
-            pkill.on('error', () => {
-                console.log(`No processes found matching pattern: ${pattern}`);
-                resolve();
+            pgrep.on('close', () => {
+                if (matchingPids.trim()) {
+                    console.log(`Found processes matching pattern '${pattern}': ${matchingPids.trim().split('\n').join(', ')}`);
+                }
+
+                // Now kill the processes
+                const pkill = spawn('pkill', ['-f', pattern]);
+
+                pkill.on('close', (killCode) => {
+                    if (killCode === 0 && matchingPids.trim()) {
+                        console.log(`Successfully killed processes matching pattern: ${pattern}`);
+                    }
+                    resolve();
+                });
+
+                pkill.on('error', () => {
+                    console.log(`No processes found matching pattern: ${pattern}`);
+                    resolve();
+                });
+            });
+
+            pgrep.on('error', () => {
+                // pgrep failed, just try pkill anyway
+                const pkill = spawn('pkill', ['-f', pattern]);
+                pkill.on('close', () => resolve());
+                pkill.on('error', () => resolve());
             });
         });
     }
@@ -796,6 +838,20 @@ export class WPILibUtils {
                 resolve();
             });
         });
+    }
+
+    /**
+     * Kill processes using ports in a specific range
+     * @param {number} startPort - Starting port number
+     * @param {number} endPort - Ending port number
+     * @returns {Promise<void>}
+     */
+    async killProcessesByPortRange(startPort, endPort) {
+        const promises = [];
+        for (let port = startPort; port <= endPort; port++) {
+            promises.push(this.killProcessByPort(port));
+        }
+        await Promise.all(promises);
     }
 
     /**

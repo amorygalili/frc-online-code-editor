@@ -107,6 +107,11 @@ COPY --chmod=755 generate-robot-project.sh ${HOME_DIR}/scripts/
 COPY --chmod=755 start.sh ${HOME_DIR}/
 COPY --chmod=755 fix-desktop-files.sh ${HOME_DIR}/
 
+# Fix line endings for shell scripts (as root to avoid permission issues)
+USER root
+RUN dos2unix ${HOME_DIR}/start.sh ${HOME_DIR}/fix-desktop-files.sh ${HOME_DIR}/scripts/generate-robot-project.sh
+USER frcuser
+
 # Create VNC directory (password will be set directly in x11vnc command)
 RUN mkdir -p ${HOME_DIR}/.vnc
 
