@@ -17,7 +17,7 @@ interface TopicData {
 }
 
 interface NT4ContextType {
-    client: NT4_Client;
+    client: NT4_Client | null;
     connected: boolean;
     topics: Map<string, NT4_Topic>;
     topicData: Map<string, TopicData>;
@@ -91,7 +91,7 @@ export const NT4Provider: React.FC<NT4ProviderProps> = ({
     }, [serverAddress, appName]);
 
     const contextValue: NT4ContextType = {
-        client: clientRef.current!,
+        client: clientRef.current,
         connected,
         topics,
         topicData,
@@ -105,7 +105,7 @@ export const NT4Provider: React.FC<NT4ProviderProps> = ({
 };
 
 // Custom hook to use NT4 client
-export const useNt4Client = (): NT4_Client => {
+export const useNt4Client = (): NT4_Client | null => {
     const context = useContext(NT4Context);
     if (!context) {
         throw new Error('useNt4Client must be used within an NT4Provider');
@@ -144,8 +144,12 @@ export const useNt4TopicData = (): Map<string, TopicData> => {
  * Hook to get and set a NetworkTables value using NT4
  */
 export function useNTValue<T>(key: string, defaultValue?: T): [T | undefined, (value: T) => void] {
-    const client = useNt4Client();
-    const topicData = useNt4TopicData();
+    const context = useContext(NT4Context);
+    if (!context) {
+        throw new Error('useNTValue must be used within an NT4Provider');
+    }
+
+    const { client, topicData } = context;
     const subscriptionRef = useRef<number | null>(null);
 
     // Get current value from topic data or use default
@@ -153,17 +157,23 @@ export function useNTValue<T>(key: string, defaultValue?: T): [T | undefined, (v
     const value = (currentTopicData?.value as T) ?? defaultValue;
 
     useEffect(() => {
+        // Only subscribe if client is available
+        if (!client) return;
+
         // Subscribe to the topic
         subscriptionRef.current = client.subscribe([key], false, false, 0.1);
 
         return () => {
-            if (subscriptionRef.current !== null) {
+            if (subscriptionRef.current !== null && client) {
                 client.unsubscribe(subscriptionRef.current);
             }
         };
     }, [client, key]);
 
     const putValue = useCallback((newValue: T) => {
+        // Only publish if client is available
+        if (!client) return;
+
         // First publish the topic if not already published
         client.publishTopic(key, typeof newValue === 'string' ? 'string' :
                               typeof newValue === 'number' ? 'double' :
