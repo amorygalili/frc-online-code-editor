@@ -1,0 +1,161 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  Button,
+  Divider,
+  Alert,
+} from '@mui/material';
+import {
+  Google as GoogleIcon,
+  Code as CodeIcon,
+} from '@mui/icons-material';
+
+const LoginPage: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // This will be replaced with actual AWS Cognito + Google OAuth
+      // For now, just simulate the process
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulate success/error
+      if (Math.random() > 0.5) {
+        alert('Sign in successful! (This is a demo - AWS Cognito integration coming next)');
+      } else {
+        throw new Error('Demo error - please try again');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred during sign in');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Container maxWidth="sm" sx={{ py: 8 }}>
+      <Paper sx={{ p: 6, textAlign: 'center' }}>
+        {/* Logo/Icon */}
+        <Box sx={{ mb: 4 }}>
+          <CodeIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+          <Typography variant="h4" component="h1" gutterBottom>
+            Welcome Back
+          </Typography>
+          <Typography variant="h6" color="text.secondary">
+            Sign in to continue your FRC programming journey
+          </Typography>
+        </Box>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Google Sign In Button */}
+        <Button
+          variant="contained"
+          size="large"
+          fullWidth
+          startIcon={<GoogleIcon />}
+          onClick={handleGoogleSignIn}
+          disabled={isLoading}
+          sx={{
+            mb: 3,
+            py: 1.5,
+            bgcolor: '#4285f4',
+            '&:hover': {
+              bgcolor: '#3367d6',
+            },
+          }}
+        >
+          {isLoading ? 'Signing in...' : 'Continue with Google'}
+        </Button>
+
+        <Divider sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            or
+          </Typography>
+        </Divider>
+
+        {/* Demo Info */}
+        <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+          <Typography variant="body2" gutterBottom>
+            <strong>Demo Mode:</strong> This is a preview of the authentication system.
+          </Typography>
+          <Typography variant="body2">
+            The full version will integrate with AWS Cognito for secure Google OAuth authentication.
+          </Typography>
+        </Alert>
+
+        {/* Browse as Guest */}
+        <Button
+          component={Link}
+          to="/challenges"
+          variant="outlined"
+          size="large"
+          fullWidth
+          sx={{ mb: 3 }}
+        >
+          Browse Challenges as Guest
+        </Button>
+
+        {/* Benefits */}
+        <Box sx={{ mt: 4, textAlign: 'left' }}>
+          <Typography variant="h6" gutterBottom>
+            Why create an account?
+          </Typography>
+          <Box component="ul" sx={{ pl: 2, color: 'text.secondary' }}>
+            <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+              Save your progress across all challenges
+            </Typography>
+            <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+              Track your learning journey and achievements
+            </Typography>
+            <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+              Access advanced challenges and features
+            </Typography>
+            <Typography component="li" variant="body2" sx={{ mb: 1 }}>
+              Sync your code across devices
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Footer */}
+        <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
+          <Typography variant="body2" color="text.secondary">
+            By signing in, you agree to our{' '}
+            <Link to="/terms" style={{ color: 'inherit' }}>
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link to="/privacy" style={{ color: 'inherit' }}>
+              Privacy Policy
+            </Link>
+          </Typography>
+        </Box>
+      </Paper>
+
+      {/* Additional Info */}
+      <Box sx={{ mt: 4, textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          New to FRC programming?{' '}
+          <Link to="/" style={{ color: 'inherit', fontWeight: 'bold' }}>
+            Learn more about our platform
+          </Link>
+        </Typography>
+      </Box>
+    </Container>
+  );
+};
+
+export default LoginPage;

@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.11.2",
     "@codingame/monaco-vscode-api": "^17.2.1",
     "@codingame/monaco-vscode-extension-api": "^17.2.1",
     "@codingame/monaco-vscode-files-service-override": "^17.2.1",
@@ -24,10 +25,12 @@
     "@mui/icons-material": "^7.1.2",
     "@mui/material": "^7.1.2",
     "@typefox/monaco-editor-react": "^6.8.1",
+    "aws-amplify": "^6.15.1",
     "monaco-editor-wrapper": "^6.8.1",
     "monaco-languageclient": "^9.7.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.6.2",
     "vscode-uri": "^3.1.0",
     "vscode-ws-jsonrpc": "^3.4.0"
   },
