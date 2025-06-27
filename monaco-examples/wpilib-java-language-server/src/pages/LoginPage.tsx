@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -9,6 +9,7 @@ import {
   Divider,
   Alert,
 } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
 // Simplified icons
 const GoogleIcon = () => <span>🔍</span>;
 const CodeIcon = () => <span>💻</span>;
@@ -16,22 +17,23 @@ const CodeIcon = () => <span>💻</span>;
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { signIn, isAuthenticated, isConfigured } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/challenges');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // This will be replaced with actual AWS Cognito + Google OAuth
-      // For now, just simulate the process
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simulate success/error
-      if (Math.random() > 0.5) {
-        alert('Sign in successful! (This is a demo - AWS Cognito integration coming next)');
-      } else {
-        throw new Error('Demo error - please try again');
-      }
+      await signIn();
+      // Navigation will happen automatically via useEffect when isAuthenticated changes
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during sign in');
     } finally {
@@ -86,15 +88,17 @@ const LoginPage: React.FC = () => {
           </Typography>
         </Divider>
 
-        {/* Demo Info */}
-        <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
-          <Typography variant="body2" gutterBottom>
-            <strong>Demo Mode:</strong> This is a preview of the authentication system.
-          </Typography>
-          <Typography variant="body2">
-            The full version will integrate with AWS Cognito for secure Google OAuth authentication.
-          </Typography>
-        </Alert>
+        {/* Configuration Info */}
+        {!isConfigured && (
+          <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+            <Typography variant="body2" gutterBottom>
+              <strong>Demo Mode:</strong> AWS Cognito is not configured.
+            </Typography>
+            <Typography variant="body2">
+              Configure AWS Cognito environment variables for production authentication.
+            </Typography>
+          </Alert>
+        )}
 
         {/* Browse as Guest */}
         <Button

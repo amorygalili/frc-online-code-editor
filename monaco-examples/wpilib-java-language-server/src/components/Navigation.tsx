@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   AppBar,
   Toolbar,
@@ -36,14 +37,15 @@ interface NavigationProps {
   };
 }
 
-const Navigation: React.FC<NavigationProps> = ({ 
-  isAuthenticated = false, 
-  user 
+const Navigation: React.FC<NavigationProps> = ({
+  isAuthenticated = false,
+  user
 }) => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+  const { signOut } = useAuth();
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -59,9 +61,12 @@ const Navigation: React.FC<NavigationProps> = ({
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  const handleLogout = () => {
-    // This would handle the actual logout logic
-    alert('Logout functionality will be implemented with AWS Cognito');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     handleProfileMenuClose();
   };
 
