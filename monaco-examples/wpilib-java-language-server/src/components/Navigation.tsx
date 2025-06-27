@@ -18,15 +18,14 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import {
-  Menu as MenuIcon,
-  Home as HomeIcon,
-  Code as CodeIcon,
-  Person as PersonIcon,
-  Login as LoginIcon,
-  Logout as LogoutIcon,
-  School as SchoolIcon,
-} from '@mui/icons-material';
+// Simplified icons
+const MenuIcon = () => <span>☰</span>;
+const HomeIcon = () => <span>🏠</span>;
+const CodeIcon = () => <span>💻</span>;
+const PersonIcon = () => <span>👤</span>;
+const LoginIcon = () => <span>🔑</span>;
+const LogoutIcon = () => <span>🚪</span>;
+const SchoolIcon = () => <span>🎓</span>;
 
 interface NavigationProps {
   isAuthenticated?: boolean;

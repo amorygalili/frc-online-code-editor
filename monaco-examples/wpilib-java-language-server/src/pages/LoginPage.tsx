@@ -9,10 +9,9 @@ import {
   Divider,
   Alert,
 } from '@mui/material';
-import {
-  Google as GoogleIcon,
-  Code as CodeIcon,
-} from '@mui/icons-material';
+// Simplified icons
+const GoogleIcon = () => <span>🔍</span>;
+const CodeIcon = () => <span>💻</span>;
 
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +44,7 @@ const LoginPage: React.FC = () => {
       <Paper sx={{ p: 6, textAlign: 'center' }}>
         {/* Logo/Icon */}
         <Box sx={{ mb: 4 }}>
-          <CodeIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+          <Box sx={{ fontSize: 60, mb: 2, textAlign: 'center' }}><CodeIcon /></Box>
           <Typography variant="h4" component="h1" gutterBottom>
             Welcome Back
           </Typography>
@@ -66,7 +65,7 @@ const LoginPage: React.FC = () => {
           variant="contained"
           size="large"
           fullWidth
-          startIcon={<GoogleIcon />}
+
           onClick={handleGoogleSignIn}
           disabled={isLoading}
           sx={{
@@ -78,7 +77,7 @@ const LoginPage: React.FC = () => {
             },
           }}
         >
-          {isLoading ? 'Signing in...' : 'Continue with Google'}
+          <GoogleIcon /> {isLoading ? 'Signing in...' : 'Continue with Google'}
         </Button>
 
         <Divider sx={{ mb: 3 }}>

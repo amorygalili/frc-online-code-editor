@@ -10,11 +10,10 @@ import {
   Breadcrumbs,
   Alert,
 } from '@mui/material';
-import {
-  ArrowBack as BackIcon,
-  PlayArrow as StartIcon,
-  School as LearningIcon,
-} from '@mui/icons-material';
+// Simplified icons
+const BackIcon = () => <span>←</span>;
+const StartIcon = () => <span>▶️</span>;
+const LearningIcon = () => <span>📚</span>;
 
 // This will eventually integrate with your existing Monaco Editor setup
 const ChallengePage: React.FC = () => {
@@ -107,10 +106,9 @@ Good luck, and welcome to FRC programming!
       <Button
         component={Link}
         to="/challenges"
-        startIcon={<BackIcon />}
         sx={{ mb: 3 }}
       >
-        Back to Challenges
+        <BackIcon /> Back to Challenges
       </Button>
 
       {/* Challenge Header */}
@@ -135,19 +133,17 @@ Good luck, and welcome to FRC programming!
         <Button
           variant="contained"
           size="large"
-          startIcon={<StartIcon />}
           onClick={handleStartChallenge}
           sx={{ mr: 2 }}
         >
-          Start Challenge
+          <StartIcon /> Start Challenge
         </Button>
 
         <Button
           variant="outlined"
           size="large"
-          startIcon={<LearningIcon />}
         >
-          View Solution
+          <LearningIcon /> View Solution
         </Button>
       </Paper>
 

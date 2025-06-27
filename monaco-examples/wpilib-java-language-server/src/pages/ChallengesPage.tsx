@@ -4,7 +4,6 @@ import {
   Box,
   Container,
   Typography,
-  Grid,
   Card,
   CardContent,
   CardActions,
@@ -19,12 +18,11 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import {
-  PlayArrow as PlayIcon,
-  CheckCircle as CompletedIcon,
-  Schedule as InProgressIcon,
-  Lock as LockedIcon,
-} from '@mui/icons-material';
+// Simplified icons
+const PlayIcon = () => <span>▶️</span>;
+const CompletedIcon = () => <span>✅</span>;
+const InProgressIcon = () => <span>🔄</span>;
+const LockedIcon = () => <span>🔒</span>;
 
 interface Challenge {
   id: number;
@@ -130,13 +128,13 @@ const ChallengesPage: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CompletedIcon color="success" />;
+        return <CompletedIcon />;
       case 'in_progress':
-        return <InProgressIcon color="warning" />;
+        return <InProgressIcon />;
       case 'locked':
-        return <LockedIcon color="disabled" />;
+        return <LockedIcon />;
       default:
-        return <PlayIcon color="primary" />;
+        return <PlayIcon />;
     }
   };
 
@@ -168,7 +166,7 @@ const ChallengesPage: React.FC = () => {
     return matchesSearch && matchesCategory && matchesDifficulty;
   });
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
@@ -189,56 +187,54 @@ const ChallengesPage: React.FC = () => {
       </Tabs>
 
       {/* Filters */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              label="Search challenges"
-              variant="outlined"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={selectedCategory}
-                label="Category"
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                {categories.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth>
-              <InputLabel>Difficulty</InputLabel>
-              <Select
-                value={selectedDifficulty}
-                label="Difficulty"
-                onChange={(e) => setSelectedDifficulty(e.target.value)}
-              >
-                {difficulties.map((difficulty) => (
-                  <MenuItem key={difficulty} value={difficulty}>
-                    {difficulty === 'all' ? 'All Difficulties' : difficulty}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
+      <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ flex: 1, minWidth: 200 }}>
+          <TextField
+            fullWidth
+            label="Search challenges"
+            variant="outlined"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 200 }}>
+          <FormControl fullWidth>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={selectedCategory}
+              label="Category"
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              {categories.map((category) => (
+                <MenuItem key={category} value={category}>
+                  {category === 'all' ? 'All Categories' : category}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 200 }}>
+          <FormControl fullWidth>
+            <InputLabel>Difficulty</InputLabel>
+            <Select
+              value={selectedDifficulty}
+              label="Difficulty"
+              onChange={(e) => setSelectedDifficulty(e.target.value)}
+            >
+              {difficulties.map((difficulty) => (
+                <MenuItem key={difficulty} value={difficulty}>
+                  {difficulty === 'all' ? 'All Difficulties' : difficulty}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
       </Box>
 
       {/* Challenge Grid */}
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 3 }}>
         {filteredChallenges.map((challenge) => (
-          <Grid item xs={12} md={6} lg={4} key={challenge.id}>
+          <Box key={challenge.id}>
             <Card 
               sx={{ 
                 height: '100%', 
@@ -301,9 +297,9 @@ const ChallengesPage: React.FC = () => {
                 </Button>
               </CardActions>
             </Card>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
 
       {filteredChallenges.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 8 }}>

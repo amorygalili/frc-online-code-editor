@@ -16,12 +16,12 @@ import {
   useNTConnection,
   useNTValue,
   useNTKeys,
-  useNt4Client,
+  // useNt4Client, // Commented out as not used
 } from '../nt4/useNetworktables';
 
 export const NetworkTablesDemo: React.FC = () => {
   const connected = useNTConnection();
-  const _client = useNt4Client();
+  // const _client = useNt4Client(); // Commented out as it's not used
   const keys = useNTKeys();
   
   // Example NetworkTables values

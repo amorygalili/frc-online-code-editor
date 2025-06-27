@@ -5,33 +5,31 @@ import {
   Container,
   Typography,
   Button,
-  Grid,
   Card,
   CardContent,
   CardActions,
   Chip,
 } from '@mui/material';
-import {
-  Code as CodeIcon,
-  School as SchoolIcon,
-  EmojiEvents as TrophyIcon,
-  PlayArrow as PlayIcon,
-} from '@mui/icons-material';
+// Simplified icons to avoid build issues
+const CodeIcon = () => <span>💻</span>;
+const SchoolIcon = () => <span>🎓</span>;
+const TrophyIcon = () => <span>🏆</span>;
+const PlayIcon = () => <span>▶️</span>;
 
 const HomePage: React.FC = () => {
   const features = [
     {
-      icon: <CodeIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+      icon: <CodeIcon />,
       title: 'Interactive Coding',
       description: 'Write and test FRC robot code directly in your browser with our Monaco editor.',
     },
     {
-      icon: <SchoolIcon sx={{ fontSize: 40, color: 'secondary.main' }} />,
+      icon: <SchoolIcon />,
       title: 'Learn by Doing',
       description: 'Progressive challenges that teach FRC programming concepts step by step.',
     },
     {
-      icon: <TrophyIcon sx={{ fontSize: 40, color: 'warning.main' }} />,
+      icon: <TrophyIcon />,
       title: 'Track Progress',
       description: 'Monitor your learning journey and unlock new challenges as you advance.',
     },
@@ -89,8 +87,8 @@ const HomePage: React.FC = () => {
         }}
       >
         <Container maxWidth="lg">
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', gap: 4 }}>
+            <Box sx={{ flex: 1 }}>
               <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
                 FRC Programming Challenges
               </Typography>
@@ -108,9 +106,8 @@ const HomePage: React.FC = () => {
                     color: 'primary.main',
                     '&:hover': { bgcolor: 'grey.100' },
                   }}
-                  startIcon={<PlayIcon />}
                 >
-                  Start Coding
+                  <PlayIcon /> Start Coding
                 </Button>
                 <Button
                   variant="outlined"
@@ -124,8 +121,8 @@ const HomePage: React.FC = () => {
                   Learn More
                 </Button>
               </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
+            </Box>
+            <Box sx={{ flex: 1 }}>
               <Box
                 sx={{
                   bgcolor: 'rgba(255,255,255,0.1)',
@@ -134,13 +131,13 @@ const HomePage: React.FC = () => {
                   textAlign: 'center',
                 }}
               >
-                <CodeIcon sx={{ fontSize: 80, mb: 2 }} />
+                <Box sx={{ fontSize: 80, mb: 2 }}><CodeIcon /></Box>
                 <Typography variant="h6">
                   Browser-based FRC Development Environment
                 </Typography>
               </Box>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </Container>
       </Box>
 
@@ -159,23 +156,21 @@ const HomePage: React.FC = () => {
             Everything you need to learn FRC programming in one place
           </Typography>
           
-          <Grid container spacing={4}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 4 }}>
             {features.map((feature, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Card sx={{ height: '100%', textAlign: 'center', p: 2 }}>
-                  <CardContent>
-                    <Box sx={{ mb: 2 }}>{feature.icon}</Box>
-                    <Typography variant="h5" component="h3" gutterBottom>
-                      {feature.title}
-                    </Typography>
-                    <Typography color="text.secondary">
-                      {feature.description}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <Card key={index} sx={{ height: '100%', textAlign: 'center', p: 2 }}>
+                <CardContent>
+                  <Box sx={{ mb: 2, fontSize: 40 }}>{feature.icon}</Box>
+                  <Typography variant="h5" component="h3" gutterBottom>
+                    {feature.title}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    {feature.description}
+                  </Typography>
+                </CardContent>
+              </Card>
             ))}
-          </Grid>
+          </Box>
         </Box>
 
         {/* Sample Challenges Section */}
@@ -192,43 +187,40 @@ const HomePage: React.FC = () => {
             Get a taste of what you'll be learning
           </Typography>
 
-          <Grid container spacing={3}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 3 }}>
             {sampleChallenges.map((challenge) => (
-              <Grid item xs={12} md={4} key={challenge.id}>
-                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                      <Chip
-                        label={challenge.difficulty}
-                        color={getDifficultyColor(challenge.difficulty) as any}
-                        size="small"
-                      />
-                      <Chip label={challenge.category} variant="outlined" size="small" />
-                    </Box>
-                    <Typography variant="h6" component="h3" gutterBottom>
-                      {challenge.title}
-                    </Typography>
-                    <Typography color="text.secondary" sx={{ mb: 2 }}>
-                      {challenge.description}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      ⏱️ {challenge.estimatedTime}
-                    </Typography>
-                  </CardContent>
-                  <CardActions>
-                    <Button
-                      component={Link}
-                      to={`/challenge/${challenge.id}`}
+              <Card key={challenge.id} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    <Chip
+                      label={challenge.difficulty}
+                      color={getDifficultyColor(challenge.difficulty) as any}
                       size="small"
-                      startIcon={<PlayIcon />}
-                    >
-                      Try Challenge
-                    </Button>
-                  </CardActions>
-                </Card>
-              </Grid>
+                    />
+                    <Chip label={challenge.category} variant="outlined" size="small" />
+                  </Box>
+                  <Typography variant="h6" component="h3" gutterBottom>
+                    {challenge.title}
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ mb: 2 }}>
+                    {challenge.description}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    ⏱️ {challenge.estimatedTime}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <Button
+                    component={Link}
+                    to={`/challenge/${challenge.id}`}
+                    size="small"
+                  >
+                    <PlayIcon /> Try Challenge
+                  </Button>
+                </CardActions>
+              </Card>
             ))}
-          </Grid>
+          </Box>
 
           <Box sx={{ textAlign: 'center', mt: 4 }}>
             <Button

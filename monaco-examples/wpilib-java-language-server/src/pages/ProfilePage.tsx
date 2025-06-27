@@ -4,7 +4,6 @@ import {
   Container,
   Typography,
   Paper,
-  Grid,
   Avatar,
   Chip,
   LinearProgress,
@@ -16,14 +15,12 @@ import {
   ListItemIcon,
   Divider,
 } from '@mui/material';
-import {
-  CheckCircle as CompletedIcon,
-  Schedule as InProgressIcon,
-  EmojiEvents as TrophyIcon,
-  Code as CodeIcon,
-  School as SchoolIcon,
-  Timer as TimerIcon,
-} from '@mui/icons-material';
+// Simplified icons
+const CompletedIcon = () => <span>✅</span>;
+const InProgressIcon = () => <span>🔄</span>;
+const TrophyIcon = () => <span>🏆</span>;
+const TimerIcon = () => <span>⏱️</span>;
+const CodeIcon = () => <span>💻</span>;
 
 const ProfilePage: React.FC = () => {
   // Mock user data - this would come from your authentication system
@@ -45,25 +42,25 @@ const ProfilePage: React.FC = () => {
       label: 'Challenges Completed',
       value: user.completedChallenges,
       total: user.totalChallenges,
-      icon: <CompletedIcon color="success" />,
+      icon: <CompletedIcon />,
       color: 'success',
     },
     {
       label: 'In Progress',
       value: user.inProgressChallenges,
-      icon: <InProgressIcon color="warning" />,
+      icon: <InProgressIcon />,
       color: 'warning',
     },
     {
       label: 'Time Spent Learning',
       value: user.totalTimeSpent,
-      icon: <TimerIcon color="info" />,
+      icon: <TimerIcon />,
       color: 'info',
     },
     {
       label: 'Current Streak',
       value: `${user.currentStreak} days`,
-      icon: <TrophyIcon color="primary" />,
+      icon: <TrophyIcon />,
       color: 'primary',
     },
   ];
@@ -124,11 +121,11 @@ const ProfilePage: React.FC = () => {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'completed':
-        return <CompletedIcon color="success" />;
+        return <CompletedIcon />;
       case 'started':
-        return <InProgressIcon color="warning" />;
+        return <InProgressIcon />;
       default:
-        return <CodeIcon color="primary" />;
+        return <CodeIcon />;
     }
   };
 
@@ -149,9 +146,9 @@ const ProfilePage: React.FC = () => {
         Profile
       </Typography>
 
-      <Grid container spacing={4}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
         {/* User Info */}
-        <Grid item xs={12} md={4}>
+        <Box sx={{ flex: { md: '0 0 300px' } }}>
           <Paper sx={{ p: 3, textAlign: 'center' }}>
             <Avatar
               sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'primary.main' }}
@@ -181,9 +178,7 @@ const ProfilePage: React.FC = () => {
               {achievements.map((achievement) => (
                 <ListItem key={achievement.id} sx={{ px: 0 }}>
                   <ListItemIcon>
-                    <TrophyIcon 
-                      color={achievement.earned ? 'warning' : 'disabled'} 
-                    />
+                    <TrophyIcon />
                   </ListItemIcon>
                   <ListItemText
                     primary={achievement.title}
@@ -196,41 +191,39 @@ const ProfilePage: React.FC = () => {
               ))}
             </List>
           </Paper>
-        </Grid>
+        </Box>
 
         {/* Stats and Activity */}
-        <Grid item xs={12} md={8}>
+        <Box sx={{ flex: 1 }}>
           {/* Stats Cards */}
-          <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 2, mb: 3 }}>
             {stats.map((stat, index) => (
-              <Grid item xs={12} sm={6} key={index}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      {stat.icon}
-                      <Typography variant="h6" sx={{ ml: 1 }}>
-                        {typeof stat.value === 'number' && stat.total 
-                          ? `${stat.value}/${stat.total}`
-                          : stat.value
-                        }
-                      </Typography>
-                    </Box>
-                    <Typography color="text.secondary" variant="body2">
-                      {stat.label}
+              <Card key={index}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    {stat.icon}
+                    <Typography variant="h6" sx={{ ml: 1 }}>
+                      {typeof stat.value === 'number' && stat.total
+                        ? `${stat.value}/${stat.total}`
+                        : stat.value
+                      }
                     </Typography>
-                    {stat.total && (
-                      <LinearProgress
-                        variant="determinate"
-                        value={(stat.value as number / stat.total) * 100}
-                        sx={{ mt: 1 }}
-                        color={stat.color as any}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
+                  </Box>
+                  <Typography color="text.secondary" variant="body2">
+                    {stat.label}
+                  </Typography>
+                  {stat.total && (
+                    <LinearProgress
+                      variant="determinate"
+                      value={(stat.value as number / stat.total) * 100}
+                      sx={{ mt: 1 }}
+                      color={stat.color as any}
+                    />
+                  )}
+                </CardContent>
+              </Card>
             ))}
-          </Grid>
+          </Box>
 
           {/* Progress Overview */}
           <Paper sx={{ p: 3, mb: 3 }}>
@@ -285,8 +278,8 @@ const ProfilePage: React.FC = () => {
               ))}
             </List>
           </Paper>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Container>
   );
 };
