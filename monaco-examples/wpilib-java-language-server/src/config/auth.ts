@@ -19,8 +19,14 @@ const awsConfig = {
         oauth: {
           domain: import.meta.env.VITE_COGNITO_DOMAIN?.replace('https://', '') || '',
           scopes: ['email', 'profile', 'openid'],
-          redirectSignIn: [import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN || window.location.origin],
-          redirectSignOut: [import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT || window.location.origin],
+          redirectSignIn: [
+            import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN || window.location.origin,
+            `${import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN || window.location.origin}/`
+          ],
+          redirectSignOut: [
+            import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT || window.location.origin,
+            `${import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT || window.location.origin}/`
+          ],
           responseType: 'code' as const,
           providers: ['Google' as const],
         },
@@ -88,9 +94,11 @@ export const debugEnvVars = () => {
     actualRedirectSignIn: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN || window.location.origin,
     actualRedirectSignOut: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT || window.location.origin,
     windowOrigin: window.location.origin,
+    currentUrl: window.location.href,
     allEnvVars: import.meta.env
   };
   console.log('Environment Variables Debug:', envVars);
+  console.log('Full AWS Config:', awsConfig);
   return envVars;
 };
 
