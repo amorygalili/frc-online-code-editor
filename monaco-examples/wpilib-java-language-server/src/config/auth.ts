@@ -40,24 +40,27 @@ export const configureAuth = () => {
   const missingVars = requiredVars.filter(varName => !import.meta.env[varName]);
 
   if (missingVars.length > 0) {
-    console.warn('Missing required environment variables for authentication:', missingVars);
-    console.warn('Authentication will use mock mode. Please configure AWS Cognito.');
+    console.log('Missing required environment variables for authentication:', missingVars);
+    console.log('Authentication is not configured. Please set up AWS Cognito.');
     return false;
   }
 
   try {
-    // Only configure if we have the required values
-    if (import.meta.env.VITE_COGNITO_USER_POOL_ID && import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID) {
+    // Only configure if we have valid values
+    const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
+    const clientId = import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID;
+
+    if (userPoolId && clientId) {
       Amplify.configure(awsConfig);
       console.log('AWS Amplify configured successfully');
       return true;
     } else {
-      console.log('AWS Cognito not configured - using mock authentication');
+      console.log('AWS Cognito not configured - authentication disabled');
       return false;
     }
   } catch (error) {
     console.error('Failed to configure AWS Amplify:', error);
-    console.warn('Falling back to mock authentication');
+    console.log('Authentication disabled due to configuration error');
     return false;
   }
 };

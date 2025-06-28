@@ -67,9 +67,8 @@ const LoginPage: React.FC = () => {
           variant="contained"
           size="large"
           fullWidth
-
           onClick={handleGoogleSignIn}
-          disabled={isLoading}
+          disabled={isLoading || !isConfigured}
           sx={{
             mb: 3,
             py: 1.5,
@@ -79,7 +78,7 @@ const LoginPage: React.FC = () => {
             },
           }}
         >
-          <GoogleIcon /> {isLoading ? 'Signing in...' : 'Continue with Google'}
+          <GoogleIcon /> {isLoading ? 'Signing in...' : !isConfigured ? 'Authentication Not Configured' : 'Continue with Google'}
         </Button>
 
         <Divider sx={{ mb: 3 }}>
@@ -90,12 +89,17 @@ const LoginPage: React.FC = () => {
 
         {/* Configuration Info */}
         {!isConfigured && (
-          <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+          <Alert severity="warning" sx={{ mb: 3, textAlign: 'left' }}>
             <Typography variant="body2" gutterBottom>
-              <strong>Demo Mode:</strong> AWS Cognito is not configured.
+              <strong>Authentication Setup Required:</strong> AWS Cognito is not configured.
             </Typography>
-            <Typography variant="body2">
-              Configure AWS Cognito environment variables for production authentication.
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              To enable sign in:
+            </Typography>
+            <Typography variant="body2" component="ol" sx={{ pl: 2, fontSize: '0.875rem' }}>
+              <li>Set up AWS Cognito (see AWS_COGNITO_SETUP.md)</li>
+              <li>Configure environment variables (see .env.example)</li>
+              <li>Restart the application</li>
             </Typography>
           </Alert>
         )}

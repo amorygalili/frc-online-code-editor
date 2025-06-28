@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { signIn, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { signInWithRedirect, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { Hub } from 'aws-amplify/utils';
 import { isAuthConfigured } from '../config/auth';
 
@@ -23,13 +23,7 @@ interface AuthContextType {
 // Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user for development when AWS is not configured
-const mockUser: User = {
-  id: 'mock-user-123',
-  email: 'demo@example.com',
-  name: 'Demo User',
-  avatar: '',
-};
+
 
 // Provider component
 interface AuthProviderProps {
@@ -53,50 +47,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Check current authentication status
-  const checkAuthState = async () => {
+  const checkAuthState = useCallback(async () => {
     if (!configured) {
-      // Use mock authentication for development
-      console.log('Using mock authentication - AWS Cognito not configured');
-      setUser(mockUser);
+      // Authentication is required but not configured
+      console.log('AWS Cognito not configured - authentication required');
+      setUser(null);
       setIsLoading(false);
       return;
     }
 
     try {
       setIsLoading(true);
-      const cognitoUser = await getCurrentUser();
-      const mappedUser = mapCognitoUser(cognitoUser);
-      setUser(mappedUser);
+
+      // First check if we have a valid session (more semantic than getCurrentUser)
+      const session = await fetchAuthSession();
+
+      // If we have tokens, get the user details
+      if (session.tokens) {
+        const cognitoUser = await getCurrentUser();
+        const mappedUser = mapCognitoUser(cognitoUser);
+        setUser(mappedUser);
+      } else {
+        // No valid session
+        setUser(null);
+      }
     } catch (error) {
-      // User is not authenticated or Cognito not properly configured
-      console.log('User not authenticated or Cognito configuration issue:', error);
+      // No authenticated session - this is expected when not logged in
+      console.log('No authenticated session found');
       setUser(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [configured]);
 
   // Sign in function
-  const signIn = async () => {
+  const handleSignIn = useCallback(async () => {
     if (!configured) {
-      // Mock sign in
-      setUser(mockUser);
-      return;
+      // No authentication configured
+      console.log('Authentication not configured - cannot sign in');
+      throw new Error('Authentication is not configured. Please set up AWS Cognito to enable sign in.');
     }
 
     try {
       // Use Cognito Hosted UI for Google OAuth
-      await signIn({ provider: 'Google' });
+      await signInWithRedirect({ provider: 'Google' });
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
     }
-  };
+  }, [configured]);
 
   // Sign out function
-  const signOut = async () => {
+  const handleSignOut = useCallback(async () => {
     if (!configured) {
-      // Mock sign out
+      // Authentication not configured - nothing to sign out from
+      console.log('Authentication not configured - no sign out needed');
       setUser(null);
       return;
     }
@@ -108,26 +113,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Sign out error:', error);
       throw error;
     }
-  };
+  }, [configured]);
 
   // Listen for authentication events
   useEffect(() => {
+    // Only check auth state on mount
     checkAuthState();
 
+    // Only set up Hub listener if configured
     if (configured) {
       // Listen for auth state changes
-      const unsubscribe = Hub.listen('auth', ({ payload: { event, data } }) => {
+      const unsubscribe = Hub.listen('auth', ({ payload: { event } }) => {
         switch (event) {
           case 'signedIn':
-          case 'cognitoHostedUI':
+          case 'signInWithRedirect':
             checkAuthState();
             break;
           case 'signedOut':
             setUser(null);
             break;
-          case 'signIn_failure':
-          case 'cognitoHostedUI_failure':
-            console.error('Authentication failed:', data);
+          case 'signInWithRedirect_failure':
+            console.error('Authentication failed');
             setUser(null);
             break;
         }
@@ -135,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return unsubscribe;
     }
-  }, [configured]);
+  }, [configured, checkAuthState]);
 
   // Handle OAuth callback
   useEffect(() => {
@@ -148,14 +154,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         checkAuthState();
       }
     }
-  }, [configured]);
+  }, [configured, checkAuthState]);
 
   const value: AuthContextType = {
     user,
     isLoading,
     isAuthenticated: !!user,
-    signIn,
-    signOut,
+    signIn: handleSignIn,
+    signOut: handleSignOut,
     isConfigured: configured,
   };
 
