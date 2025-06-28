@@ -190,6 +190,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             break;
           case 'signInWithRedirect_failure':
             console.error('Authentication failed:', payload);
+            console.error('Failure details:', {
+              error: payload.data?.error,
+              errorDescription: (payload.data as any)?.error_description,
+              message: (payload.data as any)?.message,
+              fullPayload: payload
+            });
             setUser(null);
             break;
           default:
