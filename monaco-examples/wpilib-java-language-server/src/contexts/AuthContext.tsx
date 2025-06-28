@@ -86,22 +86,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       setIsLoading(true);
+      console.log('Checking authentication state...');
 
       // First check if we have a valid session (more semantic than getCurrentUser)
       const session = await fetchAuthSession();
+      console.log('Session fetched:', { hasTokens: !!session.tokens, session });
 
       // If we have tokens, get the user details
       if (session.tokens) {
+        console.log('Valid session found, getting user details...');
         const cognitoUser = await getCurrentUser();
+        console.log('Cognito user:', cognitoUser);
+
         const mappedUser = await mapCognitoUser(cognitoUser);
+        console.log('User successfully mapped and authenticated:', mappedUser);
         setUser(mappedUser);
       } else {
         // No valid session
+        console.log('No valid session tokens found');
         setUser(null);
       }
     } catch (error) {
       // No authenticated session - this is expected when not logged in
-      console.log('No authenticated session found');
+      console.error('Authentication check failed:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -151,19 +158,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Only set up Hub listener if configured
     if (configured) {
       // Listen for auth state changes
-      const unsubscribe = Hub.listen('auth', ({ payload: { event } }) => {
+      const unsubscribe = Hub.listen('auth', ({ payload }) => {
+        const { event } = payload;
+        console.log('Auth Hub event received:', event, payload);
+
         switch (event) {
           case 'signedIn':
+            console.log('User signed in successfully');
+            checkAuthState();
+            break;
           case 'signInWithRedirect':
+            console.log('Sign in with redirect completed');
             checkAuthState();
             break;
           case 'signedOut':
+            console.log('User signed out');
             setUser(null);
             break;
           case 'signInWithRedirect_failure':
-            console.error('Authentication failed');
+            console.error('Authentication failed:', payload);
             setUser(null);
             break;
+          default:
+            console.log('Unhandled auth event:', event, payload);
         }
       });
 
@@ -176,10 +193,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (configured) {
       // Check if we're returning from OAuth
       const urlParams = new URLSearchParams(window.location.search);
+      console.log('Checking URL params:', window.location.search);
+
       if (urlParams.get('code')) {
+        console.log('OAuth callback detected with code, processing authentication...');
         // Clear the URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
         checkAuthState();
+      } else if (urlParams.get('error')) {
+        console.error('OAuth callback error:', urlParams.get('error'), urlParams.get('error_description'));
       }
     }
   }, [configured, checkAuthState]);
