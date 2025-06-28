@@ -35,6 +35,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const configured = isAuthConfigured();
 
+  // Debug environment variables on initialization
+  console.log('Auth Provider initialized with environment variables:', {
+    region: import.meta.env.VITE_AWS_REGION,
+    userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+    clientId: import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID,
+    domain: import.meta.env.VITE_COGNITO_DOMAIN,
+    redirectSignIn: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN,
+    redirectSignOut: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT,
+    configured: configured,
+    windowOrigin: window.location.origin,
+    currentUrl: window.location.href
+  });
+
   // Convert Cognito user to our User type
   const mapCognitoUser = async (cognitoUser: any): Promise<User> => {
     try {
@@ -194,12 +207,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Check if we're returning from OAuth
       const urlParams = new URLSearchParams(window.location.search);
       console.log('Checking URL params:', window.location.search);
+      console.log('Full URL:', window.location.href);
 
       if (urlParams.get('code')) {
-        console.log('OAuth callback detected with code, processing authentication...');
-        // Clear the URL parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
-        checkAuthState();
+        console.log('OAuth callback detected with code:', urlParams.get('code'));
+        console.log('State parameter:', urlParams.get('state'));
+
+        // Don't clear URL parameters immediately - let Amplify process them first
+        console.log('Waiting for Amplify to process OAuth callback...');
+
+        // Give Amplify time to process the callback before checking auth state
+        setTimeout(() => {
+          console.log('Checking auth state after OAuth callback...');
+          checkAuthState();
+          // Clear the URL parameters after processing
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }, 1000);
       } else if (urlParams.get('error')) {
         console.error('OAuth callback error:', urlParams.get('error'), urlParams.get('error_description'));
       }
