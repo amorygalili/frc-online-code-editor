@@ -68,7 +68,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const mappedUser = mapCognitoUser(cognitoUser);
       setUser(mappedUser);
     } catch (error) {
-      // User is not authenticated
+      // User is not authenticated or Cognito not properly configured
+      console.log('User not authenticated or Cognito configuration issue:', error);
       setUser(null);
     } finally {
       setIsLoading(false);
