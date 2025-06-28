@@ -9,7 +9,9 @@ import {
   CardContent,
   CardActions,
   Chip,
+  Alert,
 } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
 // Simplified icons to avoid build issues
 const CodeIcon = () => <span>💻</span>;
 const SchoolIcon = () => <span>🎓</span>;
@@ -17,6 +19,8 @@ const TrophyIcon = () => <span>🏆</span>;
 const PlayIcon = () => <span>▶️</span>;
 
 const HomePage: React.FC = () => {
+  const { user, isAuthenticated, isConfigured } = useAuth();
+
   const features = [
     {
       icon: <CodeIcon />,
@@ -142,6 +146,24 @@ const HomePage: React.FC = () => {
       </Box>
 
       <Container maxWidth="lg">
+        {/* Authentication Status Indicator */}
+        {isConfigured && isAuthenticated && user && (
+          <Alert
+            severity="success"
+            sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 1 }}
+          >
+            <span>✅</span>
+            <Box>
+              <Typography variant="body1" component="span" sx={{ fontWeight: 'bold' }}>
+                Welcome back, {user.name}!
+              </Typography>
+              <Typography variant="body2" component="div" sx={{ opacity: 0.8 }}>
+                You're signed in as {user.email}
+              </Typography>
+            </Box>
+          </Alert>
+        )}
+
         {/* Features Section */}
         <Box sx={{ mb: 8 }}>
           <Typography variant="h3" component="h2" textAlign="center" gutterBottom>

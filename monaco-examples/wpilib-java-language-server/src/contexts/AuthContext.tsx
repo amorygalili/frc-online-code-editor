@@ -36,14 +36,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const configured = isAuthConfigured();
 
   // Convert Cognito user to our User type
-  const mapCognitoUser = (cognitoUser: any): User => {
-    const attributes = cognitoUser.signInDetails?.loginId || cognitoUser.username || '';
-    return {
-      id: cognitoUser.userId || cognitoUser.username || '',
-      email: attributes || cognitoUser.signInDetails?.loginId || '',
-      name: cognitoUser.signInDetails?.loginId || 'User',
-      avatar: '',
-    };
+  const mapCognitoUser = async (cognitoUser: any): Promise<User> => {
+    try {
+      // Get user attributes which contain the actual user info from Google
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken;
+
+      // Extract user info from ID token payload
+      let userInfo = {
+        id: cognitoUser.userId || cognitoUser.username || '',
+        email: '',
+        name: 'User',
+        avatar: ''
+      };
+
+      if (idToken) {
+        const payload = idToken.payload;
+        userInfo = {
+          id: cognitoUser.userId || cognitoUser.username || '',
+          email: payload.email as string || '',
+          name: payload.name as string || payload.given_name as string || payload.email as string || 'User',
+          avatar: payload.picture as string || ''
+        };
+      }
+
+      console.log('Mapped user info:', userInfo);
+      return userInfo;
+    } catch (error) {
+      console.error('Error mapping user:', error);
+      // Fallback to basic info
+      return {
+        id: cognitoUser.userId || cognitoUser.username || '',
+        email: cognitoUser.signInDetails?.loginId || '',
+        name: cognitoUser.signInDetails?.loginId || 'User',
+        avatar: '',
+      };
+    }
   };
 
   // Check current authentication status
@@ -65,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If we have tokens, get the user details
       if (session.tokens) {
         const cognitoUser = await getCurrentUser();
-        const mappedUser = mapCognitoUser(cognitoUser);
+        const mappedUser = await mapCognitoUser(cognitoUser);
         setUser(mappedUser);
       } else {
         // No valid session
