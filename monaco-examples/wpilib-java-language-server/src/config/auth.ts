@@ -75,3 +75,24 @@ export const isAuthConfigured = () => {
     import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID
   );
 };
+
+// Debug function to check environment variables (temporary)
+export const debugEnvVars = () => {
+  const envVars = {
+    userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+    clientId: import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID,
+    domain: import.meta.env.VITE_COGNITO_DOMAIN,
+    redirectSignIn: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN,
+    redirectSignOut: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT,
+    region: import.meta.env.VITE_AWS_REGION,
+    actualRedirectSignIn: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_IN || window.location.origin,
+    actualRedirectSignOut: import.meta.env.VITE_COGNITO_REDIRECT_SIGN_OUT || window.location.origin,
+    windowOrigin: window.location.origin,
+    allEnvVars: import.meta.env
+  };
+  console.log('Environment Variables Debug:', envVars);
+  return envVars;
+};
+
+// Make debug function available globally (temporary)
+(window as any).debugEnvVars = debugEnvVars;
