@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Box,
@@ -9,7 +9,9 @@ import {
   Chip,
   Breadcrumbs,
   Alert,
+  CircularProgress,
 } from '@mui/material';
+import { challengeService, Challenge } from '../services/challengeService';
 // Simplified icons
 const BackIcon = () => <span>←</span>;
 const StartIcon = () => <span>▶️</span>;
@@ -18,57 +20,80 @@ const LearningIcon = () => <span>📚</span>;
 // This will eventually integrate with your existing Monaco Editor setup
 const ChallengePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  
-  // Mock data - this would come from your API
-  const challenge = {
-    id: parseInt(id || '1'),
-    title: 'Hello Robot World',
-    description: 'Get started with your first robot program and learn the fundamentals of FRC programming.',
-    difficulty: 'Beginner',
-    category: 'Basics',
-    estimatedTime: '15 min',
-    status: 'not_started',
-    learningObjectives: [
-      'Understand the basic structure of an FRC robot program',
-      'Learn how to use the Robot class and its methods',
-      'Implement basic robot initialization and periodic functions',
-      'Test your code using the robot simulator',
-    ],
-    instructions: `
-# Hello Robot World Challenge
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-Welcome to your first FRC programming challenge! In this challenge, you'll create your first robot program and learn the fundamentals of FRC programming.
+  // Load challenge data
+  useEffect(() => {
+    const loadChallenge = async () => {
+      if (!id) {
+        setError('Challenge ID not provided');
+        setLoading(false);
+        return;
+      }
 
-## What You'll Learn
-- Basic structure of an FRC robot program
-- The Robot class and its lifecycle methods
-- How to use the robot simulator to test your code
+      try {
+        setLoading(true);
+        setError(null);
+        const challengeData = await challengeService.getChallenge(id);
 
-## Your Task
-1. Create a basic robot program that prints "Hello, Robot World!" when the robot is initialized
-2. Add a counter that increments every time the robot's periodic function is called
-3. Print the counter value to the console every 50 iterations
-4. Test your program using the simulator
+        if (!challengeData) {
+          setError('Challenge not found');
+        } else {
+          setChallenge(challengeData);
+        }
+      } catch (err) {
+        setError('Failed to load challenge');
+        console.error('Error loading challenge:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-## Getting Started
-The starter code is already loaded in the editor. Look for the TODO comments to see where you need to add your code.
+    loadChallenge();
+  }, [id]);
 
-## Success Criteria
-- [ ] Robot prints "Hello, Robot World!" during initialization
-- [ ] Counter increments properly in the periodic function
-- [ ] Counter value is printed every 50 iterations
-- [ ] Code compiles without errors
-- [ ] Simulation runs successfully
+  // Loading state
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
-Good luck, and welcome to FRC programming!
-    `,
-    hints: [
-      'Use System.out.println() to print messages to the console',
-      'The robotInit() method is called once when the robot starts',
-      'The robotPeriodic() method is called every 20ms while the robot is running',
-      'Use the modulo operator (%) to check if the counter is divisible by 50',
-    ],
-  };
+  // Error state
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+        <Button component={Link} to="/challenges" variant="outlined">
+          Back to Challenges
+        </Button>
+      </Container>
+    );
+  }
+
+  // Challenge not found
+  if (!challenge) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Challenge not found
+        </Alert>
+        <Button component={Link} to="/challenges" variant="outlined">
+          Back to Challenges
+        </Button>
+      </Container>
+    );
+  }
+
+  // Use the loaded challenge data
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
@@ -88,6 +113,11 @@ Good luck, and welcome to FRC programming!
     // For now, we'll just show an alert
     alert('Starting challenge... This would open the Monaco editor with the challenge code!');
   };
+
+  // Final safety check - this should not happen due to earlier checks
+  if (!challenge) {
+    return null;
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -205,7 +235,7 @@ Good luck, and welcome to FRC programming!
                   );
                 } else if (line.trim()) {
                   return (
-                    <Typography key={index} paragraph>
+                    <Typography key={index} sx={{ mb: 2 }}>
                       {line}
                     </Typography>
                   );
@@ -242,11 +272,15 @@ Good luck, and welcome to FRC programming!
               Stuck? Here are some hints to help you along!
             </Alert>
             <Box component="ul" sx={{ pl: 2, m: 0 }}>
-              {challenge.hints.map((hint, index) => (
+              {challenge.hints?.map((hint, index) => (
                 <Typography key={index} component="li" sx={{ mb: 1 }} color="text.secondary">
                   {hint}
                 </Typography>
-              ))}
+              )) || (
+                <Typography color="text.secondary">
+                  No hints available for this challenge.
+                </Typography>
+              )}
             </Box>
           </Paper>
 

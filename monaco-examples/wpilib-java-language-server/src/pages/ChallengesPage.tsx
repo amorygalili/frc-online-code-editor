@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -17,100 +17,61 @@ import {
   LinearProgress,
   Tabs,
   Tab,
+  CircularProgress,
+  Alert,
+  Grid,
 } from '@mui/material';
+import { challengeService, Challenge, ChallengeFilters } from '../services/challengeService';
+
 // Simplified icons
 const PlayIcon = () => <span>▶️</span>;
 const CompletedIcon = () => <span>✅</span>;
 const InProgressIcon = () => <span>🔄</span>;
 const LockedIcon = () => <span>🔒</span>;
-
-interface Challenge {
-  id: number;
-  title: string;
-  description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: string;
-  estimatedTime: string;
-  status: 'not_started' | 'in_progress' | 'completed' | 'locked';
-  progress: number;
-  prerequisites?: number[];
-}
+const SearchIcon = () => <span>🔍</span>;
 
 const ChallengesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [activeTab, setActiveTab] = useState(0);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - this would come from your API
-  const challenges: Challenge[] = [
-    {
-      id: 1,
-      title: 'Hello Robot World',
-      description: 'Get started with your first robot program and learn the fundamentals of FRC programming.',
-      difficulty: 'Beginner',
-      category: 'Basics',
-      estimatedTime: '15 min',
-      status: 'completed',
-      progress: 100,
-    },
-    {
-      id: 2,
-      title: 'Motor Control Basics',
-      description: 'Learn how to control motors and create basic drive systems for your robot.',
-      difficulty: 'Beginner',
-      category: 'Basics',
-      estimatedTime: '30 min',
-      status: 'in_progress',
-      progress: 65,
-    },
-    {
-      id: 3,
-      title: 'Sensor Reading Fundamentals',
-      description: 'Understand how to read data from various sensors and use it in your programs.',
-      difficulty: 'Beginner',
-      category: 'Sensors',
-      estimatedTime: '25 min',
-      status: 'not_started',
-      progress: 0,
-    },
-    {
-      id: 4,
-      title: 'Encoder-based Movement',
-      description: 'Use encoders to create precise movement and positioning systems.',
-      difficulty: 'Intermediate',
-      category: 'Sensors',
-      estimatedTime: '45 min',
-      status: 'locked',
-      progress: 0,
-      prerequisites: [3],
-    },
-    {
-      id: 5,
-      title: 'Gyroscope Navigation',
-      description: 'Implement gyroscope-based navigation and rotation control.',
-      difficulty: 'Intermediate',
-      category: 'Sensors',
-      estimatedTime: '40 min',
-      status: 'locked',
-      progress: 0,
-      prerequisites: [3],
-    },
-    {
-      id: 6,
-      title: 'PID Control Implementation',
-      description: 'Master PID controllers for precise robot movement and control.',
-      difficulty: 'Advanced',
-      category: 'Control Systems',
-      estimatedTime: '60 min',
-      status: 'locked',
-      progress: 0,
-      prerequisites: [4, 5],
-    },
-  ];
+  // Load challenges from service
+  const loadChallenges = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const categories = ['all', 'Basics', 'Sensors', 'Control Systems', 'Autonomous', 'Vision'];
-  const difficulties = ['all', 'Beginner', 'Intermediate', 'Advanced'];
+      const filters: ChallengeFilters = {};
+      if (selectedCategory !== 'all') filters.category = selectedCategory;
+      if (selectedDifficulty !== 'all') filters.difficulty = selectedDifficulty;
+      if (searchTerm.trim()) filters.search = searchTerm.trim();
+
+      // Apply tab-based status filter
+      if (activeTab === 1) filters.status = 'in_progress';
+      if (activeTab === 2) filters.status = 'completed';
+
+      const challengeData = await challengeService.getChallenges(filters);
+      setChallenges(challengeData);
+    } catch (err) {
+      setError('Failed to load challenges. Please try again.');
+      console.error('Error loading challenges:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load challenges on component mount and when filters change
+  useEffect(() => {
+    loadChallenges();
+  }, [activeTab, selectedCategory, selectedDifficulty, searchTerm]);
+
+  // Get categories and difficulties from service
+  const categories = challengeService.getCategories().map(c => c.toLowerCase());
+  const difficulties = challengeService.getDifficulties().map(d => d.toLowerCase());
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
@@ -151,20 +112,7 @@ const ChallengesPage: React.FC = () => {
     }
   };
 
-  const filteredChallenges = challenges.filter((challenge) => {
-    const matchesSearch = challenge.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         challenge.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || challenge.category === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === 'all' || challenge.difficulty === selectedDifficulty;
-    
-    if (activeTab === 1) {
-      return matchesSearch && matchesCategory && matchesDifficulty && challenge.status === 'in_progress';
-    } else if (activeTab === 2) {
-      return matchesSearch && matchesCategory && matchesDifficulty && challenge.status === 'completed';
-    }
-    
-    return matchesSearch && matchesCategory && matchesDifficulty;
-  });
+  // Filtering is now handled by the service
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -231,9 +179,27 @@ const ChallengesPage: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Loading State */}
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+          <Button onClick={loadChallenges} sx={{ ml: 2 }}>
+            Retry
+          </Button>
+        </Alert>
+      )}
+
       {/* Challenge Grid */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 3 }}>
-        {filteredChallenges.map((challenge) => (
+      {!loading && !error && (
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 3 }}>
+          {challenges.map((challenge) => (
           <Box key={challenge.id}>
             <Card 
               sx={{ 
@@ -298,10 +264,12 @@ const ChallengesPage: React.FC = () => {
               </CardActions>
             </Card>
           </Box>
-        ))}
-      </Box>
+          ))}
+        </Box>
+      )}
 
-      {filteredChallenges.length === 0 && (
+      {/* Empty State */}
+      {!loading && !error && challenges.length === 0 && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary">
             No challenges found matching your criteria
