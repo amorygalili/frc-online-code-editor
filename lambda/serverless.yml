@@ -55,10 +55,16 @@ functions:
       - http:
           path: /challenges
           method: get
-          cors: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
+
+  getChallengesOptions:
+    handler: dist/handlers/cors/options.handler
+    events:
+      - http:
+          path: /challenges
+          method: options
 
   getChallenge:
     handler: dist/handlers/challenges/getChallenge.handler
@@ -66,10 +72,16 @@ functions:
       - http:
           path: /challenges/{id}
           method: get
-          cors: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
+
+  getChallengeOptions:
+    handler: dist/handlers/cors/options.handler
+    events:
+      - http:
+          path: /challenges/{id}
+          method: options
 
   # User Progress Management
   getUserProgress:
@@ -78,10 +90,16 @@ functions:
       - http:
           path: /user/progress
           method: get
-          cors: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
+
+  getUserProgressOptions:
+    handler: dist/handlers/cors/options.handler
+    events:
+      - http:
+          path: /user/progress
+          method: options
 
   updateChallengeProgress:
     handler: dist/handlers/progress/updateChallengeProgress.handler
@@ -89,10 +107,16 @@ functions:
       - http:
           path: /challenges/{id}/progress
           method: put
-          cors: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
+
+  updateChallengeProgressOptions:
+    handler: dist/handlers/cors/options.handler
+    events:
+      - http:
+          path: /challenges/{id}/progress
+          method: options
 
   # Challenge Sessions
   createChallengeSession:
@@ -101,10 +125,16 @@ functions:
       - http:
           path: /challenges/{id}/sessions
           method: post
-          cors: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
+
+  createChallengeSessionOptions:
+    handler: dist/handlers/cors/options.handler
+    events:
+      - http:
+          path: /challenges/{id}/sessions
+          method: options
 
   saveChallengeCode:
     handler: dist/handlers/sessions/saveChallengeCode.handler
@@ -112,10 +142,16 @@ functions:
       - http:
           path: /sessions/{sessionId}/code
           method: put
-          cors: true
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
+
+  saveChallengeCodeOptions:
+    handler: dist/handlers/cors/options.handler
+    events:
+      - http:
+          path: /sessions/{sessionId}/code
+          method: options
 
 # CloudFormation resources
 resources:

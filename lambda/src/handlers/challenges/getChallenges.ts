@@ -15,7 +15,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         statusCode: 401,
         message: 'User not authenticated',
         code: 'UNAUTHORIZED',
-      });
+      }, event);
     }
 
     // Parse query parameters
@@ -53,12 +53,12 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     };
 
     console.log(`Returning ${paginatedChallenges.length} challenges out of ${filteredChallenges.length} total`);
-    
-    return successResponse(response);
+
+    return successResponse(response, 200, event);
 
   } catch (error) {
     console.error('getChallenges error:', error);
-    return internalErrorResponse('Failed to get challenges', error);
+    return internalErrorResponse('Failed to get challenges', error, event);
   }
 }
 

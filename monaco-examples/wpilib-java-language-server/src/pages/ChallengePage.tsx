@@ -11,7 +11,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { challengeService, Challenge } from '../services/challengeService';
+import { challengeService, ChallengeWithProgress } from '../services/challengeService';
 // Simplified icons
 const BackIcon = () => <span>←</span>;
 const StartIcon = () => <span>▶️</span>;
@@ -20,7 +20,7 @@ const LearningIcon = () => <span>📚</span>;
 // This will eventually integrate with your existing Monaco Editor setup
 const ChallengePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [challenge, setChallenge] = useState<ChallengeWithProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

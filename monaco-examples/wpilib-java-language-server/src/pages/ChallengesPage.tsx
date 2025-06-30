@@ -21,7 +21,7 @@ import {
   Alert,
   Grid,
 } from '@mui/material';
-import { challengeService, Challenge, ChallengeFilters } from '../services/challengeService';
+import { challengeService, ChallengeWithProgress, ChallengeFilters } from '../services/challengeService';
 
 // Simplified icons
 const PlayIcon = () => <span>▶️</span>;
@@ -35,7 +35,7 @@ const ChallengesPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [activeTab, setActiveTab] = useState(0);
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [challenges, setChallenges] = useState<ChallengeWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

@@ -1,18 +1,30 @@
 // Response utilities for Lambda functions
-import { APIGatewayProxyResult } from 'aws-lambda';
+import { APIGatewayProxyResult, APIGatewayProxyEvent } from 'aws-lambda';
 import { ApiError } from '../types';
 
-const CORS_HEADERS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'https://frc-online-code-editor.vercel.app',
+  'http://localhost:3000'
+];
 
-export function successResponse<T>(data: T, statusCode: number = 200): APIGatewayProxyResult {
+function getCorsHeaders(event?: APIGatewayProxyEvent): Record<string, string> {
+  const origin = event?.headers?.origin || event?.headers?.Origin;
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin || '') ? origin : ALLOWED_ORIGINS[0];
+
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': allowedOrigin || ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
+  };
+}
+
+export function successResponse<T>(data: T, statusCode: number = 200, event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return {
     statusCode,
-    headers: CORS_HEADERS,
+    headers: getCorsHeaders(event),
     body: JSON.stringify({
       success: true,
       data,
@@ -20,10 +32,10 @@ export function successResponse<T>(data: T, statusCode: number = 200): APIGatewa
   };
 }
 
-export function errorResponse(error: ApiError): APIGatewayProxyResult {
+export function errorResponse(error: ApiError, event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return {
     statusCode: error.statusCode,
-    headers: CORS_HEADERS,
+    headers: getCorsHeaders(event),
     body: JSON.stringify({
       success: false,
       error: {
@@ -35,55 +47,55 @@ export function errorResponse(error: ApiError): APIGatewayProxyResult {
   };
 }
 
-export function validationErrorResponse(message: string, details?: any): APIGatewayProxyResult {
+export function validationErrorResponse(message: string, details?: any, event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return errorResponse({
     statusCode: 400,
     message,
     code: 'VALIDATION_ERROR',
     details,
-  });
+  }, event);
 }
 
-export function notFoundResponse(resource: string): APIGatewayProxyResult {
+export function notFoundResponse(resource: string, event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return errorResponse({
     statusCode: 404,
     message: `${resource} not found`,
     code: 'NOT_FOUND',
-  });
+  }, event);
 }
 
-export function unauthorizedResponse(message: string = 'Unauthorized'): APIGatewayProxyResult {
+export function unauthorizedResponse(message: string = 'Unauthorized', event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return errorResponse({
     statusCode: 401,
     message,
     code: 'UNAUTHORIZED',
-  });
+  }, event);
 }
 
-export function forbiddenResponse(message: string = 'Forbidden'): APIGatewayProxyResult {
+export function forbiddenResponse(message: string = 'Forbidden', event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return errorResponse({
     statusCode: 403,
     message,
     code: 'FORBIDDEN',
-  });
+  }, event);
 }
 
-export function internalErrorResponse(message: string = 'Internal server error', details?: any): APIGatewayProxyResult {
+export function internalErrorResponse(message: string = 'Internal server error', details?: any, event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return errorResponse({
     statusCode: 500,
     message,
     code: 'INTERNAL_ERROR',
     details,
-  });
+  }, event);
 }
 
-export function conflictResponse(message: string, details?: any): APIGatewayProxyResult {
+export function conflictResponse(message: string, details?: any, event?: APIGatewayProxyEvent): APIGatewayProxyResult {
   return errorResponse({
     statusCode: 409,
     message,
     code: 'CONFLICT',
     details,
-  });
+  }, event);
 }
 
 // Helper to parse JSON body safely

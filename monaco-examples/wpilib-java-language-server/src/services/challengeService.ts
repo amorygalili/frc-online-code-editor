@@ -1,5 +1,10 @@
 // Challenge Service - API layer for challenge data
-// This will eventually connect to AWS Lambda functions
+// Connected to AWS Lambda functions
+
+import { fetchAuthSession } from 'aws-amplify/auth';
+
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://20uazzdjqb.execute-api.us-east-2.amazonaws.com/dev';
 
 export interface Challenge {
   id: string;
@@ -8,8 +13,6 @@ export interface Challenge {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   category: string;
   estimatedTime: string;
-  status: 'not_started' | 'in_progress' | 'completed' | 'locked';
-  progress: number;
   prerequisites?: string[];
   learningObjectives: string[];
   instructions: string;
@@ -18,11 +21,20 @@ export interface Challenge {
   solutionCode?: string;
   testCases?: any[];
   tags: string[];
+  isPublished: boolean;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ChallengeProgress {
+export interface ChallengeWithProgress extends Challenge {
+  userProgress?: UserProgress;
+  // Computed properties for UI compatibility
+  status: 'not_started' | 'in_progress' | 'completed' | 'locked';
+  progress: number;
+}
+
+export interface UserProgress {
   challengeId: string;
   userId: string;
   status: 'not_started' | 'in_progress' | 'completed';
@@ -30,7 +42,12 @@ export interface ChallengeProgress {
   lastCode?: string;
   completedAt?: string;
   timeSpent: number; // in minutes
+  bestScore?: number;
+  createdAt: string;
+  updatedAt: string;
 }
+
+
 
 export interface ChallengeFilters {
   category?: string;
@@ -39,166 +56,47 @@ export interface ChallengeFilters {
   search?: string;
 }
 
-// Mock data for development
-const mockChallenges: Challenge[] = [
-  {
-    id: '1',
-    title: 'Hello Robot World',
-    description: 'Get started with your first robot program and learn the fundamentals of FRC programming.',
-    difficulty: 'Beginner',
-    category: 'Basics',
-    estimatedTime: '15 min',
-    status: 'not_started',
-    progress: 0,
-    learningObjectives: [
-      'Understand the basic structure of an FRC robot program',
-      'Learn how to use the Robot class and its methods',
-      'Implement basic robot initialization and periodic functions',
-      'Test your code using the robot simulator',
-    ],
-    instructions: `# Hello Robot World Challenge
+// API Helper Functions
+async function getAuthToken(): Promise<string | null> {
+  try {
+    const session = await fetchAuthSession();
+    if (session.tokens?.idToken) {
+      return session.tokens.idToken.toString();
+    }
+    return null;
+  } catch (error) {
+    console.log('No authenticated user found');
+    return null;
+  }
+}
 
-Welcome to your first FRC programming challenge! In this challenge, you'll create your first robot program.
+async function apiRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  const token = await getAuthToken();
 
-## Objectives
-- Create a basic robot class that extends TimedRobot
-- Implement robotInit() and teleopPeriodic() methods
-- Print "Hello Robot World!" to the console
-- Test your program in the simulator
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
 
-## Getting Started
-1. Look at the starter code provided
-2. Complete the TODO items
-3. Run your code in the simulator
-4. Verify the output in the console`,
-    hints: [
-      'Use System.out.println() to print messages to the console',
-      'The robotInit() method is called once when the robot starts',
-      'The teleopPeriodic() method is called every 20ms during teleop mode',
-      'Look for the TODO comments in the starter code',
-    ],
-    starterCode: `package frc.robot;
-
-import edu.wpi.first.wpilibj.TimedRobot;
-
-public class Robot extends TimedRobot {
-
-  @Override
-  public void robotInit() {
-    // TODO: Print "Hello Robot World!" to the console
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  @Override
-  public void teleopPeriodic() {
-    // TODO: This method runs periodically during teleop
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
-}`,
-    tags: ['basics', 'first-program', 'console'],
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    title: 'Motor Control Basics',
-    description: 'Learn how to control motors and create a simple drive system for your robot.',
-    difficulty: 'Beginner',
-    category: 'Basics',
-    estimatedTime: '25 min',
-    status: 'locked',
-    progress: 0,
-    prerequisites: ['1'],
-    learningObjectives: [
-      'Understand motor controller classes in WPILib',
-      'Learn how to create and configure motor controllers',
-      'Implement basic motor control with joystick input',
-      'Test motor control in simulation',
-    ],
-    instructions: `# Motor Control Basics
 
-Learn the fundamentals of controlling motors in FRC programming.
+  return response.json();
+}
 
-## Objectives
-- Create motor controller objects
-- Connect joystick input to motor output
-- Implement safety features
-- Test in simulation`,
-    tags: ['motors', 'joystick', 'drive'],
-    createdAt: '2024-01-02T00:00:00Z',
-    updatedAt: '2024-01-02T00:00:00Z',
-  },
-  {
-    id: '3',
-    title: 'Sensor Reading Fundamentals',
-    description: 'Master the basics of reading sensor data and using it in your robot programs.',
-    difficulty: 'Intermediate',
-    category: 'Sensors',
-    estimatedTime: '30 min',
-    status: 'locked',
-    progress: 0,
-    prerequisites: ['1', '2'],
-    learningObjectives: [
-      'Understand different types of sensors in FRC',
-      'Learn how to read encoder values',
-      'Implement sensor-based decision making',
-      'Debug sensor readings',
-    ],
-    instructions: `# Sensor Reading Fundamentals
-
-Explore how to read and use sensor data in your robot programs.`,
-    tags: ['sensors', 'encoders', 'data'],
-    createdAt: '2024-01-03T00:00:00Z',
-    updatedAt: '2024-01-03T00:00:00Z',
-  },
-  {
-    id: '4',
-    title: 'Autonomous Movement',
-    description: 'Create your first autonomous routine with timed movements and sensor feedback.',
-    difficulty: 'Intermediate',
-    category: 'Autonomous',
-    estimatedTime: '45 min',
-    status: 'locked',
-    progress: 0,
-    prerequisites: ['2', '3'],
-    learningObjectives: [
-      'Understand autonomous mode in FRC',
-      'Implement timed movements',
-      'Use sensor feedback for precise control',
-      'Create a complete autonomous routine',
-    ],
-    instructions: `# Autonomous Movement Challenge
-
-Build your first autonomous routine that can move the robot precisely.`,
-    tags: ['autonomous', 'movement', 'timing'],
-    createdAt: '2024-01-04T00:00:00Z',
-    updatedAt: '2024-01-04T00:00:00Z',
-  },
-  {
-    id: '5',
-    title: 'Advanced PID Control',
-    description: 'Master PID controllers for precise robot movement and mechanism control.',
-    difficulty: 'Advanced',
-    category: 'Advanced',
-    estimatedTime: '60 min',
-    status: 'locked',
-    progress: 0,
-    prerequisites: ['3', '4'],
-    learningObjectives: [
-      'Understand PID control theory',
-      'Implement PID controllers in WPILib',
-      'Tune PID parameters',
-      'Apply PID to different mechanisms',
-    ],
-    instructions: `# Advanced PID Control
-
-Learn to implement and tune PID controllers for precise robot control.`,
-    tags: ['pid', 'control', 'tuning', 'advanced'],
-    createdAt: '2024-01-05T00:00:00Z',
-    updatedAt: '2024-01-05T00:00:00Z',
-  },
-];
-
-// Mock user progress data
-const mockProgress: Record<string, ChallengeProgress> = {
+// Mock user progress data for development (will be replaced with API calls)
+const mockProgress: Record<string, UserProgress> = {
   '1': {
     challengeId: '1',
     userId: 'user123',
@@ -206,6 +104,8 @@ const mockProgress: Record<string, ChallengeProgress> = {
     progress: 100,
     completedAt: '2024-01-15T10:30:00Z',
     timeSpent: 20,
+    createdAt: '2024-01-15T09:00:00Z',
+    updatedAt: '2024-01-15T10:30:00Z',
   },
   '2': {
     challengeId: '2',
@@ -214,120 +114,186 @@ const mockProgress: Record<string, ChallengeProgress> = {
     progress: 60,
     lastCode: 'partial implementation...',
     timeSpent: 15,
+    createdAt: '2024-01-15T09:30:00Z',
+    updatedAt: '2024-01-15T10:00:00Z',
   },
 };
 
 class ChallengeService {
   // Get all challenges with user progress applied
-  async getChallenges(filters?: ChallengeFilters): Promise<Challenge[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    let challenges = [...mockChallenges];
-    
-    // Apply user progress to challenges
-    challenges = challenges.map(challenge => {
-      const progress = mockProgress[challenge.id];
+  async getChallenges(filters?: ChallengeFilters): Promise<ChallengeWithProgress[]> {
+    try {
+      // Fetch challenges from API
+      const challenges: Challenge[] = await apiRequest('/challenges');
+      
+      // Apply user progress to challenges (this will be replaced with API call)
+      const challengesWithProgress = challenges.map(challenge => {
+        const progress = mockProgress[challenge.id];
+        if (progress) {
+          return {
+            ...challenge,
+            status: progress.status,
+            progress: progress.progress,
+          };
+        }
+        
+        // Check if challenge should be unlocked based on prerequisites
+        if (challenge.prerequisites && challenge.prerequisites.length > 0) {
+          const prerequisitesMet = challenge.prerequisites.every(prereqId => {
+            const prereqProgress = mockProgress[prereqId];
+            return prereqProgress && prereqProgress.status === 'completed';
+          });
+          
+          return {
+            ...challenge,
+            status: prerequisitesMet ? 'not_started' : 'locked',
+            progress: 0,
+          } as ChallengeWithProgress;
+        }
+        
+        return {
+          ...challenge,
+          status: 'not_started' as const,
+          progress: 0,
+        };
+      });
+      
+      // Apply filters
+      let filteredChallenges = challengesWithProgress;
+      
+      if (filters) {
+        if (filters.category && filters.category !== 'all') {
+          filteredChallenges = filteredChallenges.filter(c => 
+            c.category.toLowerCase() === filters.category!.toLowerCase()
+          );
+        }
+        
+        if (filters.difficulty && filters.difficulty !== 'all') {
+          filteredChallenges = filteredChallenges.filter(c => 
+            c.difficulty.toLowerCase() === filters.difficulty!.toLowerCase()
+          );
+        }
+        
+        if (filters.status && filters.status !== 'all') {
+          filteredChallenges = filteredChallenges.filter(c => c.status === filters.status);
+        }
+        
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase();
+          filteredChallenges = filteredChallenges.filter(c => 
+            c.title.toLowerCase().includes(searchLower) ||
+            c.description.toLowerCase().includes(searchLower) ||
+            c.tags.some(tag => tag.toLowerCase().includes(searchLower))
+          );
+        }
+      }
+      
+      // Sort by sortOrder
+      return filteredChallenges.sort((a, b) => a.sortOrder - b.sortOrder);
+      
+    } catch (error) {
+      console.error('Failed to fetch challenges:', error);
+      throw error;
+    }
+  }
+  
+  // Get a specific challenge by ID
+  async getChallenge(id: string): Promise<ChallengeWithProgress | null> {
+    try {
+      const challenge: Challenge = await apiRequest(`/challenges/${id}`);
+
+      // Apply user progress (this will be replaced with API call)
+      const progress = mockProgress[id];
       if (progress) {
         return {
           ...challenge,
           status: progress.status,
           progress: progress.progress,
-        };
+        } as ChallengeWithProgress;
       }
-      
-      // Check if challenge should be unlocked based on prerequisites
-      if (challenge.prerequisites && challenge.prerequisites.length > 0) {
-        const prerequisitesMet = challenge.prerequisites.every(prereqId => {
-          const prereqProgress = mockProgress[prereqId];
-          return prereqProgress && prereqProgress.status === 'completed';
-        });
-        
-        return {
-          ...challenge,
-          status: prerequisitesMet ? 'not_started' : 'locked',
-        };
-      }
-      
-      return challenge;
-    });
-    
-    // Apply filters
-    if (filters) {
-      if (filters.category && filters.category !== 'all') {
-        challenges = challenges.filter(c => c.category.toLowerCase() === filters.category!.toLowerCase());
-      }
-      
-      if (filters.difficulty && filters.difficulty !== 'all') {
-        challenges = challenges.filter(c => c.difficulty.toLowerCase() === filters.difficulty!.toLowerCase());
-      }
-      
-      if (filters.status && filters.status !== 'all') {
-        challenges = challenges.filter(c => c.status === filters.status);
-      }
-      
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        challenges = challenges.filter(c => 
-          c.title.toLowerCase().includes(searchLower) ||
-          c.description.toLowerCase().includes(searchLower) ||
-          c.tags.some(tag => tag.toLowerCase().includes(searchLower))
-        );
-      }
-    }
-    
-    return challenges;
-  }
-  
-  // Get a specific challenge by ID
-  async getChallenge(id: string): Promise<Challenge | null> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    const challenge = mockChallenges.find(c => c.id === id);
-    if (!challenge) return null;
-    
-    // Apply user progress
-    const progress = mockProgress[id];
-    if (progress) {
+
       return {
         ...challenge,
-        status: progress.status,
-        progress: progress.progress,
-      };
+        status: 'not_started' as const,
+        progress: 0,
+      } as ChallengeWithProgress;
+      
+    } catch (error) {
+      console.error(`Failed to fetch challenge ${id}:`, error);
+      return null;
     }
-    
-    return challenge;
   }
   
   // Get user progress for a challenge
-  async getChallengeProgress(challengeId: string): Promise<ChallengeProgress | null> {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return mockProgress[challengeId] || null;
-  }
-  
-  // Update user progress
-  async updateChallengeProgress(challengeId: string, progress: Partial<ChallengeProgress>): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    if (mockProgress[challengeId]) {
-      mockProgress[challengeId] = { ...mockProgress[challengeId], ...progress };
-    } else {
-      mockProgress[challengeId] = {
-        challengeId,
-        userId: 'user123', // This would come from auth context
-        status: 'not_started',
-        progress: 0,
-        timeSpent: 0,
-        ...progress,
-      };
+  async getChallengeProgress(challengeId: string): Promise<UserProgress | null> {
+    try {
+      const progress = await apiRequest(`/user/progress?challengeId=${challengeId}`);
+      return progress;
+    } catch (error) {
+      console.error(`Failed to fetch progress for challenge ${challengeId}:`, error);
+      // Return mock data as fallback
+      return mockProgress[challengeId] || null;
     }
   }
   
+  // Update user progress
+  async updateChallengeProgress(challengeId: string, progress: Partial<UserProgress>): Promise<void> {
+    try {
+      await apiRequest(`/challenges/${challengeId}/progress`, {
+        method: 'PUT',
+        body: JSON.stringify(progress),
+      });
+    } catch (error) {
+      console.error(`Failed to update progress for challenge ${challengeId}:`, error);
+      // Update mock data as fallback
+      if (mockProgress[challengeId]) {
+        mockProgress[challengeId] = { ...mockProgress[challengeId], ...progress };
+      } else {
+        mockProgress[challengeId] = {
+          challengeId,
+          userId: 'user123', // This would come from auth context
+          status: 'not_started',
+          progress: 0,
+          timeSpent: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          ...progress,
+        };
+      }
+    }
+  }
+
+  // Create a challenge session
+  async createChallengeSession(challengeId: string): Promise<{ sessionId: string }> {
+    try {
+      const session = await apiRequest(`/challenges/${challengeId}/sessions`, {
+        method: 'POST',
+      });
+      return session;
+    } catch (error) {
+      console.error(`Failed to create session for challenge ${challengeId}:`, error);
+      throw error;
+    }
+  }
+
+  // Save challenge code
+  async saveChallengeCode(sessionId: string, code: string): Promise<void> {
+    try {
+      await apiRequest(`/sessions/${sessionId}/code`, {
+        method: 'PUT',
+        body: JSON.stringify({ code }),
+      });
+    } catch (error) {
+      console.error(`Failed to save code for session ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
   // Get available categories
   getCategories(): string[] {
     return ['All', 'Basics', 'Sensors', 'Autonomous', 'Advanced'];
   }
-  
+
   // Get available difficulty levels
   getDifficulties(): string[] {
     return ['All', 'Beginner', 'Intermediate', 'Advanced'];

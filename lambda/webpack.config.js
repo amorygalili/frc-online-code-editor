@@ -9,6 +9,8 @@ module.exports = {
     'handlers/progress/updateChallengeProgress': './src/handlers/progress/updateChallengeProgress.ts',
     'handlers/sessions/createChallengeSession': './src/handlers/sessions/createChallengeSession.ts',
     'handlers/sessions/saveChallengeCode': './src/handlers/sessions/saveChallengeCode.ts',
+    'handlers/cors/options': './src/handlers/cors/options.ts',
+    'scripts/seedData': './src/scripts/seedData.ts',
   },
   target: 'node',
   module: {
