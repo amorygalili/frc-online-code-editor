@@ -138,37 +138,6 @@ app.put('/files/*', express.json(), async (req, res) => {
 
 // WPILib project management endpoints
 
-// Generate new robot project
-app.post('/wpilib/generate-project', express.json(), async (req, res) => {
-    try {
-        const { name, teamNumber, packageName } = req.body;
-
-        if (!name) {
-            return res.status(400).json({ error: 'Project name is required' });
-        }
-
-        const result = await wpilibUtils.generateRobotProject({
-            name,
-            teamNumber: teamNumber || 0,
-            packageName: packageName || 'frc.robot'
-        });
-
-        if (result.success) {
-            // Create Eclipse project files for better LSP support
-            await wpilibUtils.createEclipseProjectFiles(result.projectPath, result.projectName);
-        }
-
-        res.json(result);
-    } catch (error) {
-        console.error('Error generating robot project:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error',
-            message: error.message
-        });
-    }
-});
-
 // List robot projects
 app.get('/wpilib/projects', async (req, res) => {
     try {

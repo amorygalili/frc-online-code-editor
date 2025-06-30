@@ -27,61 +27,6 @@ export class WPILibUtils {
     }
 
     /**
-     * Generate a new WPILib robot project
-     * @param {Object} options - Project generation options
-     * @param {string} options.name - Project name
-     * @param {number} options.teamNumber - FRC team number
-     * @param {string} options.packageName - Java package name
-     * @returns {Promise<Object>} Generation result
-     */
-    async generateRobotProject(options = {}) {
-        const {
-            name = 'RobotProject',
-            teamNumber = 0,
-            packageName = 'frc.robot'
-        } = options;
-
-        console.log(`Generating WPILib robot project: ${name}`);
-
-        try {
-            const scriptPath = path.join(this.scriptsDir, 'generate-robot-project.sh');
-            const command = [
-                scriptPath,
-                '--name', name,
-                '--team', teamNumber.toString(),
-                '--package', packageName,
-                '--workspace', this.workspaceDir
-            ];
-
-            const result = await this.executeCommand('bash', command);
-            
-            const projectDir = path.join(this.workspaceDir, name);
-            
-            // Verify project was created
-            const exists = await this.directoryExists(projectDir);
-            if (!exists) {
-                throw new Error(`Project directory was not created: ${projectDir}`);
-            }
-
-            return {
-                success: true,
-                projectName: name,
-                projectPath: projectDir,
-                teamNumber,
-                packageName,
-                message: `Robot project '${name}' generated successfully`
-            };
-        } catch (error) {
-            console.error('Error generating robot project:', error);
-            return {
-                success: false,
-                error: error.message,
-                message: `Failed to generate robot project: ${error.message}`
-            };
-        }
-    }
-
-    /**
      * List all robot projects in the workspace
      * @returns {Promise<Array>} List of project information
      */

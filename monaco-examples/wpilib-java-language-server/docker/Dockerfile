@@ -100,16 +100,13 @@ RUN cd ${HOME_DIR}/wpilib \
     && chmod +x WPILib_Linux-${WPILIB_VERSION}/WPILibInstaller
 
 # Copy server files and utilities
-COPY server.js ${HOME_DIR}/
-COPY package.json ${HOME_DIR}/
-COPY wpilib-utils.js ${HOME_DIR}/
-COPY --chmod=755 generate-robot-project.sh ${HOME_DIR}/scripts/
+COPY server ${HOME_DIR}/server/
 COPY --chmod=755 start.sh ${HOME_DIR}/
-COPY --chmod=755 fix-desktop-files.sh ${HOME_DIR}/
 
-# Fix line endings for shell scripts (as root to avoid permission issues)
+# Fix ownership of copied files for frcuser and convert line endings
 USER root
-RUN dos2unix ${HOME_DIR}/start.sh ${HOME_DIR}/fix-desktop-files.sh ${HOME_DIR}/scripts/generate-robot-project.sh
+RUN dos2unix ${HOME_DIR}/start.sh && \
+    chown -R frcuser:frcuser ${HOME_DIR}/server ${HOME_DIR}/start.sh
 USER frcuser
 
 # Create VNC directory (password will be set directly in x11vnc command)
@@ -120,12 +117,8 @@ ENV DISPLAY=:1
 ENV DONT_PROMPT_WSL_INSTALL=1
 
 # Install Node.js dependencies
+WORKDIR ${HOME_DIR}/server
 RUN npm install
-
-
-
-
+WORKDIR ${HOME_DIR}
 
 CMD ["/home/frcuser/start.sh"]
-
-# CMD ["node", "server.js"]
