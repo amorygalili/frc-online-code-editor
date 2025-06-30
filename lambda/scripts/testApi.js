@@ -143,38 +143,43 @@ function logInfo(message) {
   log(`ℹ️  ${message}`, colors.blue);
 }
 
-// HTTP client setup
-const apiClient = axios.create({
-  baseURL: config.baseURL,
-  timeout: config.timeout,
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': config.jwtToken ? `Bearer ${config.jwtToken}` : ''
-  }
-});
+// HTTP client - will be created after configuration is set
+let apiClient;
 
-// Add request/response interceptors for debugging
-if (config.verbose) {
-  apiClient.interceptors.request.use(request => {
-    log(`🔄 ${request.method?.toUpperCase()} ${request.url}`, colors.cyan);
-    if (request.data) {
-      log(`📤 Request Body: ${JSON.stringify(request.data, null, 2)}`, colors.cyan);
+// Create HTTP client with current configuration
+function createApiClient() {
+  apiClient = axios.create({
+    baseURL: config.baseURL,
+    timeout: config.timeout,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': config.jwtToken ? `Bearer ${config.jwtToken}` : ''
     }
-    return request;
   });
 
-  apiClient.interceptors.response.use(
-    response => {
-      log(`📥 Response ${response.status}: ${JSON.stringify(response.data, null, 2)}`, colors.cyan);
-      return response;
-    },
-    error => {
-      if (error.response) {
-        log(`📥 Error Response ${error.response.status}: ${JSON.stringify(error.response.data, null, 2)}`, colors.red);
+  // Add request/response interceptors for debugging
+  if (config.verbose) {
+    apiClient.interceptors.request.use(request => {
+      log(`🔄 ${request.method?.toUpperCase()} ${request.url}`, colors.cyan);
+      if (request.data) {
+        log(`📤 Request Body: ${JSON.stringify(request.data, null, 2)}`, colors.cyan);
       }
-      return Promise.reject(error);
-    }
-  );
+      return request;
+    });
+
+    apiClient.interceptors.response.use(
+      response => {
+        log(`📥 Response ${response.status}: ${JSON.stringify(response.data, null, 2)}`, colors.cyan);
+        return response;
+      },
+      error => {
+        if (error.response) {
+          log(`📥 Error Response ${error.response.status}: ${JSON.stringify(error.response.data, null, 2)}`, colors.red);
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
 }
 
 // Test helper functions
@@ -466,7 +471,10 @@ async function runAllTests() {
     logInfo('Run with --help for more information on getting a JWT token.');
     process.exit(1);
   }
-  
+
+  // Create HTTP client with the configured settings
+  createApiClient();
+
   let challengeId = null;
   let sessionId = null;
   

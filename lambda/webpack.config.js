@@ -1,17 +1,10 @@
 const path = require('path');
+const slsw = require('serverless-webpack');
 
 module.exports = {
   mode: 'production',
-  entry: {
-    'handlers/challenges/getChallenges': './src/handlers/challenges/getChallenges.ts',
-    'handlers/challenges/getChallenge': './src/handlers/challenges/getChallenge.ts',
-    'handlers/progress/getUserProgress': './src/handlers/progress/getUserProgress.ts',
-    'handlers/progress/updateChallengeProgress': './src/handlers/progress/updateChallengeProgress.ts',
-    'handlers/sessions/createChallengeSession': './src/handlers/sessions/createChallengeSession.ts',
-    'handlers/sessions/saveChallengeCode': './src/handlers/sessions/saveChallengeCode.ts',
-    'handlers/cors/options': './src/handlers/cors/options.ts',
-    'scripts/seedData': './src/scripts/seedData.ts',
-  },
+  entry: slsw.lib.entries,
+  // serverless-webpack will automatically determine entry points from serverless.yml
   target: 'node',
   module: {
     rules: [

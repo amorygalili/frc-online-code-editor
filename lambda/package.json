@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "build:dev": "webpack --mode development",
-    "deploy": "npm run build && npm run deploy:serverless",
+    "deploy": "npm run deploy:serverless",
     "deploy:dev": "npm run build && npm run deploy:serverless:dev",
     "deploy:prod": "npm run build && npm run deploy:serverless:prod",
     "deploy:serverless": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js deploy",

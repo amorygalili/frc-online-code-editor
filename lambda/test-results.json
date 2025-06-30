@@ -1,0 +1,371 @@
+{
+  "timestamp": "2025-06-30T21:36:28.697Z",
+  "config": {
+    "baseURL": "https://6gn6mwav0j.execute-api.us-east-2.amazonaws.com/dev",
+    "hasJwtToken": true
+  },
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "total": 6
+  },
+  "tests": [
+    {
+      "name": "Get Challenges List",
+      "status": "PASSED",
+      "result": {
+        "challenges": [
+          {
+            "instructions": "# Hello Robot World Challenge\n\nWelcome to your first FRC programming challenge! In this challenge, you'll create your first robot program.\n\n## Objectives\n- Create a basic robot class that extends TimedRobot\n- Implement robotInit() and teleopPeriodic() methods\n- Print \"Hello Robot World!\" to the console\n- Test your program in the simulator\n\n## Getting Started\n1. Look at the starter code provided\n2. Complete the TODO items\n3. Run your code in the simulator\n4. Verify the output in the console",
+            "starterCode": "package frc.robot;\n\nimport edu.wpi.first.wpilibj.TimedRobot;\n\npublic class Robot extends TimedRobot {\n  \n  @Override\n  public void robotInit() {\n    // TODO: Print \"Hello Robot World!\" to the console\n  }\n\n  @Override\n  public void teleopPeriodic() {\n    // TODO: This method runs periodically during teleop\n  }\n}",
+            "createdAt": "2025-06-30T20:33:22.299Z",
+            "difficulty": "Beginner",
+            "estimatedTime": "15 min",
+            "GSI2PK": "Beginner",
+            "GSI1PK": "Basics",
+            "learningObjectives": [
+              "Understand the basic structure of an FRC robot program",
+              "Learn how to use the Robot class and its methods",
+              "Implement basic robot initialization and periodic functions",
+              "Test your code using the robot simulator"
+            ],
+            "hints": [
+              "Use System.out.println() to print messages to the console",
+              "The robotInit() method is called once when the robot starts",
+              "The teleopPeriodic() method is called every 20ms during teleop mode",
+              "Look for the TODO comments in the starter code"
+            ],
+            "updatedAt": "2025-06-30T20:33:22.299Z",
+            "isPublished": true,
+            "prerequisites": [],
+            "category": "Basics",
+            "description": "Get started with your first robot program and learn the fundamentals of FRC programming.",
+            "id": "1",
+            "tags": [
+              "basics",
+              "first-program",
+              "console"
+            ],
+            "title": "Hello Robot World",
+            "sortOrder": 1
+          },
+          {
+            "instructions": "# Motor Control Basics\n\nLearn the fundamentals of controlling motors in FRC programming.\n\n## Objectives\n- Create motor controller objects\n- Connect joystick input to motor output\n- Implement safety features\n- Test in simulation",
+            "createdAt": "2025-06-30T20:33:22.299Z",
+            "difficulty": "Beginner",
+            "estimatedTime": "25 min",
+            "GSI2PK": "Beginner",
+            "GSI1PK": "Basics",
+            "learningObjectives": [
+              "Understand motor controller classes in WPILib",
+              "Learn how to create and configure motor controllers",
+              "Implement basic motor control with joystick input",
+              "Test motor control in simulation"
+            ],
+            "hints": [
+              "Use PWMSparkMax or similar motor controller classes",
+              "XboxController class provides easy joystick access",
+              "Remember to set motor safety and inversion if needed",
+              "Test with small values first"
+            ],
+            "updatedAt": "2025-06-30T20:33:22.299Z",
+            "isPublished": true,
+            "prerequisites": [
+              "1"
+            ],
+            "category": "Basics",
+            "description": "Learn how to control motors and create a simple drive system for your robot.",
+            "id": "2",
+            "tags": [
+              "motors",
+              "joystick",
+              "drive"
+            ],
+            "title": "Motor Control Basics",
+            "sortOrder": 2
+          },
+          {
+            "instructions": "# Sensor Reading Fundamentals\n\nExplore how to read and use sensor data in your robot programs.",
+            "createdAt": "2025-06-30T20:33:22.299Z",
+            "difficulty": "Intermediate",
+            "estimatedTime": "30 min",
+            "GSI2PK": "Intermediate",
+            "GSI1PK": "Sensors",
+            "learningObjectives": [
+              "Understand different types of sensors in FRC",
+              "Learn how to read encoder values",
+              "Implement sensor-based decision making",
+              "Debug sensor readings"
+            ],
+            "hints": [
+              "Encoders provide position and velocity feedback",
+              "Use SmartDashboard to display sensor values",
+              "Check sensor connections and wiring",
+              "Consider sensor noise and filtering"
+            ],
+            "updatedAt": "2025-06-30T20:33:22.299Z",
+            "isPublished": true,
+            "prerequisites": [
+              "1",
+              "2"
+            ],
+            "category": "Sensors",
+            "description": "Master the basics of reading sensor data and using it in your robot programs.",
+            "id": "3",
+            "tags": [
+              "sensors",
+              "encoders",
+              "data"
+            ],
+            "title": "Sensor Reading Fundamentals",
+            "sortOrder": 3
+          },
+          {
+            "instructions": "# Autonomous Movement Challenge\n\nBuild your first autonomous routine that can move the robot precisely.",
+            "createdAt": "2025-06-30T20:33:22.299Z",
+            "difficulty": "Intermediate",
+            "estimatedTime": "45 min",
+            "GSI2PK": "Intermediate",
+            "GSI1PK": "Autonomous",
+            "learningObjectives": [
+              "Understand autonomous mode in FRC",
+              "Implement timed movements",
+              "Use sensor feedback for precise control",
+              "Create a complete autonomous routine"
+            ],
+            "hints": [
+              "Use Timer class for timed movements",
+              "Combine multiple movement phases",
+              "Test each phase individually",
+              "Consider robot orientation and field position"
+            ],
+            "updatedAt": "2025-06-30T20:33:22.299Z",
+            "isPublished": true,
+            "prerequisites": [
+              "2",
+              "3"
+            ],
+            "category": "Autonomous",
+            "description": "Create your first autonomous routine with timed movements and sensor feedback.",
+            "id": "4",
+            "tags": [
+              "autonomous",
+              "movement",
+              "timing"
+            ],
+            "title": "Autonomous Movement",
+            "sortOrder": 4
+          },
+          {
+            "instructions": "# Advanced PID Control\n\nLearn to implement and tune PID controllers for precise robot control.",
+            "createdAt": "2025-06-30T20:33:22.299Z",
+            "difficulty": "Advanced",
+            "estimatedTime": "60 min",
+            "GSI2PK": "Advanced",
+            "GSI1PK": "Advanced",
+            "learningObjectives": [
+              "Understand PID control theory",
+              "Implement PID controllers in WPILib",
+              "Tune PID parameters",
+              "Apply PID to different mechanisms"
+            ],
+            "hints": [
+              "Start with P (proportional) control only",
+              "Add I (integral) to eliminate steady-state error",
+              "Add D (derivative) to reduce oscillation",
+              "Use SmartDashboard for live tuning"
+            ],
+            "updatedAt": "2025-06-30T20:33:22.299Z",
+            "isPublished": true,
+            "prerequisites": [
+              "3",
+              "4"
+            ],
+            "category": "Advanced",
+            "description": "Master PID controllers for precise robot movement and mechanism control.",
+            "id": "5",
+            "tags": [
+              "pid",
+              "control",
+              "tuning",
+              "advanced"
+            ],
+            "title": "Advanced PID Control",
+            "sortOrder": 5
+          }
+        ],
+        "total": 5,
+        "hasMore": false
+      }
+    },
+    {
+      "name": "Get Challenges with Filters",
+      "status": "PASSED",
+      "result": {
+        "challenges": [
+          {
+            "instructions": "# Hello Robot World Challenge\n\nWelcome to your first FRC programming challenge! In this challenge, you'll create your first robot program.\n\n## Objectives\n- Create a basic robot class that extends TimedRobot\n- Implement robotInit() and teleopPeriodic() methods\n- Print \"Hello Robot World!\" to the console\n- Test your program in the simulator\n\n## Getting Started\n1. Look at the starter code provided\n2. Complete the TODO items\n3. Run your code in the simulator\n4. Verify the output in the console",
+            "starterCode": "package frc.robot;\n\nimport edu.wpi.first.wpilibj.TimedRobot;\n\npublic class Robot extends TimedRobot {\n  \n  @Override\n  public void robotInit() {\n    // TODO: Print \"Hello Robot World!\" to the console\n  }\n\n  @Override\n  public void teleopPeriodic() {\n    // TODO: This method runs periodically during teleop\n  }\n}",
+            "createdAt": "2025-06-30T20:33:22.299Z",
+            "difficulty": "Beginner",
+            "estimatedTime": "15 min",
+            "GSI2PK": "Beginner",
+            "GSI1PK": "Basics",
+            "learningObjectives": [
+              "Understand the basic structure of an FRC robot program",
+              "Learn how to use the Robot class and its methods",
+              "Implement basic robot initialization and periodic functions",
+              "Test your code using the robot simulator"
+            ],
+            "hints": [
+              "Use System.out.println() to print messages to the console",
+              "The robotInit() method is called once when the robot starts",
+              "The teleopPeriodic() method is called every 20ms during teleop mode",
+              "Look for the TODO comments in the starter code"
+            ],
+            "updatedAt": "2025-06-30T20:33:22.299Z",
+            "isPublished": true,
+            "prerequisites": [],
+            "category": "Basics",
+            "description": "Get started with your first robot program and learn the fundamentals of FRC programming.",
+            "id": "1",
+            "tags": [
+              "basics",
+              "first-program",
+              "console"
+            ],
+            "title": "Hello Robot World",
+            "sortOrder": 1
+          },
+          {
+            "instructions": "# Motor Control Basics\n\nLearn the fundamentals of controlling motors in FRC programming.\n\n## Objectives\n- Create motor controller objects\n- Connect joystick input to motor output\n- Implement safety features\n- Test in simulation",
+            "createdAt": "2025-06-30T20:33:22.299Z",
+            "difficulty": "Beginner",
+            "estimatedTime": "25 min",
+            "GSI2PK": "Beginner",
+            "GSI1PK": "Basics",
+            "learningObjectives": [
+              "Understand motor controller classes in WPILib",
+              "Learn how to create and configure motor controllers",
+              "Implement basic motor control with joystick input",
+              "Test motor control in simulation"
+            ],
+            "hints": [
+              "Use PWMSparkMax or similar motor controller classes",
+              "XboxController class provides easy joystick access",
+              "Remember to set motor safety and inversion if needed",
+              "Test with small values first"
+            ],
+            "updatedAt": "2025-06-30T20:33:22.299Z",
+            "isPublished": true,
+            "prerequisites": [
+              "1"
+            ],
+            "category": "Basics",
+            "description": "Learn how to control motors and create a simple drive system for your robot.",
+            "id": "2",
+            "tags": [
+              "motors",
+              "joystick",
+              "drive"
+            ],
+            "title": "Motor Control Basics",
+            "sortOrder": 2
+          }
+        ],
+        "params": {
+          "category": "Basics",
+          "difficulty": "Beginner",
+          "limit": 5
+        }
+      }
+    },
+    {
+      "name": "Get Specific Challenge",
+      "status": "PASSED",
+      "result": {
+        "instructions": "# Hello Robot World Challenge\n\nWelcome to your first FRC programming challenge! In this challenge, you'll create your first robot program.\n\n## Objectives\n- Create a basic robot class that extends TimedRobot\n- Implement robotInit() and teleopPeriodic() methods\n- Print \"Hello Robot World!\" to the console\n- Test your program in the simulator\n\n## Getting Started\n1. Look at the starter code provided\n2. Complete the TODO items\n3. Run your code in the simulator\n4. Verify the output in the console",
+        "starterCode": "package frc.robot;\n\nimport edu.wpi.first.wpilibj.TimedRobot;\n\npublic class Robot extends TimedRobot {\n  \n  @Override\n  public void robotInit() {\n    // TODO: Print \"Hello Robot World!\" to the console\n  }\n\n  @Override\n  public void teleopPeriodic() {\n    // TODO: This method runs periodically during teleop\n  }\n}",
+        "createdAt": "2025-06-30T20:33:22.299Z",
+        "difficulty": "Beginner",
+        "estimatedTime": "15 min",
+        "GSI2PK": "Beginner",
+        "GSI1PK": "Basics",
+        "learningObjectives": [
+          "Understand the basic structure of an FRC robot program",
+          "Learn how to use the Robot class and its methods",
+          "Implement basic robot initialization and periodic functions",
+          "Test your code using the robot simulator"
+        ],
+        "hints": [
+          "Use System.out.println() to print messages to the console",
+          "The robotInit() method is called once when the robot starts",
+          "The teleopPeriodic() method is called every 20ms during teleop mode",
+          "Look for the TODO comments in the starter code"
+        ],
+        "updatedAt": "2025-06-30T20:33:22.299Z",
+        "isPublished": true,
+        "prerequisites": [],
+        "category": "Basics",
+        "description": "Get started with your first robot program and learn the fundamentals of FRC programming.",
+        "id": "1",
+        "tags": [
+          "basics",
+          "first-program",
+          "console"
+        ],
+        "title": "Hello Robot World",
+        "sortOrder": 1
+      }
+    },
+    {
+      "name": "Get User Progress",
+      "status": "PASSED",
+      "result": {
+        "progress": [],
+        "summary": {
+          "totalChallenges": 0,
+          "completedChallenges": 0,
+          "inProgressChallenges": 0,
+          "totalTimeSpent": 0,
+          "averageProgress": 0,
+          "completionRate": 0,
+          "totalAttempts": 0,
+          "bestScores": []
+        }
+      }
+    },
+    {
+      "name": "Create Challenge Session",
+      "status": "PASSED",
+      "result": {
+        "sessionId": "7e8cc974-ddd3-4b64-aacd-51c4832a0d63",
+        "userId": "218b3590-8071-7019-e08b-f511a644fea9",
+        "challengeId": "1",
+        "currentCode": "package frc.robot;\n\nimport edu.wpi.first.wpilibj.TimedRobot;\n\npublic class Robot extends TimedRobot {\n  \n  @Override\n  public void robotInit() {\n    // TODO: Print \"Hello Robot World!\" to the console\n  }\n\n  @Override\n  public void teleopPeriodic() {\n    // TODO: This method runs periodically during teleop\n  }\n}",
+        "status": "active",
+        "startedAt": "2025-06-30T21:36:28.290Z",
+        "lastSavedAt": "2025-06-30T21:36:28.290Z",
+        "testResults": []
+      }
+    },
+    {
+      "name": "Save Challenge Code",
+      "status": "PASSED",
+      "result": {
+        "GSI2PK": "1",
+        "GSI1PK": "218b3590-8071-7019-e08b-f511a644fea9",
+        "challengeId": "1",
+        "lastSavedAt": "2025-06-30T21:36:29.375Z",
+        "sessionId": "7e8cc974-ddd3-4b64-aacd-51c4832a0d63",
+        "currentCode": "// Test code\npublic class Robot {}",
+        "startedAt": "2025-06-30T21:36:28.290Z",
+        "testResults": [],
+        "userId": "218b3590-8071-7019-e08b-f511a644fea9",
+        "status": "active",
+        "TTL": 1751405788
+      }
+    }
+  ]
+}

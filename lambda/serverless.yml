@@ -50,7 +50,7 @@ provider:
 functions:
   # Challenge Management
   getChallenges:
-    handler: dist/handlers/challenges/getChallenges.handler
+    handler: src/handlers/challenges/getChallenges.handler
     events:
       - http:
           path: /challenges
@@ -60,14 +60,14 @@ functions:
             authorizerId: !Ref ApiGatewayAuthorizer
 
   getChallengesOptions:
-    handler: dist/handlers/cors/options.handler
+    handler: src/handlers/cors/options.handler
     events:
       - http:
           path: /challenges
           method: options
 
   getChallenge:
-    handler: dist/handlers/challenges/getChallenge.handler
+    handler: src/handlers/challenges/getChallenge.handler
     events:
       - http:
           path: /challenges/{id}
@@ -77,7 +77,7 @@ functions:
             authorizerId: !Ref ApiGatewayAuthorizer
 
   getChallengeOptions:
-    handler: dist/handlers/cors/options.handler
+    handler: src/handlers/cors/options.handler
     events:
       - http:
           path: /challenges/{id}
@@ -85,7 +85,7 @@ functions:
 
   # User Progress Management
   getUserProgress:
-    handler: dist/handlers/progress/getUserProgress.handler
+    handler: src/handlers/progress/getUserProgress.handler
     events:
       - http:
           path: /user/progress
@@ -95,14 +95,14 @@ functions:
             authorizerId: !Ref ApiGatewayAuthorizer
 
   getUserProgressOptions:
-    handler: dist/handlers/cors/options.handler
+    handler: src/handlers/cors/options.handler
     events:
       - http:
           path: /user/progress
           method: options
 
   updateChallengeProgress:
-    handler: dist/handlers/progress/updateChallengeProgress.handler
+    handler: src/handlers/progress/updateChallengeProgress.handler
     events:
       - http:
           path: /challenges/{id}/progress
@@ -112,7 +112,7 @@ functions:
             authorizerId: !Ref ApiGatewayAuthorizer
 
   updateChallengeProgressOptions:
-    handler: dist/handlers/cors/options.handler
+    handler: src/handlers/cors/options.handler
     events:
       - http:
           path: /challenges/{id}/progress
@@ -120,7 +120,7 @@ functions:
 
   # Challenge Sessions
   createChallengeSession:
-    handler: dist/handlers/sessions/createChallengeSession.handler
+    handler: src/handlers/sessions/createChallengeSession.handler
     events:
       - http:
           path: /challenges/{id}/sessions
@@ -130,14 +130,14 @@ functions:
             authorizerId: !Ref ApiGatewayAuthorizer
 
   createChallengeSessionOptions:
-    handler: dist/handlers/cors/options.handler
+    handler: src/handlers/cors/options.handler
     events:
       - http:
           path: /challenges/{id}/sessions
           method: options
 
   saveChallengeCode:
-    handler: dist/handlers/sessions/saveChallengeCode.handler
+    handler: src/handlers/sessions/saveChallengeCode.handler
     events:
       - http:
           path: /sessions/{sessionId}/code
@@ -147,7 +147,7 @@ functions:
             authorizerId: !Ref ApiGatewayAuthorizer
 
   saveChallengeCodeOptions:
-    handler: dist/handlers/cors/options.handler
+    handler: src/handlers/cors/options.handler
     events:
       - http:
           path: /sessions/{sessionId}/code
@@ -253,8 +253,9 @@ plugins:
   - serverless-webpack
   - serverless-offline
 
+
 custom:
   webpack:
     webpackConfig: webpack.config.js
-    includeModules: true
+    includeModules: false
     packager: npm
