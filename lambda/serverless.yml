@@ -5,7 +5,7 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: nodejs18.x
-  region: ${opt:region, 'us-east-1'}
+  region: ${opt:region, 'us-east-2'}
   stage: ${opt:stage, 'dev'}
   memorySize: 256
   timeout: 30
@@ -129,7 +129,7 @@ resources:
         IdentitySource: method.request.header.Authorization
         RestApiId: !Ref ApiGatewayRestApi
         ProviderARNs:
-          - arn:aws:cognito-idp:${self:provider.region}:#{AWS::AccountId}:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}
+          - !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}"
 
     # DynamoDB Tables
     ChallengesTable:
@@ -214,7 +214,6 @@ resources:
               ProjectionType: ALL
 
 plugins:
-  - serverless-dotenv-plugin
   - serverless-webpack
   - serverless-offline
 
