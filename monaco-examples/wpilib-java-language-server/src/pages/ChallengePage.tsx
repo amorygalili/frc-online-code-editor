@@ -300,7 +300,7 @@ const ChallengePage: React.FC = () => {
                 <strong>Estimated Time:</strong> {challenge.estimatedTime}
               </Typography>
               <Typography variant="body2">
-                <strong>Status:</strong> {challenge.status.replace('_', ' ').toUpperCase()}
+                <strong>Status:</strong> {challenge.status ? challenge.status.replace('_', ' ').toUpperCase() : 'NOT STARTED'}
               </Typography>
             </Box>
           </Paper>

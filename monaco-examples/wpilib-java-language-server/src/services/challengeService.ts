@@ -92,7 +92,16 @@ async function apiRequest(endpoint: string, options: RequestInit = {}): Promise<
     throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
-  return response.json();
+  const jsonResponse = await response.json();
+
+  // Extract data from the API response structure
+  if (jsonResponse.success && jsonResponse.data !== undefined) {
+    return jsonResponse.data;
+  } else if (jsonResponse.success === false) {
+    throw new Error(`API error: ${jsonResponse.error?.message || 'Unknown error'}`);
+  }
+
+  return jsonResponse;
 }
 
 // Mock user progress data for development (will be replaced with API calls)
@@ -124,38 +133,33 @@ class ChallengeService {
   async getChallenges(filters?: ChallengeFilters): Promise<ChallengeWithProgress[]> {
     try {
       // Fetch challenges from API
-      const challenges: Challenge[] = await apiRequest('/challenges');
-      
-      // Apply user progress to challenges (this will be replaced with API call)
-      const challengesWithProgress = challenges.map(challenge => {
-        const progress = mockProgress[challenge.id];
-        if (progress) {
-          return {
-            ...challenge,
-            status: progress.status,
-            progress: progress.progress,
-          };
-        }
-        
-        // Check if challenge should be unlocked based on prerequisites
-        if (challenge.prerequisites && challenge.prerequisites.length > 0) {
-          const prerequisitesMet = challenge.prerequisites.every(prereqId => {
+      const response = await apiRequest('/challenges');
+      const apiChallenges = response.challenges || [];
+
+      // Transform API response to match expected ChallengeWithProgress format
+      const challengesWithProgress = apiChallenges.map((challenge: any) => {
+        // Extract status and progress from userProgress, or use defaults
+        const userProgress = challenge.userProgress;
+        const status = userProgress?.status || 'not_started';
+        const progress = userProgress?.progress || 0;
+
+        // Check if challenge should be locked based on prerequisites
+        let finalStatus = status;
+        if (challenge.prerequisites && challenge.prerequisites.length > 0 && !userProgress) {
+          // For challenges with prerequisites and no user progress, check if prerequisites are met
+          const prerequisitesMet = challenge.prerequisites.every((prereqId: string) => {
             const prereqProgress = mockProgress[prereqId];
             return prereqProgress && prereqProgress.status === 'completed';
           });
-          
-          return {
-            ...challenge,
-            status: prerequisitesMet ? 'not_started' : 'locked',
-            progress: 0,
-          } as ChallengeWithProgress;
+
+          finalStatus = prerequisitesMet ? 'not_started' : 'locked';
         }
-        
+
         return {
           ...challenge,
-          status: 'not_started' as const,
-          progress: 0,
-        };
+          status: finalStatus,
+          progress: progress,
+        } as ChallengeWithProgress;
       });
       
       // Apply filters
@@ -163,27 +167,27 @@ class ChallengeService {
       
       if (filters) {
         if (filters.category && filters.category !== 'all') {
-          filteredChallenges = filteredChallenges.filter(c => 
+          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) =>
             c.category.toLowerCase() === filters.category!.toLowerCase()
           );
         }
-        
+
         if (filters.difficulty && filters.difficulty !== 'all') {
-          filteredChallenges = filteredChallenges.filter(c => 
+          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) =>
             c.difficulty.toLowerCase() === filters.difficulty!.toLowerCase()
           );
         }
-        
+
         if (filters.status && filters.status !== 'all') {
-          filteredChallenges = filteredChallenges.filter(c => c.status === filters.status);
+          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) => c.status === filters.status);
         }
-        
+
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();
-          filteredChallenges = filteredChallenges.filter(c => 
+          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) =>
             c.title.toLowerCase().includes(searchLower) ||
             c.description.toLowerCase().includes(searchLower) ||
-            c.tags.some(tag => tag.toLowerCase().includes(searchLower))
+            c.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))
           );
         }
       }
@@ -200,24 +204,18 @@ class ChallengeService {
   // Get a specific challenge by ID
   async getChallenge(id: string): Promise<ChallengeWithProgress | null> {
     try {
-      const challenge: Challenge = await apiRequest(`/challenges/${id}`);
+      const apiResponse = await apiRequest(`/challenges/${id}`);
 
-      // Apply user progress (this will be replaced with API call)
-      const progress = mockProgress[id];
-      if (progress) {
-        return {
-          ...challenge,
-          status: progress.status,
-          progress: progress.progress,
-        } as ChallengeWithProgress;
-      }
+      // Transform the API response to match the expected ChallengeWithProgress format
+      const challenge: ChallengeWithProgress = {
+        ...apiResponse,
+        // Extract status and progress from userProgress, or use defaults
+        status: apiResponse.userProgress?.status || 'not_started',
+        progress: apiResponse.userProgress?.progress || 0,
+      };
 
-      return {
-        ...challenge,
-        status: 'not_started' as const,
-        progress: 0,
-      } as ChallengeWithProgress;
-      
+      return challenge;
+
     } catch (error) {
       console.error(`Failed to fetch challenge ${id}:`, error);
       return null;
