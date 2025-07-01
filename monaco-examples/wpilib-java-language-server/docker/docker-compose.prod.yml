@@ -1,0 +1,24 @@
+services:
+  eclipse-jdt-ls:
+    build:
+      context: .
+      dockerfile: ./DockerfileProd
+    container_name: wpilib-sim-prod
+    ports:
+      - "30003:30003"
+      - "5901:5901"
+      - "6901:6901"
+      - "1735:1735"   # NetworkTables NT3 port
+      - "5810:5810"   # NetworkTables NT4 port
+      - "3300:3300"   # HAL Simulation WebSocket port
+    volumes:
+      - ./workspace:/home/frcuser/workspace
+    environment:
+      - JAVA_OPTS=-Xmx2g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:30003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

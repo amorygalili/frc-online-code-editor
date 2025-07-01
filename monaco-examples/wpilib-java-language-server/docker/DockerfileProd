@@ -1,0 +1,3 @@
+FROM agalili/wpilib-2025:v2
+
+CMD ["node", "server/server.js"]
