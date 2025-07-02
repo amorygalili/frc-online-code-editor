@@ -63,18 +63,7 @@
           "value": "production"
         }
       ],
-      "mountPoints": [
-        {
-          "sourceVolume": "workspace",
-          "containerPath": "/home/frcuser/workspace",
-          "readOnly": false
-        },
-        {
-          "sourceVolume": "tmp",
-          "containerPath": "/tmp",
-          "readOnly": false
-        }
-      ],
+
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
@@ -108,32 +97,7 @@
       }
     }
   ],
-  "volumes": [
-    {
-      "name": "workspace",
-      "efsVolumeConfiguration": {
-        "fileSystemId": "${EFS_FILE_SYSTEM_ID}",
-        "rootDirectory": "/challenges/${USER_ID}/${CHALLENGE_ID}",
-        "transitEncryption": "ENABLED",
-        "authorizationConfig": {
-          "accessPointId": "${EFS_ACCESS_POINT_ID}",
-          "iam": "ENABLED"
-        }
-      }
-    },
-    {
-      "name": "tmp",
-      "efsVolumeConfiguration": {
-        "fileSystemId": "${EFS_FILE_SYSTEM_ID}",
-        "rootDirectory": "/tmp/${SESSION_ID}",
-        "transitEncryption": "ENABLED",
-        "authorizationConfig": {
-          "accessPointId": "${EFS_ACCESS_POINT_ID}",
-          "iam": "ENABLED"
-        }
-      }
-    }
-  ],
+  "volumes": [],
   "placementConstraints": [],
   "tags": [
     {

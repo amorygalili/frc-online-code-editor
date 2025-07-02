@@ -4,7 +4,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../../config';
-import { corsHeaders, createResponse, parseJSONBody } from '../../utils/response';
+import { createResponse, parseJSONBody } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
 
 const ecsClient = new ECSClient({ region: config.region });
@@ -29,7 +29,7 @@ const SESSION_LIMITS: SessionLimits = {
   idleTimeoutMinutes: 60,         // 1 hour idle timeout
 };
 
-const RESOURCE_PROFILES = {
+const RESOURCE_PROFILES: Record<string, { cpu: string; memory: string; javaHeapSize: string }> = {
   development: { cpu: '512', memory: '1024', javaHeapSize: '768' },
   basic: { cpu: '1024', memory: '2048', javaHeapSize: '1536' },
   advanced: { cpu: '2048', memory: '4096', javaHeapSize: '3072' },
@@ -48,7 +48,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // Parse request body
     const body = parseJSONBody<CreateSessionRequest>(event.body);
-    if (!body.challengeId) {
+    if (!body || !body.challengeId) {
       return createResponse(400, { error: 'challengeId is required' });
     }
 
@@ -125,14 +125,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
   } catch (error) {
     console.error('Error creating session:', error);
-    return createResponse(500, { 
+    return createResponse(500, {
       error: 'Failed to create session',
-      details: config.isDevelopment ? error.message : undefined
+      details: config.isDevelopment ? (error as Error).message : undefined
     });
   }
 };
 
-async function getActiveSessionsForUser(userId: string) {
+async function getUserContainer(userId: string) {
   const command = new QueryCommand({
     TableName: config.tables.challengeSessions,
     IndexName: 'UserIdIndex',
@@ -145,12 +145,15 @@ async function getActiveSessionsForUser(userId: string) {
       ':userId': userId,
       ':starting': 'starting',
       ':running': 'running'
-    }
+    },
+    Limit: 1
   });
 
   const result = await dynamoClient.send(command);
-  return result.Items || [];
+  return result.Items && result.Items.length > 0 ? result.Items[0] : null;
 }
+
+// Removed unused function getActiveSessionsForUser
 
 async function createECSTask(userId: string, challengeId: string, sessionId: string, resourceProfile: string): Promise<string> {
   const profile = RESOURCE_PROFILES[resourceProfile] || RESOURCE_PROFILES.basic;
@@ -206,6 +209,24 @@ async function createECSTask(userId: string, challengeId: string, sessionId: str
   }
 
   return result.tasks[0].taskArn!;
+}
+
+async function loadChallengeInContainer(sessionId: string, challengeId: string) {
+  // TODO: Implement challenge loading logic
+  // This would typically involve calling the container API to load a specific challenge
+  console.log(`Loading challenge ${challengeId} in session ${sessionId}`);
+
+  // For now, just update the session record
+  const command = new PutCommand({
+    TableName: config.tables.challengeSessions,
+    Item: {
+      sessionId,
+      currentChallengeId: challengeId,
+      lastActivity: new Date().toISOString()
+    }
+  });
+
+  await dynamoClient.send(command);
 }
 
 async function storeSession(session: any) {

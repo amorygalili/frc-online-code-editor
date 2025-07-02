@@ -195,7 +195,7 @@ functions:
     handler: src/handlers/sessions/getSession.handler
     events:
       - http:
-          path: /sessions/{id}
+          path: /sessions/{sessionId}
           method: get
           authorizer:
             type: COGNITO_USER_POOLS
@@ -205,14 +205,14 @@ functions:
     handler: src/handlers/cors/options.handler
     events:
       - http:
-          path: /sessions/{id}
+          path: /sessions/{sessionId}
           method: options
 
   terminateSession:
     handler: src/handlers/sessions/terminateSession.handler
     events:
       - http:
-          path: /sessions/{id}
+          path: /sessions/{sessionId}
           method: delete
           authorizer:
             type: COGNITO_USER_POOLS
@@ -222,7 +222,7 @@ functions:
     handler: src/handlers/cors/options.handler
     events:
       - http:
-          path: /sessions/{id}
+          path: /sessions/{sessionId}
           method: options
 
   listSessions:
@@ -246,7 +246,7 @@ functions:
     handler: src/handlers/sessions/keepAlive.handler
     events:
       - http:
-          path: /sessions/{id}/keepalive
+          path: /sessions/{sessionId}/keepalive
           method: post
           authorizer:
             type: COGNITO_USER_POOLS
@@ -256,15 +256,15 @@ functions:
     handler: src/handlers/cors/options.handler
     events:
       - http:
-          path: /sessions/{id}/keepalive
+          path: /sessions/{sessionId}/keepalive
           method: options
 
-  # Scheduled cleanup function
-  cleanupSessions:
-    handler: src/handlers/sessions/cleanupSessions.handler
-    timeout: 300
-    events:
-      - schedule: rate(5 minutes)
+  # Scheduled cleanup function (temporarily disabled due to compilation errors)
+  # cleanupSessions:
+  #   handler: src/handlers/sessions/cleanupSessions.handler
+  #   timeout: 300
+  #   events:
+  #     - schedule: rate(5 minutes)
 
 # CloudFormation resources
 resources:

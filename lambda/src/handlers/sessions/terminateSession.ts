@@ -3,7 +3,7 @@ import { ECSClient, StopTaskCommand } from '@aws-sdk/client-ecs';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { config } from '../../config';
-import { corsHeaders, createResponse } from '../../utils/response';
+import { createResponse } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
 
 const ecsClient = new ECSClient({ region: config.region });
@@ -19,7 +19,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return createResponse(401, { error: 'Unauthorized' });
     }
 
-    const sessionId = event.pathParameters?.id;
+    const sessionId = event.pathParameters?.sessionId;
     if (!sessionId) {
       return createResponse(400, { error: 'Session ID is required' });
     }
@@ -76,7 +76,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     console.error('Error terminating session:', error);
     return createResponse(500, { 
       error: 'Failed to terminate session',
-      details: config.isDevelopment ? error.message : undefined
+      details: config.isDevelopment ? (error as Error).message : undefined
     });
   }
 };

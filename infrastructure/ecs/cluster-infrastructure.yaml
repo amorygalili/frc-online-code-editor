@@ -275,74 +275,7 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
 
-  # EFS File System for persistent workspace storage
-  EFSFileSystem:
-    Type: AWS::EFS::FileSystem
-    Properties:
-      CreationToken: !Sub '${ProjectName}-${Environment}-efs'
-      Encrypted: true
-      PerformanceMode: generalPurpose
-      ThroughputMode: provisioned
-      ProvisionedThroughputInMibps: 100
-      FileSystemTags:
-        - Key: Name
-          Value: !Sub '${ProjectName}-${Environment}-efs'
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: Project
-          Value: !Ref ProjectName
-
-  # EFS Mount Targets
-  EFSMountTarget1:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EFSFileSystem
-      SubnetId: !Ref PrivateSubnet1
-      SecurityGroups:
-        - !Ref EFSSecurityGroup
-
-  EFSMountTarget2:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EFSFileSystem
-      SubnetId: !Ref PrivateSubnet2
-      SecurityGroups:
-        - !Ref EFSSecurityGroup
-
-  # EFS Security Group
-  EFSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: !Sub '${ProjectName}-${Environment}-efs-sg'
-      GroupDescription: Security group for EFS file system
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 2049
-          ToPort: 2049
-          SourceSecurityGroupId: !Ref ChallengeRuntimeSecurityGroup
-          Description: NFS from challenge runtime containers
-      Tags:
-        - Key: Name
-          Value: !Sub '${ProjectName}-${Environment}-efs-sg'
-
-  # EFS Access Point for challenge workspaces
-  EFSAccessPoint:
-    Type: AWS::EFS::AccessPoint
-    Properties:
-      FileSystemId: !Ref EFSFileSystem
-      PosixUser:
-        Uid: 1000
-        Gid: 1000
-      RootDirectory:
-        Path: '/challenges'
-        CreationInfo:
-          OwnerUid: 1000
-          OwnerGid: 1000
-          Permissions: '755'
-      AccessPointTags:
-        - Key: Name
-          Value: !Sub '${ProjectName}-${Environment}-efs-access-point'
+  # Note: EFS temporarily removed due to permissions - will add back later
 
   # CloudWatch Log Group
   LogGroup:
@@ -394,14 +327,4 @@ Outputs:
     Export:
       Name: !Sub '${ProjectName}-${Environment}-log-group-name'
 
-  EFSFileSystemId:
-    Description: EFS File System ID
-    Value: !Ref EFSFileSystem
-    Export:
-      Name: !Sub '${ProjectName}-${Environment}-efs-id'
 
-  EFSAccessPointId:
-    Description: EFS Access Point ID
-    Value: !Ref EFSAccessPoint
-    Export:
-      Name: !Sub '${ProjectName}-${Environment}-efs-access-point-id'

@@ -132,12 +132,27 @@ export function getUserEmailFromEvent(event: any): string | null {
 // Helper to validate required fields
 export function validateRequiredFields(data: any, requiredFields: string[]): string[] {
   const missingFields: string[] = [];
-  
+
   for (const field of requiredFields) {
     if (data[field] === undefined || data[field] === null || data[field] === '') {
       missingFields.push(field);
     }
   }
-  
+
   return missingFields;
 }
+
+// Export CORS headers for direct use
+export const corsHeaders = getCorsHeaders();
+
+// Generic response creator
+export function createResponse(statusCode: number, body: any, event?: APIGatewayProxyEvent): APIGatewayProxyResult {
+  return {
+    statusCode,
+    headers: getCorsHeaders(event),
+    body: JSON.stringify(body)
+  };
+}
+
+// Alias for parseJsonBody to match import expectations
+export const parseJSONBody = parseJsonBody;

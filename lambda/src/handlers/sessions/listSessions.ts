@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { config } from '../../config';
-import { corsHeaders, createResponse } from '../../utils/response';
+import { createResponse } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
 
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
@@ -105,7 +105,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     console.error('Error listing sessions:', error);
     return createResponse(500, { 
       error: 'Failed to list sessions',
-      details: config.isDevelopment ? error.message : undefined
+      details: config.isDevelopment ? (error as Error).message : undefined
     });
   }
 };
