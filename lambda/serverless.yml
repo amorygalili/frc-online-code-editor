@@ -19,6 +19,12 @@ provider:
     CHALLENGE_SESSIONS_TABLE: ${self:service}-challenge-sessions-${self:provider.stage}
     COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
     NODE_ENV: ${env:NODE_ENV, 'development'}
+    # ECS Configuration
+    ECS_CLUSTER_NAME: ${env:ECS_CLUSTER_NAME, 'frc-challenge-cluster'}
+    ECS_TASK_DEFINITION: ${env:ECS_TASK_DEFINITION, 'frc-challenge-runtime'}
+    PRIVATE_SUBNET_1: ${env:PRIVATE_SUBNET_1}
+    PRIVATE_SUBNET_2: ${env:PRIVATE_SUBNET_2}
+    CHALLENGE_RUNTIME_SECURITY_GROUP: ${env:CHALLENGE_RUNTIME_SECURITY_GROUP}
     
   # IAM permissions
   iam:
@@ -45,6 +51,19 @@ provider:
             - cognito-idp:AdminGetUser
           Resource:
             - "arn:aws:cognito-idp:${self:provider.region}:*:userpool/${self:provider.environment.COGNITO_USER_POOL_ID}"
+        - Effect: Allow
+          Action:
+            - ecs:RunTask
+            - ecs:StopTask
+            - ecs:DescribeTasks
+            - ecs:ListTasks
+            - iam:PassRole
+          Resource:
+            - "arn:aws:ecs:${self:provider.region}:*:cluster/${self:provider.environment.ECS_CLUSTER_NAME}"
+            - "arn:aws:ecs:${self:provider.region}:*:task-definition/frc-challenge-runtime:*"
+            - "arn:aws:ecs:${self:provider.region}:*:task/*"
+            - "arn:aws:iam::*:role/ecsTaskExecutionRole*"
+            - "arn:aws:iam::*:role/ecsTaskRole*"
 
 # Lambda functions
 functions:
@@ -152,6 +171,100 @@ functions:
       - http:
           path: /sessions/{sessionId}/code
           method: options
+
+  # Session Management
+  createSession:
+    handler: src/handlers/sessions/createSession.handler
+    timeout: 60
+    events:
+      - http:
+          path: /sessions
+          method: post
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+
+  createSessionOptions:
+    handler: src/handlers/cors/options.handler
+    events:
+      - http:
+          path: /sessions
+          method: options
+
+  getSession:
+    handler: src/handlers/sessions/getSession.handler
+    events:
+      - http:
+          path: /sessions/{id}
+          method: get
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+
+  getSessionOptions:
+    handler: src/handlers/cors/options.handler
+    events:
+      - http:
+          path: /sessions/{id}
+          method: options
+
+  terminateSession:
+    handler: src/handlers/sessions/terminateSession.handler
+    events:
+      - http:
+          path: /sessions/{id}
+          method: delete
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+
+  terminateSessionOptions:
+    handler: src/handlers/cors/options.handler
+    events:
+      - http:
+          path: /sessions/{id}
+          method: options
+
+  listSessions:
+    handler: src/handlers/sessions/listSessions.handler
+    events:
+      - http:
+          path: /sessions
+          method: get
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+
+  listSessionsOptions:
+    handler: src/handlers/cors/options.handler
+    events:
+      - http:
+          path: /sessions
+          method: options
+
+  keepAlive:
+    handler: src/handlers/sessions/keepAlive.handler
+    events:
+      - http:
+          path: /sessions/{id}/keepalive
+          method: post
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+
+  keepAliveOptions:
+    handler: src/handlers/cors/options.handler
+    events:
+      - http:
+          path: /sessions/{id}/keepalive
+          method: options
+
+  # Scheduled cleanup function
+  cleanupSessions:
+    handler: src/handlers/sessions/cleanupSessions.handler
+    timeout: 300
+    events:
+      - schedule: rate(5 minutes)
 
 # CloudFormation resources
 resources:

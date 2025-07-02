@@ -1,0 +1,152 @@
+{
+  "family": "frc-challenge-runtime",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "wpilib-editor",
+      "image": "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/frc-challenge-runtime:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 30003,
+          "protocol": "tcp",
+          "name": "editor-api"
+        },
+        {
+          "containerPort": 1735,
+          "protocol": "tcp",
+          "name": "nt3-port"
+        },
+        {
+          "containerPort": 5810,
+          "protocol": "tcp",
+          "name": "nt4-port"
+        },
+        {
+          "containerPort": 3300,
+          "protocol": "tcp",
+          "name": "hal-websocket"
+        }
+      ],
+      "environment": [
+        {
+          "name": "CHALLENGE_ID",
+          "value": "${CHALLENGE_ID}"
+        },
+        {
+          "name": "USER_ID",
+          "value": "${USER_ID}"
+        },
+        {
+          "name": "SESSION_ID",
+          "value": "${SESSION_ID}"
+        },
+        {
+          "name": "JAVA_OPTS",
+          "value": "-Xmx1536m"
+        },
+        {
+          "name": "DISPLAY",
+          "value": ":1"
+        },
+        {
+          "name": "DONT_PROMPT_WSL_INSTALL",
+          "value": "1"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "workspace",
+          "containerPath": "/home/frcuser/workspace",
+          "readOnly": false
+        },
+        {
+          "sourceVolume": "tmp",
+          "containerPath": "/tmp",
+          "readOnly": false
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/frc-challenge-runtime",
+          "awslogs-region": "${AWS_REGION}",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:30003/health || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "stopTimeout": 30,
+      "startTimeout": 120,
+      "ulimits": [
+        {
+          "name": "nofile",
+          "softLimit": 65536,
+          "hardLimit": 65536
+        }
+      ],
+      "linuxParameters": {
+        "initProcessEnabled": true
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "workspace",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "${EFS_FILE_SYSTEM_ID}",
+        "rootDirectory": "/challenges/${USER_ID}/${CHALLENGE_ID}",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "${EFS_ACCESS_POINT_ID}",
+          "iam": "ENABLED"
+        }
+      }
+    },
+    {
+      "name": "tmp",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "${EFS_FILE_SYSTEM_ID}",
+        "rootDirectory": "/tmp/${SESSION_ID}",
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": "${EFS_ACCESS_POINT_ID}",
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ],
+  "placementConstraints": [],
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "${ENVIRONMENT}"
+    },
+    {
+      "key": "Project",
+      "value": "frc-challenge-site"
+    },
+    {
+      "key": "Component",
+      "value": "challenge-runtime"
+    }
+  ]
+}
