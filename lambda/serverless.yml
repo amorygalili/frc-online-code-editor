@@ -57,6 +57,7 @@ provider:
             - ecs:StopTask
             - ecs:DescribeTasks
             - ecs:ListTasks
+            - ecs:TagResource
             - iam:PassRole
           Resource:
             - "arn:aws:ecs:${self:provider.region}:*:cluster/${self:provider.environment.ECS_CLUSTER_NAME}"

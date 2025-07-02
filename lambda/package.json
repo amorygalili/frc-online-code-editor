@@ -23,8 +23,10 @@
     "info": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js info --stage dev"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.840.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.658.1",
     "@aws-sdk/client-dynamodb": "^3.658.1",
+    "@aws-sdk/client-ec2": "^3.842.0",
     "@aws-sdk/client-ecs": "^3.840.0",
     "@aws-sdk/lib-dynamodb": "^3.658.1",
     "@types/jsonwebtoken": "^9.0.10",

@@ -20,6 +20,7 @@ import ChallengesPage from "./pages/ChallengesPage";
 import ChallengePage from "./pages/ChallengePage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
+import { TestPage } from "./pages/TestPage";
 
 // Import components
 import Navigation from "./components/Navigation";
@@ -81,6 +82,7 @@ function AppContent() {
             <Route path="/challenge/:id" element={<ChallengePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/test" element={<TestPage />} />
 
             {/* Fallback route */}
             <Route path="*" element={<HomePage />} />

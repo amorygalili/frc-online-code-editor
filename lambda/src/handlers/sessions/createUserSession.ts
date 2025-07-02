@@ -87,7 +87,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 async function getUserContainer(userId: string): Promise<UserContainer | null> {
   const command = new QueryCommand({
     TableName: config.tables.challengeSessions,
-    IndexName: 'UserIdIndex',
+    IndexName: 'UserIndex',
     KeyConditionExpression: 'userId = :userId',
     FilterExpression: '#status IN (:running, :starting)',
     ExpressionAttributeNames: {

@@ -27,6 +27,7 @@ const PersonIcon = () => <span>👤</span>;
 const LoginIcon = () => <span>🔑</span>;
 const LogoutIcon = () => <span>🚪</span>;
 const SchoolIcon = () => <span>🎓</span>;
+const TestIcon = () => <span>🧪</span>;
 
 interface NavigationProps {
   isAuthenticated?: boolean;
@@ -73,6 +74,7 @@ const Navigation: React.FC<NavigationProps> = ({
   const navigationItems = [
     { label: 'Home', path: '/', icon: <HomeIcon /> },
     { label: 'Challenges', path: '/challenges', icon: <SchoolIcon /> },
+    { label: 'Test API', path: '/test', icon: <TestIcon /> },
   ];
 
   const isActivePath = (path: string) => {

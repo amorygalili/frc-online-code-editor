@@ -135,7 +135,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 async function getUserContainer(userId: string) {
   const command = new QueryCommand({
     TableName: config.tables.challengeSessions,
-    IndexName: 'UserIdIndex',
+    IndexName: 'UserIndex',
     KeyConditionExpression: 'userId = :userId',
     FilterExpression: '#status IN (:starting, :running)',
     ExpressionAttributeNames: {
@@ -146,7 +146,8 @@ async function getUserContainer(userId: string) {
       ':starting': 'starting',
       ':running': 'running'
     },
-    Limit: 1
+    Limit: 1,
+    ScanIndexForward: false // Get most recent first
   });
 
   const result = await dynamoClient.send(command);

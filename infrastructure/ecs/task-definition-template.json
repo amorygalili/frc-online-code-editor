@@ -4,6 +4,9 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "{{CPU}}",
   "memory": "{{MEMORY}}",
+  "ephemeralStorage": {
+    "sizeInGiB": 50
+  },
   "executionRoleArn": "arn:aws:iam::{{AWS_ACCOUNT_ID}}:role/{{EXECUTION_ROLE_NAME}}",
   "taskRoleArn": "arn:aws:iam::{{AWS_ACCOUNT_ID}}:role/{{TASK_ROLE_NAME}}",
   "containerDefinitions": [

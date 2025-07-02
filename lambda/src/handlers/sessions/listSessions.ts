@@ -40,7 +40,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     const queryCommand = new QueryCommand({
       TableName: config.tables.challengeSessions,
-      IndexName: 'UserIdIndex',
+      IndexName: 'UserIndex',
       KeyConditionExpression: 'userId = :userId',
       FilterExpression: filterExpression || undefined,
       ExpressionAttributeNames: Object.keys(expressionAttributeNames).length > 0 ? expressionAttributeNames : undefined,

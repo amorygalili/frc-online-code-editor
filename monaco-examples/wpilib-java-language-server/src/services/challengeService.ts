@@ -4,7 +4,7 @@
 import { fetchAuthSession } from 'aws-amplify/auth';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://20uazzdjqb.execute-api.us-east-2.amazonaws.com/dev';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://6gn6mwav0j.execute-api.us-east-2.amazonaws.com/dev';
 
 export interface Challenge {
   id: string;
@@ -45,6 +45,30 @@ export interface UserProgress {
   bestScore?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ChallengeSession {
+  sessionId: string;
+  userId: string;
+  challengeId: string;
+  status: 'starting' | 'running' | 'stopping' | 'stopped' | 'failed';
+  containerInfo?: {
+    taskArn?: string;
+    publicIp?: string;
+    editorUrl?: string;
+    nt4Url?: string;
+    halWebSocketUrl?: string;
+  };
+  resourceProfile: 'development' | 'basic' | 'advanced' | 'competition';
+  createdAt: string;
+  updatedAt: string;
+  lastActivity: string;
+  expiresAt: string;
+}
+
+export interface SessionCreateRequest {
+  challengeId: string;
+  resourceProfile?: 'development' | 'basic' | 'advanced' | 'competition';
 }
 
 
@@ -261,17 +285,70 @@ class ChallengeService {
     }
   }
 
-  // Create a challenge session
-  async createChallengeSession(challengeId: string): Promise<{ sessionId: string }> {
+  // Create a challenge session (new session management API)
+  async createSession(request: SessionCreateRequest): Promise<ChallengeSession> {
     try {
-      const session = await apiRequest(`/challenges/${challengeId}/sessions`, {
+      const session = await apiRequest('/sessions', {
         method: 'POST',
+        body: JSON.stringify(request),
       });
       return session;
     } catch (error) {
-      console.error(`Failed to create session for challenge ${challengeId}:`, error);
+      console.error(`Failed to create session for challenge ${request.challengeId}:`, error);
       throw error;
     }
+  }
+
+  // Get session details
+  async getSession(sessionId: string): Promise<ChallengeSession | null> {
+    try {
+      const session = await apiRequest(`/sessions/${sessionId}`);
+      return session;
+    } catch (error) {
+      console.error(`Failed to get session ${sessionId}:`, error);
+      return null;
+    }
+  }
+
+  // List user sessions
+  async listSessions(): Promise<ChallengeSession[]> {
+    try {
+      const response = await apiRequest('/sessions');
+      return response.sessions || [];
+    } catch (error) {
+      console.error('Failed to list sessions:', error);
+      return [];
+    }
+  }
+
+  // Terminate a session
+  async terminateSession(sessionId: string): Promise<void> {
+    try {
+      await apiRequest(`/sessions/${sessionId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error(`Failed to terminate session ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  // Keep session alive
+  async keepSessionAlive(sessionId: string): Promise<void> {
+    try {
+      await apiRequest(`/sessions/${sessionId}/keepalive`, {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error(`Failed to keep session ${sessionId} alive:`, error);
+      throw error;
+    }
+  }
+
+  // Legacy method for backward compatibility
+  async createChallengeSession(challengeId: string): Promise<{ sessionId: string }> {
+    const session = await this.createSession({ challengeId });
+    return { sessionId: session.sessionId };
   }
 
   // Save challenge code
