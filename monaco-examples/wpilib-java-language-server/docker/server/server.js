@@ -36,6 +36,22 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'Eclipse JDT Language Server' });
 });
 
+// Session root endpoint
+app.get('/session/:sessionId/', (req, res) => {
+    const sessionId = req.params.sessionId;
+    res.json({
+        message: 'FRC Challenge Session Active',
+        sessionId: sessionId,
+        service: 'Eclipse JDT Language Server',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: `/session/${sessionId}/health`,
+            files: `/files/`,
+            websocket: `ws://localhost:1735` // Language Server WebSocket
+        }
+    });
+});
+
 // Static file server for workspace files
 const workspacePath = path.join(__dirname, 'workspace');
 

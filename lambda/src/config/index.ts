@@ -21,7 +21,24 @@ export const config = {
   
   // API Configuration
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['*'],
-  
+
+  // ECS Configuration
+  ecs: {
+    clusterName: process.env.ECS_CLUSTER_NAME || 'frc-challenge-site-dev-cluster',
+    taskDefinition: process.env.ECS_TASK_DEFINITION || 'frc-challenge-runtime',
+    securityGroup: process.env.CHALLENGE_RUNTIME_SECURITY_GROUP || '',
+    privateSubnet1: process.env.PRIVATE_SUBNET_1 || '',
+    privateSubnet2: process.env.PRIVATE_SUBNET_2 || '',
+  },
+
+  // ALB Configuration
+  alb: {
+    listenerArn: process.env.ALB_LISTENER_ARN || '',
+    targetGroupArn: process.env.ALB_TARGET_GROUP_ARN || '',
+    dnsName: process.env.ALB_DNS_NAME || '',
+    vpcId: process.env.VPC_ID || '',
+  },
+
   // Development flags
   isDevelopment: process.env.NODE_ENV !== 'production',
   isLocal: process.env.IS_OFFLINE === 'true',

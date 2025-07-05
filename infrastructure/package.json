@@ -1,0 +1,18 @@
+{
+  "name": "frc-infrastructure-deploy",
+  "version": "1.0.0",
+  "description": "Deployment scripts for FRC Challenge Site infrastructure",
+  "main": "deploy.js",
+  "scripts": {
+    "deploy": "node deploy.js all",
+    "deploy:infrastructure": "node deploy.js infrastructure",
+    "deploy:dev": "ENVIRONMENT=dev node deploy.js all",
+    "deploy:prod": "ENVIRONMENT=prod node deploy.js all"
+  },
+  "keywords": ["frc", "infrastructure", "aws", "deployment"],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

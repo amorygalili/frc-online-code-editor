@@ -25,6 +25,12 @@ provider:
     PRIVATE_SUBNET_1: ${env:PRIVATE_SUBNET_1}
     PRIVATE_SUBNET_2: ${env:PRIVATE_SUBNET_2}
     CHALLENGE_RUNTIME_SECURITY_GROUP: ${env:CHALLENGE_RUNTIME_SECURITY_GROUP}
+
+    # ALB Configuration
+    ALB_LISTENER_ARN: ${env:ALB_LISTENER_ARN}
+    ALB_TARGET_GROUP_ARN: ${env:ALB_TARGET_GROUP_ARN}
+    ALB_DNS_NAME: ${env:ALB_DNS_NAME}
+    VPC_ID: ${env:VPC_ID}
     
   # IAM permissions
   iam:
@@ -65,6 +71,30 @@ provider:
             - "arn:aws:ecs:${self:provider.region}:*:task/*"
             - "arn:aws:iam::*:role/ecsTaskExecutionRole*"
             - "arn:aws:iam::*:role/ecsTaskRole*"
+        # ALB permissions for session management
+        - Effect: Allow
+          Action:
+            - elasticloadbalancing:CreateTargetGroup
+            - elasticloadbalancing:CreateRule
+            - elasticloadbalancing:RegisterTargets
+            - elasticloadbalancing:DeregisterTargets
+            - elasticloadbalancing:DescribeTargetGroups
+            - elasticloadbalancing:DescribeTargetHealth
+            - elasticloadbalancing:DescribeRules
+            - elasticloadbalancing:DeleteTargetGroup
+            - elasticloadbalancing:DeleteRule
+            - elasticloadbalancing:AddTags
+            - elasticloadbalancing:RemoveTags
+            - ec2:DescribeVpcs
+            - ec2:DescribeSubnets
+            - ec2:DescribeSecurityGroups
+          Resource: "*"
+        # Lambda invoke permissions for background processes
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource:
+            - "arn:aws:lambda:${self:provider.region}:*:function:${self:service}-${self:provider.stage}-containerSetup"
 
 # Lambda functions
 functions:
@@ -176,7 +206,7 @@ functions:
   # Session Management
   createSession:
     handler: src/handlers/sessions/createSession.handler
-    timeout: 60
+    timeout: 30  # API Gateway limit
     events:
       - http:
           path: /sessions
@@ -184,6 +214,11 @@ functions:
           authorizer:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
+
+  containerSetup:
+    handler: src/handlers/sessions/containerSetup.handler
+    timeout: 900  # 15 minutes for background process
+    # No HTTP events - invoked asynchronously
 
   createSessionOptions:
     handler: src/handlers/cors/options.handler
