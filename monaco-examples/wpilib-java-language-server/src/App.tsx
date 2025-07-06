@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import {
   ThemeProvider,
   createTheme,
@@ -18,6 +18,7 @@ import {
 import HomePage from "./pages/HomePage";
 import ChallengesPage from "./pages/ChallengesPage";
 import ChallengePage from "./pages/ChallengePage";
+import ChallengeEditorPage from "./pages/ChallengeEditorPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import { TestPage } from "./pages/TestPage";
@@ -62,9 +63,61 @@ const LoadingScreen = () => (
   </Box>
 );
 
+// Component that conditionally shows navigation
+function AppLayout() {
+  const location = useLocation();
+  const { user, isAuthenticated, isConfigured } = useAuth();
+
+  // Hide main navigation for editor routes
+  const isEditorRoute = location.pathname.includes('/editor');
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {!isEditorRoute && (
+        <Navigation isAuthenticated={isAuthenticated} user={user || undefined} />
+      )}
+
+      <Box component="main" sx={{ flexGrow: 1 }}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/challenges" element={<ChallengesPage />} />
+          <Route path="/challenge/:id" element={<ChallengePage />} />
+          <Route path="/challenge/:id/editor" element={<ChallengeEditorPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/test" element={<TestPage />} />
+
+          {/* Fallback route */}
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </Box>
+
+      {/* Development indicator */}
+      {!isConfigured && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            bgcolor: 'warning.main',
+            color: 'warning.contrastText',
+            px: 2,
+            py: 1,
+            borderRadius: 1,
+            fontSize: '0.875rem',
+            zIndex: 1000,
+          }}
+        >
+          Demo Mode - Configure AWS Cognito for production
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 // Main app content that uses authentication
 function AppContent() {
-  const { user, isLoading, isAuthenticated, isConfigured } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -72,43 +125,7 @@ function AppContent() {
 
   return (
     <Router>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Navigation isAuthenticated={isAuthenticated} user={user || undefined} />
-
-        <Box component="main" sx={{ flexGrow: 1 }}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/challenges" element={<ChallengesPage />} />
-            <Route path="/challenge/:id" element={<ChallengePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/test" element={<TestPage />} />
-
-            {/* Fallback route */}
-            <Route path="*" element={<HomePage />} />
-          </Routes>
-        </Box>
-
-        {/* Development indicator */}
-        {!isConfigured && (
-          <Box
-            sx={{
-              position: 'fixed',
-              bottom: 16,
-              right: 16,
-              bgcolor: 'warning.main',
-              color: 'warning.contrastText',
-              px: 2,
-              py: 1,
-              borderRadius: 1,
-              fontSize: '0.875rem',
-              zIndex: 1000,
-            }}
-          >
-            Demo Mode - Configure AWS Cognito for production
-          </Box>
-        )}
-      </Box>
+      <AppLayout />
     </Router>
   );
 }

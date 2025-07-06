@@ -6,6 +6,8 @@ import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { WPILibUtils } from './wpilib-utils.js';
+import httpProxy from 'http-proxy';
+import HttpProxyRules from 'http-proxy-rules';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +18,34 @@ const wpilibUtils = new WPILibUtils();
 const app = express();
 const server = createServer(app);
 const port = 30003;
+
+// Setup HTTP proxy for WebSocket forwarding
+const proxyRules = new HttpProxyRules({
+  rules: {
+    // Forward NT4 WebSocket traffic from ALB to local NT4 server
+    // Match /session/{SESSION_ID}/nt/{appName} and forward to ws://localhost:5810/nt/frc-challenges
+    '^/session/[^/]+/nt/.*': 'ws://localhost:5810/nt/frc-challenges'
+  }
+});
+
+const proxy = httpProxy.createProxy();
+
+// Handle proxy errors
+proxy.on('error', (err, req, res) => {
+    console.error('Proxy error:', err);
+    if (res && res.writeHead) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Proxy error: ' + err.message);
+    }
+});
+
+proxy.on('proxyReqWs', (proxyReq, req, socket, options, head) => {
+    console.log('Proxying WebSocket request:', req.url, 'to', options.target);
+});
+
+proxy.on('proxyResWs', (proxyRes, req, socket, head) => {
+    console.log('WebSocket proxy response received for:', req.url);
+});
 
 // Enable CORS for all routes
 app.use((req, res, next) => {
@@ -299,12 +329,35 @@ app.get('/wpilib/simulate/:simulationId/status', async (req, res) => {
     }
 });
 
+// Handle WebSocket upgrade requests for proxy routing
+server.on('upgrade', (req, socket, head) => {
+    const pathname = new URL(req.url, 'http://localhost').pathname;
+    console.log('WebSocket upgrade request for:', pathname);
+
+    // Check if this is an NT4 proxy request
+    const target = proxyRules.match(req);
+    if (target) {
+        console.log('Proxying WebSocket connection to:', target);
+        return proxy.ws(req, socket, head, { target });
+    }
+
+    // If not a proxy request, let the existing WebSocket server handle it
+    // This will be handled by the WebSocketServer below
+});
+
 // Create single WebSocket server with path-based routing
 const wss = new WebSocketServer({
     server,
     verifyClient: (info) => {
-        // Accept connections for /jdtls and /build paths (build handles both builds and simulations)
         const pathname = new URL(info.req.url, 'http://localhost').pathname;
+
+        // Allow proxy paths to be handled by the proxy
+        const target = proxyRules.match(info.req);
+        if (target) {
+            return false; // Let the proxy handle this
+        }
+
+        // Accept connections for /jdtls and /build paths (build handles both builds and simulations)
         return pathname === '/jdtls' || pathname === '/build';
     }
 });
@@ -468,5 +521,7 @@ server.listen(port, () => {
     console.log(`WebSocket endpoints:`);
     console.log(`  - JDT LS: ws://localhost:${port}/jdtls`);
     console.log(`  - Build/Simulation: ws://localhost:${port}/build`);
+    console.log(`  - NT4 Proxy: ws://localhost:${port}/session/{SESSION_ID}/nt/{appName} -> ws://localhost:5810/nt/frc-challenges`);
     console.log(`Health check: http://localhost:${port}/health`);
+    console.log(`Proxy rules configured for NT4 WebSocket forwarding`);
 });

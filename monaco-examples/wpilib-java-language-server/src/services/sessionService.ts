@@ -13,7 +13,7 @@ export interface SessionConnectionInfo {
 
 class SessionService {
   private activeSessions: Map<string, ChallengeSession> = new Map();
-  private keepAliveIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private keepAliveIntervals: Map<string, number> = new Map();
   private readonly KEEP_ALIVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
   // Create a new challenge session
@@ -23,23 +23,32 @@ class SessionService {
       
       // Check if user already has an active session
       const existingSessions = await challengeService.listSessions();
-      const activeSession = existingSessions.find(s => 
+      const activeSession = existingSessions.find(s =>
         s.status === 'running' || s.status === 'starting'
       );
 
       if (activeSession) {
         console.log('Found existing active session:', activeSession.sessionId);
-        // Ask user if they want to terminate the existing session
-        const shouldTerminate = confirm(
-          `You have an active session for challenge "${activeSession.challengeId}". ` +
-          'Would you like to terminate it and start a new session?'
-        );
-        
-        if (shouldTerminate) {
-          await this.terminateSession(activeSession.sessionId);
-        } else {
-          throw new Error('Cannot create new session while another is active');
+        console.log('Reusing existing session for challenge:', challengeId);
+
+        // Always reuse the existing session regardless of challenge
+        // The same container can handle multiple challenges
+        this.activeSessions.set(activeSession.sessionId, activeSession);
+
+        // Start keep-alive for the reused session
+        this.startKeepAlive(activeSession.sessionId);
+
+        // Wait for session to be ready if it's still starting
+        if (activeSession.status === 'starting') {
+          await this.waitForSessionReady(activeSession.sessionId);
         }
+
+        // Update the session's current challenge ID (for tracking purposes)
+        // Note: This is just for local tracking, the container remains the same
+        const updatedSession = { ...activeSession, challengeId };
+        this.activeSessions.set(activeSession.sessionId, updatedSession);
+
+        return updatedSession;
       }
 
       // Create new session
@@ -65,9 +74,9 @@ class SessionService {
   }
 
   // Wait for session to be ready
-  private async waitForSessionReady(sessionId: string, maxWaitTime: number = 300000): Promise<ChallengeSession> {
+  private async waitForSessionReady(sessionId: string, maxWaitTime: number = 600000): Promise<ChallengeSession> {
     const startTime = Date.now();
-    const pollInterval = 5000; // 5 seconds
+    const pollInterval = 3000; // 3 seconds for more responsive polling
 
     return new Promise((resolve, reject) => {
       const poll = async () => {
@@ -78,22 +87,30 @@ class SessionService {
             return;
           }
 
-          console.log(`Session ${sessionId} status: ${session.status}`);
+          console.log(`Session ${sessionId} status: ${session.status}`, session.containerInfo);
 
-          if (session.status === 'running' && session.containerInfo?.editorUrl) {
+          // Consider session ready if it's running, even without full container info
+          // The container info might be populated later
+          if (session.status === 'running') {
             this.activeSessions.set(sessionId, session);
             resolve(session);
             return;
           }
 
           if (session.status === 'failed') {
-            reject(new Error('Session failed to start'));
+            reject(new Error(`Session failed to start: ${session.sessionId}`));
+            return;
+          }
+
+          if (session.status === 'stopped') {
+            reject(new Error(`Session was stopped: ${session.sessionId}`));
             return;
           }
 
           // Check timeout
           if (Date.now() - startTime > maxWaitTime) {
-            reject(new Error('Session startup timeout'));
+            const elapsedMinutes = Math.round((Date.now() - startTime) / 60000);
+            reject(new Error(`Session startup timeout after ${elapsedMinutes} minutes. The container may be taking longer than expected to start.`));
             return;
           }
 
@@ -123,6 +140,41 @@ class SessionService {
       halWebSocketUrl: containerInfo.halWebSocketUrl || '',
       status: session.status === 'running' ? 'connected' : 'connecting'
     };
+  }
+
+  // Get session details
+  async getSession(sessionId: string): Promise<ChallengeSession | null> {
+    try {
+      const session = await challengeService.getSession(sessionId);
+      if (session) {
+        this.activeSessions.set(sessionId, session);
+      }
+      return session;
+    } catch (error) {
+      console.error(`Failed to get session ${sessionId}:`, error);
+      return null;
+    }
+  }
+
+  // List user sessions
+  async listSessions(): Promise<ChallengeSession[]> {
+    try {
+      return await challengeService.listSessions();
+    } catch (error) {
+      console.error('Failed to list sessions:', error);
+      return [];
+    }
+  }
+
+  // Keep session alive
+  async keepSessionAlive(sessionId: string): Promise<void> {
+    try {
+      await challengeService.keepSessionAlive(sessionId);
+      console.log(`Keep-alive sent for session ${sessionId}`);
+    } catch (error) {
+      console.error(`Failed to send keep-alive for session ${sessionId}:`, error);
+      throw error;
+    }
   }
 
   // Terminate a session

@@ -58,6 +58,14 @@ export interface ChallengeSession {
     editorUrl?: string;
     nt4Url?: string;
     halWebSocketUrl?: string;
+    // ALB-routed endpoints
+    albEndpoints?: {
+      main?: string;        // http://alb-dns/session/sessionId/
+      vscode?: string;      // http://alb-dns/vscode/sessionId/
+      health?: string;      // http://alb-dns/session/sessionId/
+      nt4?: string;         // ws://alb-dns/session/sessionId/nt4
+      halWebSocket?: string; // ws://alb-dns/session/sessionId/hal
+    };
   };
   resourceProfile: 'development' | 'basic' | 'advanced' | 'competition';
   createdAt: string;
@@ -217,7 +225,7 @@ class ChallengeService {
       }
       
       // Sort by sortOrder
-      return filteredChallenges.sort((a, b) => a.sortOrder - b.sortOrder);
+      return filteredChallenges.sort((a: any, b: any) => a.sortOrder - b.sortOrder);
       
     } catch (error) {
       console.error('Failed to fetch challenges:', error);

@@ -41,7 +41,7 @@ const theme = createTheme({
 const DRAWER_WIDTH = 240; // Reduced from 320 to make more compact
 
 // Main app content that uses the editor context
-function EditorAppContent() {
+export function EditorAppContent() {
   const { openFiles, openFile, closeFile, setActiveFile } = useEditor();
 
   const handleFileOpen = useCallback(

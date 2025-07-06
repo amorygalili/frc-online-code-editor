@@ -27,6 +27,7 @@ interface NT4ProviderProps {
     children: ReactNode;
     serverAddress: string;
     appName?: string;
+    sessionId?: string | null;
 }
 
 // Create NT4 Context
@@ -36,7 +37,8 @@ const NT4Context = createContext<NT4ContextType | undefined>(undefined);
 export const NT4Provider: React.FC<NT4ProviderProps> = ({
     children,
     serverAddress,
-    appName = 'WPILib-Monaco-Editor'
+    appName = 'WPILib-Monaco-Editor',
+    sessionId = null
 }) => {
     const [connected, setConnected] = useState<boolean>(false);
     const [topics, setTopics] = useState<Map<string, NT4_Topic>>(new Map());
@@ -48,6 +50,7 @@ export const NT4Provider: React.FC<NT4ProviderProps> = ({
         const client = new NT4_Client(
             serverAddress,
             appName,
+            sessionId,
             // onTopicAnnounce
             (topic: NT4_Topic) => {
                 setTopics(prev => new Map(prev.set(topic.name, topic)));
@@ -88,7 +91,7 @@ export const NT4Provider: React.FC<NT4ProviderProps> = ({
         return () => {
             client.disconnect();
         };
-    }, [serverAddress, appName]);
+    }, [serverAddress, appName, sessionId]);
 
     const contextValue: NT4ContextType = {
         client: clientRef.current,

@@ -85,13 +85,14 @@ export class NT4_Topic {
 }
 
 export class NT4_Client {
-  private PORT = 5810;
+  private PORT = 80;
   private RTT_PERIOD_MS_V40 = 1000;
   private RTT_PERIOD_MS_V41 = 250;
   private TIMEOUT_MS_V40 = 5000;
   private TIMEOUT_MS_V41 = 1000;
 
   private appName: string;
+  private sessionId: string | null;
   private onTopicAnnounce: (topic: NT4_Topic) => void;
   private onTopicUnannounce: (topic: NT4_Topic) => void;
   private onNewTopicData: (
@@ -123,8 +124,9 @@ export class NT4_Client {
 
   /**
    * Creates a new NT4 client without connecting.
-   * @param serverAddr Network address of NT4 server
+   * @param serverAddr Network address of NT4 server (ALB endpoint for session-based routing)
    * @param appName Identifier for this client (does not need to be unique).
+   * @param sessionId Session ID for ALB routing (null for direct connections)
    * @param onTopicAnnounce Gets called when server announces enough topics to form a new signal
    * @param onTopicUnannounce Gets called when server unannounces any part of a signal
    * @param onNewTopicData Gets called when any new data is available
@@ -134,6 +136,7 @@ export class NT4_Client {
   constructor(
     serverAddr: string,
     appName: string,
+    sessionId: string | null,
     onTopicAnnounce: (topic: NT4_Topic) => void,
     onTopicUnannounce: (topic: NT4_Topic) => void,
     onNewTopicData: (
@@ -146,6 +149,7 @@ export class NT4_Client {
   ) {
     this.serverBaseAddr = serverAddr;
     this.appName = appName;
+    this.sessionId = sessionId;
     this.onTopicAnnounce = onTopicAnnounce;
     this.onTopicUnannounce = onTopicUnannounce;
     this.onNewTopicData = onNewTopicData;
@@ -171,12 +175,19 @@ export class NT4_Client {
     let result: Response | null = null;
     const requestStart = new Date().getTime();
     try {
-      result = await fetch(
-        'http://' + this.serverBaseAddr + ':' + this.PORT.toString(),
-        {
-          signal: AbortSignal.timeout(250),
-        },
-      );
+      // For ALB routing, construct the health check URL with session path
+      let healthCheckUrl: string;
+      if (this.sessionId) {
+        // ALB routing: use session-based health check
+        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}/session/${this.sessionId}/`;
+      } else {
+        // Direct connection: use base address
+        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}`;
+      }
+
+      result = await fetch(healthCheckUrl, {
+        signal: AbortSignal.timeout(250),
+      });
     } catch {
       //
     }
@@ -720,13 +731,30 @@ export class NT4_Client {
   }
 
   private ws_connect(rttWs = false) {
-    this.serverAddr =
-      'ws://' +
-      this.serverBaseAddr +
-      ':' +
-      this.PORT.toString() +
-      '/nt/' +
-      this.appName;
+    // Construct WebSocket URL based on whether we're using ALB routing or direct connection
+    if (this.sessionId) {
+      // ALB routing: /session/{SESSION_ID}/nt/{appName}
+      this.serverAddr =
+        'ws://' +
+        this.serverBaseAddr +
+        ':' +
+        this.PORT.toString() +
+        '/session/' +
+        this.sessionId +
+        '/nt/' +
+        this.appName;
+    } else {
+      // Direct connection: /nt/{appName}
+      this.serverAddr =
+        'ws://' +
+        this.serverBaseAddr +
+        ':' +
+        this.PORT.toString() +
+        '/nt/' +
+        this.appName;
+    }
+
+    console.log('[NT4] Connecting to:', this.serverAddr);
 
     const ws = new WebSocket(
       this.serverAddr,

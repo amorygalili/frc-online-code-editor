@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -12,6 +12,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { challengeService, ChallengeWithProgress } from '../services/challengeService';
+import { useAuth } from '../contexts/AuthContext';
 // Simplified icons
 const BackIcon = () => <span>←</span>;
 const StartIcon = () => <span>▶️</span>;
@@ -20,9 +21,12 @@ const LearningIcon = () => <span>📚</span>;
 // This will eventually integrate with your existing Monaco Editor setup
 const ChallengePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [challenge, setChallenge] = useState<ChallengeWithProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [startingChallenge, setStartingChallenge] = useState(false);
 
   // Load challenge data
   useEffect(() => {
@@ -108,10 +112,28 @@ const ChallengePage: React.FC = () => {
     }
   };
 
-  const handleStartChallenge = () => {
-    // This would navigate to the editor view or create a new session
-    // For now, we'll just show an alert
-    alert('Starting challenge... This would open the Monaco editor with the challenge code!');
+  const handleStartChallenge = async () => {
+    if (!challenge || !isAuthenticated) {
+      // Redirect to login if not authenticated
+      if (!isAuthenticated) {
+        navigate('/login');
+        return;
+      }
+      return;
+    }
+
+    try {
+      setStartingChallenge(true);
+
+      // Navigate to the editor page - the ChallengeEditorPage will handle session creation
+      navigate(`/challenge/${challenge.id}/editor`);
+
+    } catch (err) {
+      console.error('Error starting challenge:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start challenge');
+    } finally {
+      setStartingChallenge(false);
+    }
   };
 
   // Final safety check - this should not happen due to earlier checks
@@ -164,9 +186,19 @@ const ChallengePage: React.FC = () => {
           variant="contained"
           size="large"
           onClick={handleStartChallenge}
+          disabled={startingChallenge || !isAuthenticated}
           sx={{ mr: 2 }}
         >
-          <StartIcon /> Start Challenge
+          {startingChallenge ? (
+            <>
+              <CircularProgress size={16} sx={{ mr: 1 }} />
+              Starting...
+            </>
+          ) : (
+            <>
+              <StartIcon /> {isAuthenticated ? 'Start Challenge' : 'Login to Start'}
+            </>
+          )}
         </Button>
 
         <Button
