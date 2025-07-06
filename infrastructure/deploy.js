@@ -574,6 +574,7 @@ async function registerTaskDefinition() {
       `--requires-compatibilities FARGATE ` +
       `--cpu 2048 ` +
       `--memory 4096 ` +
+      `--ephemeral-storage sizeInGiB=50 ` +
       `--execution-role-arn arn:aws:iam::${awsAccountId}:role/ecsTaskExecutionRole ` +
       `--task-role-arn arn:aws:iam::${awsAccountId}:role/ecsTaskRole ` +
       `--container-definitions file://${tempTaskDefPath} ` +

@@ -45,7 +45,7 @@ app.get('/session/:sessionId/', (req, res) => {
         service: 'Eclipse JDT Language Server',
         timestamp: new Date().toISOString(),
         endpoints: {
-            health: `/session/${sessionId}/health`,
+            health: `/session/${sessionId}/`,
             files: `/files/`,
             websocket: `ws://localhost:1735` // Language Server WebSocket
         }

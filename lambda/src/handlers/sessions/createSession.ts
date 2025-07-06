@@ -600,7 +600,7 @@ async function setupALBIntegration(sessionId: string): Promise<{
     const endpoints = {
       main: `http://${config.alb.dnsName}/session/${sessionId}/`,
       vscode: `http://${config.alb.dnsName}/vscode/${sessionId}/`,
-      health: `http://${config.alb.dnsName}/session/${sessionId}/health`
+      health: `http://${config.alb.dnsName}/session/${sessionId}/`
     };
 
     return {
