@@ -4,48 +4,22 @@ import { spawn } from 'child_process';
 import { createServer } from 'http';
 import path from 'path';
 import fs from 'fs/promises';
-import { fileURLToPath } from 'url';
 import { WPILibUtils } from './wpilib-utils.js';
-import httpProxy from 'http-proxy';
-import HttpProxyRules from 'http-proxy-rules';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Initialize WPILib utilities
 const wpilibUtils = new WPILibUtils();
 
 const app = express();
+
 const server = createServer(app);
 const port = 30003;
 
-// Setup HTTP proxy for WebSocket forwarding
-const proxyRules = new HttpProxyRules({
-  rules: {
-    // Forward NT4 WebSocket traffic from ALB to local NT4 server
-    // Match /session/{SESSION_ID}/nt/{appName} and forward to ws://localhost:5810/nt/frc-challenges
-    '^/session/[^/]+/nt/.*': 'ws://localhost:5810/nt/frc-challenges'
-  }
+
+server.on('upgrade', (req, socket, head) => {
+
 });
 
-const proxy = httpProxy.createProxy();
-
-// Handle proxy errors
-proxy.on('error', (err, req, res) => {
-    console.error('Proxy error:', err);
-    if (res && res.writeHead) {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Proxy error: ' + err.message);
-    }
-});
-
-proxy.on('proxyReqWs', (proxyReq, req, socket, options, head) => {
-    console.log('Proxying WebSocket request:', req.url, 'to', options.target);
-});
-
-proxy.on('proxyResWs', (proxyRes, req, socket, head) => {
-    console.log('WebSocket proxy response received for:', req.url);
-});
 
 // Enable CORS for all routes
 app.use((req, res, next) => {
@@ -83,18 +57,24 @@ app.get('/session/:sessionId/', (req, res) => {
 });
 
 // Static file server for workspace files
-const workspacePath = path.join(__dirname, 'workspace');
+// In container: server is in /home/frcuser/server, workspace is in /home/frcuser/workspace
+const workspacePath = '/home/frcuser/workspace';
 
 // Get file content endpoint
 app.get('/files/*', async (req, res) => {
+    const filePath = req.params[0]; // Get the path after /files/
+    const fullPath = path.join(workspacePath, filePath);
+
     try {
-        const filePath = req.params[0]; // Get the path after /files/
-        const fullPath = path.join(workspacePath, filePath);
+        // console.log(`File request: ${filePath}`);
+        // console.log(`Workspace path: ${workspacePath}`);
+        // console.log(`Full path: ${fullPath}`);
 
         // Security check: ensure the path is within workspace
         const resolvedPath = path.resolve(fullPath);
         const resolvedWorkspace = path.resolve(workspacePath);
         if (!resolvedPath.startsWith(resolvedWorkspace)) {
+            console.log(`Access denied: ${resolvedPath} not within ${resolvedWorkspace}`);
             return res.status(403).json({ error: 'Access denied: path outside workspace' });
         }
 
@@ -104,12 +84,12 @@ app.get('/files/*', async (req, res) => {
             content: content
         });
     } catch (error) {
+        console.error(`Error reading file ${fullPath}:`, error);
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: 'File not found' });
         } else if (error.code === 'EISDIR') {
             res.status(400).json({ error: 'Path is a directory, not a file' });
         } else {
-            console.error('Error reading file:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
     }
@@ -117,14 +97,19 @@ app.get('/files/*', async (req, res) => {
 
 // List directory contents endpoint
 app.get('/files', async (req, res) => {
+    const dirPath = req.query.path || '';
+    const fullPath = path.join(workspacePath, dirPath);
+
     try {
-        const dirPath = req.query.path || '';
-        const fullPath = path.join(workspacePath, dirPath);
+        // console.log(`Directory listing request: ${dirPath}`);
+        // console.log(`Workspace path: ${workspacePath}`);
+        // console.log(`Full path: ${fullPath}`);
 
         // Security check: ensure the path is within workspace
         const resolvedPath = path.resolve(fullPath);
         const resolvedWorkspace = path.resolve(workspacePath);
         if (!resolvedPath.startsWith(resolvedWorkspace)) {
+            console.log(`Access denied: ${resolvedPath} not within ${resolvedWorkspace}`);
             return res.status(403).json({ error: 'Access denied: path outside workspace' });
         }
 
@@ -135,15 +120,16 @@ app.get('/files', async (req, res) => {
             path: path.posix.join(dirPath, entry.name)
         }));
 
+        // console.log(`Found ${files.length} entries in ${fullPath}`);
         res.json({
             path: dirPath,
             files: files
         });
     } catch (error) {
+        console.error(`Error reading directory ${fullPath}:`, error);
         if (error.code === 'ENOENT') {
             res.status(404).json({ error: 'Directory not found' });
         } else {
-            console.error('Error reading directory:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
     }
@@ -329,35 +315,20 @@ app.get('/wpilib/simulate/:simulationId/status', async (req, res) => {
     }
 });
 
-// Handle WebSocket upgrade requests for proxy routing
-server.on('upgrade', (req, socket, head) => {
-    const pathname = new URL(req.url, 'http://localhost').pathname;
-    console.log('WebSocket upgrade request for:', pathname);
-
-    // Check if this is an NT4 proxy request
-    const target = proxyRules.match(req);
-    if (target) {
-        console.log('Proxying WebSocket connection to:', target);
-        return proxy.ws(req, socket, head, { target });
-    }
-
-    // If not a proxy request, let the existing WebSocket server handle it
-    // This will be handled by the WebSocketServer below
-});
-
 // Create single WebSocket server with path-based routing
 const wss = new WebSocketServer({
     server,
     verifyClient: (info) => {
         const pathname = new URL(info.req.url, 'http://localhost').pathname;
+        console.log("VERIFY CLIENT:", pathname);
 
-        // Allow proxy paths to be handled by the proxy
-        const target = proxyRules.match(info.req);
-        if (target) {
-            return false; // Let the proxy handle this
+        // Check if this is an NT4 session request - let our custom upgrade handler deal with it
+        const sessionMatch = pathname.match(/^\/session\/([^\/]+)\/nt\/(.+)$/);
+        if (sessionMatch) {
+            console.log("VERIFY CLIENT: NT4 session request detected, rejecting to let custom handler process");
+            return false; // Let our custom upgrade handler process this
         }
 
-        // Accept connections for /jdtls and /build paths (build handles both builds and simulations)
         return pathname === '/jdtls' || pathname === '/build';
     }
 });
@@ -404,7 +375,7 @@ function handleJdtlsConnection(ws) {
     ws.on('message', (data) => {
         try {
             const jsonMessage = data.toString();
-            console.log('Received from client:', jsonMessage.substring(0, 100) + '...');
+            // console.log('Received from client:', jsonMessage.substring(0, 100) + '...');
 
             // Convert JSON message to LSP format with Content-Length header
             const lspMessage = `Content-Length: ${Buffer.byteLength(jsonMessage, 'utf8')}\r\n\r\n${jsonMessage}`;
@@ -487,7 +458,7 @@ function handleBuildConnection(ws) {
     ws.on('message', (data) => {
         try {
             const message = JSON.parse(data.toString());
-            console.log('Build/Simulation WebSocket message:', message);
+            // console.log('Build/Simulation WebSocket message:', message);
 
             // Handle build and simulation commands
             if (message.type === 'subscribe') {
@@ -521,7 +492,5 @@ server.listen(port, () => {
     console.log(`WebSocket endpoints:`);
     console.log(`  - JDT LS: ws://localhost:${port}/jdtls`);
     console.log(`  - Build/Simulation: ws://localhost:${port}/build`);
-    console.log(`  - NT4 Proxy: ws://localhost:${port}/session/{SESSION_ID}/nt/{appName} -> ws://localhost:5810/nt/frc-challenges`);
     console.log(`Health check: http://localhost:${port}/health`);
-    console.log(`Proxy rules configured for NT4 WebSocket forwarding`);
 });

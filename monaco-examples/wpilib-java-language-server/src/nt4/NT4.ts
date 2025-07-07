@@ -85,7 +85,8 @@ export class NT4_Topic {
 }
 
 export class NT4_Client {
-  private PORT = 80;
+  private PORT = 5810;
+  private PROXY_PORT = 30004;
   private RTT_PERIOD_MS_V40 = 1000;
   private RTT_PERIOD_MS_V41 = 250;
   private TIMEOUT_MS_V40 = 5000;
@@ -179,11 +180,13 @@ export class NT4_Client {
       let healthCheckUrl: string;
       if (this.sessionId) {
         // ALB routing: use session-based health check
-        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}/session/${this.sessionId}/`;
+        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/`;
       } else {
         // Direct connection: use base address
         healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}`;
       }
+      console.log(`[NT4] Checking health of ${healthCheckUrl}...`);
+      console.trace();
 
       result = await fetch(healthCheckUrl, {
         signal: AbortSignal.timeout(250),
@@ -738,13 +741,13 @@ export class NT4_Client {
         'ws://' +
         this.serverBaseAddr +
         ':' +
-        this.PORT.toString() +
+        this.PROXY_PORT.toString() +
         '/session/' +
         this.sessionId +
         '/nt/' +
         this.appName;
     } else {
-      // Direct connection: /nt/{appName}
+      // Direct connection to NT4 server: ws://localhost:5810/nt/{appName}
       this.serverAddr =
         'ws://' +
         this.serverBaseAddr +
@@ -753,8 +756,6 @@ export class NT4_Client {
         '/nt/' +
         this.appName;
     }
-
-    console.log('[NT4] Connecting to:', this.serverAddr);
 
     const ws = new WebSocket(
       this.serverAddr,
@@ -768,16 +769,24 @@ export class NT4_Client {
       this.ws = ws;
     }
     ws.binaryType = 'arraybuffer';
-    ws.addEventListener('open', () => this.ws_onOpen(ws));
-    ws.addEventListener('message', (event: MessageEvent) =>
-      this.ws_onMessage(event, rttWs),
-    );
+    ws.addEventListener('open', () => {
+      console.log('[NT4] WebSocket opened successfully');
+      this.ws_onOpen(ws);
+    });
+    ws.addEventListener('message', (event: MessageEvent) => {
+      console.log('[NT4] WebSocket message received:', event.data);
+      this.ws_onMessage(event, rttWs);
+    });
     if (!rttWs) {
       // Don't run two callbacks when on normal and RTT close
-      ws.addEventListener('error', () => this.ws_onError(ws));
-      ws.addEventListener('close', (event: CloseEvent) =>
-        this.ws_onClose(event, ws),
-      );
+      ws.addEventListener('error', (error) => {
+        console.error('[NT4] WebSocket error:', error);
+        this.ws_onError(ws);
+      });
+      ws.addEventListener('close', (event: CloseEvent) => {
+        console.log('[NT4] WebSocket closed:', event.code, event.reason);
+        this.ws_onClose(event, ws);
+      });
     }
   }
 

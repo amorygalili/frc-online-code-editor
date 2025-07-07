@@ -1,3 +1,16 @@
 FROM wpilib-2025:v4
 
+ARG HOME_DIR=/home/frcuser
+
+USER frcuser
+COPY server ${HOME_DIR}/server/
+
+USER root
+RUN chown -R frcuser:frcuser ${HOME_DIR}/server
+USER frcuser
+
+WORKDIR ${HOME_DIR}/server
+RUN npm install
+WORKDIR ${HOME_DIR}
+
 CMD ["node", "server/server.js"]
