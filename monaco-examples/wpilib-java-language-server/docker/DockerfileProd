@@ -13,4 +13,4 @@ WORKDIR ${HOME_DIR}/server
 RUN npm install
 WORKDIR ${HOME_DIR}
 
-CMD ["node", "server/server.js"]
+CMD ["npm", "start", "--prefix", "server"]

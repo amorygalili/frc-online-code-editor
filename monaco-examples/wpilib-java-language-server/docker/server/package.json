@@ -9,9 +9,12 @@
     "http-proxy": "^1.18.1",
     "http-proxy-middleware": "^3.0.5",
     "http-proxy-rules": "^1.1.3",
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "concurrently": "^8.2.2"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "concurrently \"node server.js\" \"node nt4-proxy.js\"",
+    "start:server": "node server.js",
+    "start:nt4": "node nt4-proxy.js"
   }
 }
