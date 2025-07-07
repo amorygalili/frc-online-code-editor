@@ -117,12 +117,12 @@ export const SessionAwareProviders: React.FC<SessionAwareProvidersProps> = ({
 
     // Use session-specific proxy endpoints
     const nt4ProxyUrl = `${proxyBaseUrl}/session/${sessionId}/nt4`;
-    const halProxyUrl = `${proxyBaseUrl}/session/${sessionId}/hal`;
+    const halProxyUrl = `${proxyBaseUrl}/session/${sessionId}/halsim`;
 
     console.log('Using ALB proxy endpoints:');
     console.log('- NT4 Proxy URL:', nt4ProxyUrl);
     console.log('- HAL Proxy URL:', halProxyUrl);
-    console.log('- Server.js will proxy NT4 to localhost:5810/nt/FRCUserProgram');
+    console.log('- Server.js will proxy NT4 to localhost:5810/nt/frc-challenges');
     console.log('- Server.js will proxy HAL to localhost:3300/wpilibws');
 
     // Configure providers to use the proxy endpoints
@@ -138,7 +138,8 @@ export const SessionAwareProviders: React.FC<SessionAwareProvidersProps> = ({
         <CustomHalSimProvider
           websocketUrl={halProxyUrl}
           hostname={proxyHostname}
-          port={proxyPort}
+          port={30005}
+          sessionId={sessionId}
         >
           {children}
         </CustomHalSimProvider>
@@ -216,26 +217,30 @@ export const CustomHalSimProvider: React.FC<{
   websocketUrl?: string;
   hostname?: string;
   port?: number;
-}> = ({ children, websocketUrl, hostname = 'localhost', port = 3300 }) => {
+  sessionId?: string;
+}> = ({ children, websocketUrl, hostname = 'localhost', port = 3300, sessionId }) => {
 
-  if (websocketUrl) {
-    console.log('CustomHalSimProvider: Using full WebSocket URL:', websocketUrl);
+  if (websocketUrl && sessionId) {
+    console.log('CustomHalSimProvider: Using session-aware WebSocket URL:', websocketUrl);
 
-    // For ALB routing, extract hostname and port from the WebSocket URL
+    // For session routing, extract hostname and port from the WebSocket URL
     try {
       const url = new URL(websocketUrl);
       const customHostname = url.hostname;
       const customPort = url.port ? parseInt(url.port) : (url.protocol === 'wss:' ? 443 : 80);
 
       console.log('CustomHalSimProvider: Extracted hostname:', customHostname, 'port:', customPort);
-      console.log('CustomHalSimProvider: Note - Backend ALB routing required for:', websocketUrl);
+      console.log('CustomHalSimProvider: Session ID:', sessionId);
+      console.log('CustomHalSimProvider: Will connect to halsim-proxy on port:', customPort);
 
-      // The WPILibWebSocketClient will construct: ws://hostname:port/wpilibws
-      // For ALB routing, we need: wss://alb-host/session/sessionId/hal
-      // This means the backend ALB needs to route /wpilibws to the session-specific HAL endpoint
-
+      // Pass sessionId to HalSimProvider so it can construct the correct URI
+      // The HalSimProvider will construct: ws://hostname:port/session/{sessionId}/halsim/ws
       return (
-        <HalSimProvider hostname={customHostname} port={customPort}>
+        <HalSimProvider
+          hostname={customHostname}
+          port={customPort}
+          sessionId={sessionId}
+        >
           {children}
         </HalSimProvider>
       );
@@ -244,9 +249,9 @@ export const CustomHalSimProvider: React.FC<{
     }
   }
 
-  // Fallback to standard provider
+  // Fallback to standard provider (no session routing)
   return (
-    <HalSimProvider hostname={hostname} port={port}>
+    <HalSimProvider hostname={hostname} port={port} sessionId={sessionId}>
       {children}
     </HalSimProvider>
   );

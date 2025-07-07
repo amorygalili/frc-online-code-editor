@@ -44,8 +44,6 @@ const theme = createTheme({
 // Fixed configuration for localhost Docker container
 const DOCKER_HOST = 'localhost';
 const DOCKER_PORT = 30003;
-const NT4_PORT = 5810;
-const HAL_SIM_PORT = 3300;
 const TEST_SESSION_ID = 'test-session-123';
 
 export function TestApp() {
@@ -308,7 +306,7 @@ const TestEditorWrapper: React.FC<TestEditorWrapperProps> = ({ useSessionRouting
         sessionId={useSessionRouting ? TEST_SESSION_ID : null}
         appName="frc-challenges"
       >
-        <HalSimProvider hostname={DOCKER_HOST} port={HAL_SIM_PORT}>
+        <HalSimProvider hostname={DOCKER_HOST} sessionId={useSessionRouting ? TEST_SESSION_ID : null}>
           <EditorProvider>
             <BuildProvider>
               <TestEditorAppContent

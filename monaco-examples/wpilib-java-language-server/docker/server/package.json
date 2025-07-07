@@ -13,8 +13,9 @@
     "concurrently": "^8.2.2"
   },
   "scripts": {
-    "start": "concurrently \"node server.js\" \"node nt4-proxy.js\"",
+    "start": "concurrently \"node server.js\" \"node nt4-proxy.js\" \"node halsim-proxy.js\"",
     "start:server": "node server.js",
-    "start:nt4": "node nt4-proxy.js"
+    "start:nt4": "node nt4-proxy.js",
+    "start:halsim": "node halsim-proxy.js"
   }
 }

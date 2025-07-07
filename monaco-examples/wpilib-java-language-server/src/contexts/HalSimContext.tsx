@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useState, useEffect, ReactNode, memo } from 'react';
 import {
   WPILibWebSocketClient,
   DriverStationPayload,
@@ -53,16 +53,18 @@ interface HalSimProviderProps {
   children: ReactNode;
   hostname?: string;
   port?: number;
+  sessionId?: string | null;
 }
 
 // Create context
 const HalSimContext = createContext<HalSimContextType | null>(null);
 
 // Provider component
-export const HalSimProvider: React.FC<HalSimProviderProps> = ({
+export const HalSimProvider: React.FC<HalSimProviderProps> = memo(({
   children,
   hostname = 'localhost',
-  port = 3300
+  port = 30005,
+  sessionId = null,
 }) => {
   const clientRef = useRef<WPILibWebSocketClient | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
@@ -81,13 +83,22 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
 
   useEffect(() => {
 
-    if (clientRef.current) {
+    if (clientRef.current || !sessionId) {
       return;
     }
 
-    const client = new WPILibWebSocketClient();
+    // Construct the URI based on whether we have a session ID
+    let clientUri = `/session/${sessionId}/halsim`;
+    console.log(`HAL Sim using session routing: ${clientUri}`);
 
-    console.log("HAL Sim WebSocket client created");
+    
+    const client = new WPILibWebSocketClient({
+      hostname,
+      port,
+      uri: clientUri
+    });
+
+    console.log(`HAL Sim WebSocket client created for ws://${hostname}:${port}${clientUri}`);
 
     clientRef.current = client;
 
@@ -215,7 +226,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
     //     clientRef.current.removeAllListeners();
     //   }
     // };
-  }, [hostname, port]);
+  }, [hostname, port, sessionId]);
 
   const setRobotMode = (mode: RobotMode) => {
     if (!clientRef.current) return;
@@ -266,7 +277,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = ({
       {children}
     </HalSimContext.Provider>
   );
-};
+});
 
 // Custom hook to use HAL Sim client
 export const useHalSim = (): HalSimContextType => {

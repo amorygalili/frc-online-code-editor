@@ -5,7 +5,8 @@ import React, {
     useState, 
     useCallback, 
     useRef, 
-    ReactNode 
+    ReactNode, 
+    memo
 } from 'react';
 import { NT4_Client, NT4_Topic } from './NT4';
 
@@ -34,7 +35,7 @@ interface NT4ProviderProps {
 const NT4Context = createContext<NT4ContextType | undefined>(undefined);
 
 // NT4 Provider Component
-export const NT4Provider: React.FC<NT4ProviderProps> = ({
+export const NT4Provider: React.FC<NT4ProviderProps> = memo(({
     children,
     serverAddress,
     appName = 'WPILib-Monaco-Editor',
@@ -105,7 +106,7 @@ export const NT4Provider: React.FC<NT4ProviderProps> = ({
             {children}
         </NT4Context.Provider>
     );
-};
+});
 
 // Custom hook to use NT4 client
 export const useNt4Client = (): NT4_Client | null => {
