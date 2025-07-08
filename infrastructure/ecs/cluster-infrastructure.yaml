@@ -213,20 +213,20 @@ Resources:
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
           Description: Editor API from ALB
         - IpProtocol: tcp
-          FromPort: 1735
-          ToPort: 1735
+          FromPort: 30004
+          ToPort: 30004
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-          Description: NetworkTables NT3
+          Description: NT4 Proxy from ALB
         - IpProtocol: tcp
-          FromPort: 5810
-          ToPort: 5810
+          FromPort: 30005
+          ToPort: 30005
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-          Description: NetworkTables NT4
+          Description: HALSim Proxy from ALB
         - IpProtocol: tcp
-          FromPort: 3300
-          ToPort: 3300
+          FromPort: 30006
+          ToPort: 30006
           SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-          Description: HAL Simulation WebSocket
+          Description: Language Server from ALB
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0

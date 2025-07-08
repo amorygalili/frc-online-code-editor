@@ -68,7 +68,7 @@ health_check() {
     fi
     
     # Check if required ports are listening
-    for port in 30003; do
+    for port in 30003 30004 30005 30006; do
         if ! check_port $port; then
             log "${RED}❌ Port $port not listening${NC}"
             exit_code=1

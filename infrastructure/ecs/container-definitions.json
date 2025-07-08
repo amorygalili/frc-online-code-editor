@@ -10,19 +10,19 @@
         "name": "editor-api"
       },
       {
-        "containerPort": 1735,
+        "containerPort": 30004,
         "protocol": "tcp",
-        "name": "nt3-port"
+        "name": "nt4-proxy"
       },
       {
-        "containerPort": 5810,
+        "containerPort": 30005,
         "protocol": "tcp",
-        "name": "nt4-port"
+        "name": "halsim-proxy"
       },
       {
-        "containerPort": 3300,
+        "containerPort": 30006,
         "protocol": "tcp",
-        "name": "hal-websocket"
+        "name": "language-server"
       }
     ],
     "environment": [

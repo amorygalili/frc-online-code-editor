@@ -6,7 +6,7 @@
 # - WPILib 2025 installation
 # - Node.js and all dependencies
 # - Configured frcuser and environment
-FROM agalili/wpilib-2025:v4
+FROM agalili/wpilib-2025:v5
 
 # Set production environment variables
 ENV NODE_ENV=production
@@ -17,13 +17,13 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:30003/health || exit 1
 
 # Expose the required ports for ECS
-EXPOSE 30003 1735 5810 3300
+EXPOSE 30003 30004 30005 30006
 
 # Set working directory
 WORKDIR /home/frcuser
 
 # Use the same command as the original DockerfileProd
-CMD ["node", "server/server.js"]
+CMD ["npm", "start", "--prefix", "server"]
 
 # Labels for better container management in ECS
 LABEL maintainer="FRC Challenge Site Team"
