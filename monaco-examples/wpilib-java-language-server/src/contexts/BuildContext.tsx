@@ -13,6 +13,7 @@ import {
   BuildStatusResponse,
   BuildWebSocketMessage,
 } from '../types/build';
+import { useConfig, buildSessionUrl } from './ConfigContext';
 
 const BuildContext = createContext<BuildContextType | undefined>(undefined);
 
@@ -29,16 +30,16 @@ export const useBuild = (): BuildContextType => {
 
 interface BuildProviderProps {
   children: React.ReactNode;
-  serverUrl?: string;
 }
 
 /**
  * BuildProvider component that manages build state and WebSocket connections
  */
 export const BuildProvider: React.FC<BuildProviderProps> = ({
-  children,
-  serverUrl = 'ws://localhost:30003'
+  children
 }) => {
+  const { config } = useConfig();
+
   // State
   const [currentBuildId, setCurrentBuildId] = useState<string | null>(null);
   const [buildStatus, setBuildStatus] = useState<BuildStatus>('idle');
@@ -70,8 +71,9 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     }
 
     try {
-      console.log('Creating new WebSocket connection to:', `${serverUrl}/build`, wsRef.current);
-      const ws = new WebSocket(`${serverUrl}/build`);
+      const wsUrl = `ws://${config.serverUrl}:30003/session/${config.sessionId}/build`;
+      console.log('Creating new WebSocket connection to:', wsUrl);
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -115,7 +117,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
       console.error('Error creating build WebSocket connection:', error);
       setIsConnected(false);
     }
-  }, [serverUrl]);
+  }, [config]);
 
   /**
    * Disconnect from build WebSocket
@@ -199,7 +201,8 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const startBuild = useCallback(async (projectName: string, task: BuildTask): Promise<string | null> => {
     try {
-      const response = await fetch(`http://localhost:30003/wpilib/build/${projectName}`, {
+      const url = buildSessionUrl(config, `/wpilib/build/${projectName}`, 30003);
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,7 +234,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
       setBuildStatus('error');
       return null;
     }
-  }, []);
+  }, [config]);
 
   /**
    * Stop a build
@@ -254,7 +257,8 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const startSimulation = useCallback(async (projectName: string, simulationType: string = 'debug'): Promise<string | null> => {
     try {
-      const response = await fetch(`http://localhost:30003/wpilib/simulate/${projectName}`, {
+      const url = buildSessionUrl(config, `/wpilib/simulate/${projectName}`, 30003);
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,7 +298,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
       setBuildStatus('error');
       return null;
     }
-  }, []);
+  }, [config]);
 
   /**
    * Stop a simulation
@@ -307,7 +311,8 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     }
 
     try {
-      const response = await fetch(`http://localhost:30003/wpilib/simulate/${idToStop}/stop`, {
+      const url = buildSessionUrl(config, `/wpilib/simulate/${idToStop}/stop`, 30003);
+      const response = await fetch(url, {
         method: 'POST',
       });
 
@@ -327,7 +332,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
       console.error('Error stopping simulation:', error);
       return false;
     }
-  }, [currentBuildId]);
+  }, [config, currentBuildId]);
 
   /**
    * Clear build output
@@ -365,7 +370,8 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const getBuildStatus = useCallback(async (buildId: string): Promise<BuildStatusResponse | null> => {
     try {
-      const response = await fetch(`http://localhost:30003/wpilib/build/${buildId}/status`);
+      const url = buildSessionUrl(config, `/wpilib/build/${buildId}/status`, 30003);
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -376,7 +382,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
       console.error('Error getting build status:', error);
       return null;
     }
-  }, []);
+  }, [config]);
 
   // Connect to WebSocket on mount
   useEffect(() => {

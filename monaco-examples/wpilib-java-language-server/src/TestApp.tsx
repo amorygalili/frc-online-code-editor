@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from "react";
 import {
   ThemeProvider,
   createTheme,
@@ -8,16 +8,14 @@ import {
   Typography,
   Box,
   Button,
-  Paper,
-  FormControlLabel,
-  Switch,
-  Alert,
   Chip,
 } from "@mui/material";
-import { EditorProvider } from './contexts/EditorContext';
-import { BuildProvider } from './contexts/BuildContext';
-import { NT4Provider } from './nt4/useNetworktables';
-import { HalSimProvider } from './contexts/HalSimContext';
+import { EditorProvider } from "./contexts/EditorContext";
+import { BuildProvider } from "./contexts/BuildContext";
+import { NT4Provider } from "./nt4/useNetworktables";
+import { HalSimProvider } from "./contexts/HalSimContext";
+import { ConfigProvider, AppConfig } from "./contexts/ConfigContext";
+import { setFileServiceConfig } from "./fileService";
 import { useCallback } from "react";
 import { useEditor } from "./contexts/EditorContext";
 import * as vscode from "vscode";
@@ -41,143 +39,28 @@ const theme = createTheme({
 });
 
 // Fixed configuration for localhost Docker container
-const DOCKER_HOST = 'localhost';
+const DOCKER_HOST = "localhost";
 const DOCKER_PORT = 30003;
-const TEST_SESSION_ID = 'test-session-123';
+const TEST_SESSION_ID = "test-session-123";
 
 export function TestApp() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<string>('Not connected');
-  const [showEditor, setShowEditor] = useState(false);
-  const [useSessionRouting, setUseSessionRouting] = useState(false);
-
-  // Test connection to Docker container
-  const testConnection = async () => {
-    setConnectionStatus('Testing connection...');
-    try {
-      const healthUrl = `http://${DOCKER_HOST}:${DOCKER_PORT}/health`;
-      const response = await fetch(healthUrl);
-
-      if (response.ok) {
-        const data = await response.json();
-        setIsConnected(true);
-        setConnectionStatus(`Connected to ${data.service || 'Docker container'}`);
-      } else {
-        setIsConnected(false);
-        setConnectionStatus(`Connection failed: ${response.status} ${response.statusText}`);
-      }
-    } catch (error) {
-      setIsConnected(false);
-      setConnectionStatus(`Connection error: ${(error as Error).message}`);
-    }
-  };
-
-  // Auto-test connection on mount
-  useEffect(() => {
-    testConnection();
-  }, []);
-
-  const launchEditor = () => {
-    if (isConnected) {
-      setShowEditor(true);
-    }
-  };
-
-  const closeEditor = () => {
-    setShowEditor(false);
-  };
-
-  if (showEditor) {
-    return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <TestEditorWrapper useSessionRouting={useSessionRouting} onClose={closeEditor} />
-      </ThemeProvider>
-    );
-  }
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-        <AppBar position="static" elevation={1}>
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              WPILib Challenge Editor - Local Docker Test
-            </Typography>
-            <Chip
-              label={isConnected ? 'Connected' : 'Disconnected'}
-              color={isConnected ? 'success' : 'error'}
-              variant="outlined"
-            />
-          </Toolbar>
-        </AppBar>
-
-        <Box sx={{ flex: 1, p: 3, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Paper sx={{ p: 4, maxWidth: 600, width: '100%' }}>
-            <Typography variant="h4" gutterBottom align="center">
-              Local Docker Test
-            </Typography>
-
-            <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 3 }}>
-              Testing against localhost:30003 Docker container
-            </Typography>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, justifyContent: 'center' }}>
-              <Button variant="outlined" onClick={testConnection}>
-                Test Connection
-              </Button>
-              <Typography variant="body2">
-                {connectionStatus}
-              </Typography>
-            </Box>
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={useSessionRouting}
-                  onChange={(e) => setUseSessionRouting(e.target.checked)}
-                />
-              }
-              label="Enable Session Routing (ALB simulation)"
-              sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}
-            />
-
-            {isConnected ? (
-              <Alert severity="success" sx={{ mb: 3 }}>
-                Docker container is accessible. You can launch the editor.
-              </Alert>
-            ) : (
-              <Alert severity="warning" sx={{ mb: 3 }}>
-                Docker container is not accessible. Please ensure the container is running.
-              </Alert>
-            )}
-
-            <Box sx={{ textAlign: 'center' }}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={launchEditor}
-                disabled={!isConnected}
-              >
-                Launch Challenge Editor
-              </Button>
-            </Box>
-          </Paper>
-        </Box>
-      </Box>
+      <TestEditorWrapper onClose={() => {}} />
     </ThemeProvider>
   );
-};
+}
 
 // Custom EditorAppContent for test page that includes close button in header
 interface TestEditorAppContentProps {
-  useSessionRouting: boolean;
   onClose: () => void;
 }
 
-const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({ useSessionRouting, onClose }) => {
-  const { openFiles, openFile, closeFile, setActiveFile } = useEditor();
+const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({
+  onClose,
+}) => {
+  const { openFile } = useEditor();
 
   const handleFileOpen = useCallback(
     async (filePath: string) => {
@@ -188,30 +71,15 @@ const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({ useSessionR
     [openFile]
   );
 
-  const handleFileClose = useCallback(
-    (index: number) => {
-      if (index >= 0 && index < openFiles.length) {
-        const fileToClose = openFiles[index];
-        closeFile(fileToClose.uri);
-      }
-    },
-    [openFiles, closeFile]
-  );
-
-  const handleTabClick = useCallback(
-    (index: number) => {
-      if (index >= 0 && index < openFiles.length) {
-        setActiveFile(openFiles[index].uri);
-      }
-    },
-    [openFiles, setActiveFile]
-  );
-
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <AppBar position="static" elevation={1} sx={{ minHeight: 48 }}>
         <Toolbar variant="dense" sx={{ minHeight: 48, py: 0.5 }}>
-          <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600, mr: 2 }}>
+          <Typography
+            variant="subtitle1"
+            component="div"
+            sx={{ fontWeight: 600, mr: 2 }}
+          >
             FRC Challenge Editor
           </Typography>
 
@@ -220,17 +88,8 @@ const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({ useSessionR
             label={`${DOCKER_HOST}:${DOCKER_PORT}`}
             size="small"
             variant="outlined"
-            sx={{ mr: 1, height: 24, fontSize: '0.75rem' }}
+            sx={{ mr: 1, height: 24, fontSize: "0.75rem" }}
           />
-          {useSessionRouting && (
-            <Chip
-              label="Session Routing"
-              size="small"
-              color="primary"
-              variant="outlined"
-              sx={{ mr: 2, height: 24, fontSize: '0.75rem' }}
-            />
-          )}
 
           {/* Spacer to push everything to the right */}
           <Box sx={{ flexGrow: 1 }} />
@@ -246,7 +105,7 @@ const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({ useSessionR
             color="inherit"
             onClick={onClose}
             size="small"
-            sx={{ ml: 2, minWidth: 'auto', px: 1 }}
+            sx={{ ml: 2, minWidth: "auto", px: 1 }}
           >
             Close
           </Button>
@@ -273,17 +132,18 @@ const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({ useSessionR
             {/* Editor area */}
             <Box
               sx={{
-                height: '100%',
+                height: "100%",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
               }}
             >
-              <WPILibEditorWrapper config={{
-                serverUrl: DOCKER_HOST,
-                sessionId: TEST_SESSION_ID,
-                port: 30006,
-              }}
+              <WPILibEditorWrapper
+                config={{
+                  serverUrl: DOCKER_HOST,
+                  sessionId: TEST_SESSION_ID,
+                  port: 30006,
+                }}
               />
             </Box>
 
@@ -294,33 +154,45 @@ const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({ useSessionR
       </Box>
     </Box>
   );
-}
+};
 
 // Wrapper component that provides the editor with the test configuration
 interface TestEditorWrapperProps {
-  useSessionRouting: boolean;
   onClose: () => void;
 }
 
-const TestEditorWrapper: React.FC<TestEditorWrapperProps> = ({ useSessionRouting, onClose }) => {
+const TestEditorWrapper: React.FC<TestEditorWrapperProps> = ({ onClose }) => {
+  // Create test configuration
+  const testConfig: AppConfig = {
+    serverUrl: DOCKER_HOST,
+    sessionId: TEST_SESSION_ID,
+  };
+
+  const [initialized, setInitialized] = React.useState(false);
+
+  // Set file service config
+  React.useEffect(() => {
+    setFileServiceConfig(testConfig);
+    setInitialized(true);
+  }, [testConfig]);
+
+  if (!initialized) {
+    return null;
+  }
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <NT4Provider
-        serverAddress={DOCKER_HOST}
-        sessionId={useSessionRouting ? TEST_SESSION_ID : null}
-        appName="frc-challenges"
-      >
-        <HalSimProvider hostname={DOCKER_HOST} sessionId={useSessionRouting ? TEST_SESSION_ID : null}>
-          <EditorProvider>
-            <BuildProvider>
-              <TestEditorAppContent
-                useSessionRouting={useSessionRouting}
-                onClose={onClose}
-              />
-            </BuildProvider>
-          </EditorProvider>
-        </HalSimProvider>
-      </NT4Provider>
+      <ConfigProvider config={testConfig}>
+        <NT4Provider>
+          <HalSimProvider>
+            <EditorProvider>
+              <BuildProvider>
+                <TestEditorAppContent onClose={onClose} />
+              </BuildProvider>
+            </EditorProvider>
+          </HalSimProvider>
+        </NT4Provider>
+      </ConfigProvider>
     </Box>
   );
 };

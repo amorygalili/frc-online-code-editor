@@ -34,9 +34,21 @@ app.use((req, res, next) => {
     }
 });
 
-// Health check endpoint
+// Session-aware health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', service: 'Eclipse JDT Language Server' });
+    res.json({
+        status: 'ok',
+        service: 'FRC Simulation Server',
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.get('/session/:sessionId/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        service: 'FRC Simulation Server',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Session root endpoint
@@ -48,9 +60,12 @@ app.get('/session/:sessionId/', (req, res) => {
         service: 'Eclipse JDT Language Server',
         timestamp: new Date().toISOString(),
         endpoints: {
-            health: `/session/${sessionId}/`,
-            files: `/files/`,
-            websocket: `ws://localhost:1735` // Language Server WebSocket
+            health: `/session/${sessionId}/health`,
+            files: `/session/${sessionId}/files/`,
+            javaFiles: `/session/${sessionId}/java-files`,
+            wpilib: `/session/${sessionId}/wpilib/`,
+            jdtls: `ws://localhost:${port}/session/${sessionId}/jdtls`,
+            build: `ws://localhost:${port}/session/${sessionId}/build`
         }
     });
 });
@@ -59,16 +74,13 @@ app.get('/session/:sessionId/', (req, res) => {
 // In container: server is in /home/frcuser/server, workspace is in /home/frcuser/workspace
 const workspacePath = '/home/frcuser/workspace';
 
-// Get file content endpoint
-app.get('/files/*', async (req, res) => {
+// Session-aware get file content endpoint
+app.get('/session/:sessionId/files/*', async (req, res) => {
+    const sessionId = req.params.sessionId;
     const filePath = req.params[0]; // Get the path after /files/
     const fullPath = path.join(workspacePath, filePath);
 
     try {
-        // console.log(`File request: ${filePath}`);
-        // console.log(`Workspace path: ${workspacePath}`);
-        // console.log(`Full path: ${fullPath}`);
-
         // Security check: ensure the path is within workspace
         const resolvedPath = path.resolve(fullPath);
         const resolvedWorkspace = path.resolve(workspacePath);
@@ -80,7 +92,7 @@ app.get('/files/*', async (req, res) => {
         const content = await fs.readFile(fullPath, 'utf8');
         res.json({
             path: filePath,
-            content: content
+            content: content,
         });
     } catch (error) {
         console.error(`Error reading file ${fullPath}:`, error);
@@ -94,16 +106,12 @@ app.get('/files/*', async (req, res) => {
     }
 });
 
-// List directory contents endpoint
-app.get('/files', async (req, res) => {
+// Session-aware list directory contents endpoint
+app.get('/session/:sessionId/files', async (req, res) => {
     const dirPath = req.query.path || '';
     const fullPath = path.join(workspacePath, dirPath);
 
     try {
-        // console.log(`Directory listing request: ${dirPath}`);
-        // console.log(`Workspace path: ${workspacePath}`);
-        // console.log(`Full path: ${fullPath}`);
-
         // Security check: ensure the path is within workspace
         const resolvedPath = path.resolve(fullPath);
         const resolvedWorkspace = path.resolve(workspacePath);
@@ -119,10 +127,9 @@ app.get('/files', async (req, res) => {
             path: path.posix.join(dirPath, entry.name)
         }));
 
-        // console.log(`Found ${files.length} entries in ${fullPath}`);
         res.json({
             path: dirPath,
-            files: files
+            files: files,
         });
     } catch (error) {
         console.error(`Error reading directory ${fullPath}:`, error);
@@ -134,8 +141,64 @@ app.get('/files', async (req, res) => {
     }
 });
 
-// Save file content endpoint
-app.put('/files/*', express.json(), async (req, res) => {
+// Session-aware get all Java files recursively endpoint
+app.get('/session/:sessionId/java-files', async (req, res) => {
+    const sessionId = req.params.sessionId;
+
+    try {
+        const javaFiles = [];
+
+        // Recursive function to find all Java files
+        async function findJavaFiles(dirPath) {
+            const fullPath = path.join(workspacePath, dirPath);
+
+            // Security check: ensure the path is within workspace
+            const resolvedPath = path.resolve(fullPath);
+            const resolvedWorkspace = path.resolve(workspacePath);
+            if (!resolvedPath.startsWith(resolvedWorkspace)) {
+                console.log(`Access denied: ${resolvedPath} not within ${resolvedWorkspace}`);
+                return;
+            }
+
+            try {
+                const entries = await fs.readdir(fullPath, { withFileTypes: true });
+
+                for (const entry of entries) {
+                    const entryPath = path.posix.join(dirPath, entry.name);
+
+                    if (entry.isDirectory()) {
+                        // Recursively search subdirectories
+                        await findJavaFiles(entryPath);
+                    } else if (entry.isFile() && entry.name.endsWith('.java')) {
+                        // Add Java file to results
+                        javaFiles.push({
+                            name: entry.name,
+                            type: 'file',
+                            path: entryPath
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error(`Error reading directory ${fullPath}:`, error);
+                // Continue processing other directories even if one fails
+            }
+        }
+
+        // Start recursive search from workspace root
+        await findJavaFiles('');
+
+        res.json({
+            files: javaFiles,
+            count: javaFiles.length
+        });
+    } catch (error) {
+        console.error('Error finding Java files:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Session-aware save file content endpoint
+app.put('/session/:sessionId/files/*', express.json(), async (req, res) => {
     try {
         const filePath = req.params[0]; // Get the path after /files/
         const fullPath = path.join(workspacePath, filePath);
@@ -159,7 +222,7 @@ app.put('/files/*', express.json(), async (req, res) => {
         await fs.writeFile(fullPath, content, 'utf8');
         res.json({
             path: filePath,
-            message: 'File saved successfully'
+            message: 'File saved successfully',
         });
     } catch (error) {
         console.error('Error saving file:', error);
@@ -169,8 +232,8 @@ app.put('/files/*', express.json(), async (req, res) => {
 
 // WPILib project management endpoints
 
-// List robot projects
-app.get('/wpilib/projects', async (req, res) => {
+// Session-aware list robot projects
+app.get('/session/:sessionId/wpilib/projects', async (req, res) => {
     try {
         const projects = await wpilibUtils.listRobotProjects();
         res.json({ projects });
@@ -180,8 +243,8 @@ app.get('/wpilib/projects', async (req, res) => {
     }
 });
 
-// Get project information
-app.get('/wpilib/projects/:projectName', async (req, res) => {
+// Session-aware get project information
+app.get('/session/:sessionId/wpilib/projects/:projectName', async (req, res) => {
     try {
         const { projectName } = req.params;
         const projectPath = path.join(workspacePath, projectName);
@@ -198,7 +261,7 @@ app.get('/wpilib/projects/:projectName', async (req, res) => {
             name: projectName,
             path: projectPath,
             ...projectInfo,
-            classpath
+            classpath,
         });
     } catch (error) {
         console.error('Error getting project info:', error);
@@ -206,8 +269,8 @@ app.get('/wpilib/projects/:projectName', async (req, res) => {
     }
 });
 
-// Build project endpoint
-app.post('/wpilib/build/:projectName', express.json(), async (req, res) => {
+// Session-aware build project endpoint
+app.post('/session/:sessionId/wpilib/build/:projectName', express.json(), async (req, res) => {
     try {
         const { projectName } = req.params;
         const { task = 'build' } = req.body; // 'build', 'clean', 'deploy', etc.
@@ -235,8 +298,8 @@ app.post('/wpilib/build/:projectName', express.json(), async (req, res) => {
     }
 });
 
-// Get build status endpoint
-app.get('/wpilib/build/:buildId/status', async (req, res) => {
+// Session-aware get build status endpoint
+app.get('/session/:sessionId/wpilib/build/:buildId/status', async (req, res) => {
     try {
         const { buildId } = req.params;
         const status = await wpilibUtils.getBuildStatus(buildId);
@@ -247,8 +310,8 @@ app.get('/wpilib/build/:buildId/status', async (req, res) => {
     }
 });
 
-// Start simulation endpoint
-app.post('/wpilib/simulate/:projectName', express.json(), async (req, res) => {
+// Session-aware start simulation endpoint
+app.post('/session/:sessionId/wpilib/simulate/:projectName', express.json(), async (req, res) => {
     try {
         const { projectName } = req.params;
         const { simulationType = 'debug' } = req.body;
@@ -279,8 +342,8 @@ app.post('/wpilib/simulate/:projectName', express.json(), async (req, res) => {
     }
 });
 
-// Stop simulation endpoint
-app.post('/wpilib/simulate/:simulationId/stop', async (req, res) => {
+// Session-aware stop simulation endpoint
+app.post('/session/:sessionId/wpilib/simulate/:simulationId/stop', async (req, res) => {
     try {
         const { simulationId } = req.params;
         const result = await wpilibUtils.stopSimulation(simulationId);
@@ -294,8 +357,8 @@ app.post('/wpilib/simulate/:simulationId/stop', async (req, res) => {
     }
 });
 
-// Get simulation status endpoint
-app.get('/wpilib/simulate/:simulationId/status', async (req, res) => {
+// Session-aware get simulation status endpoint
+app.get('/session/:sessionId/wpilib/simulate/:simulationId/status', async (req, res) => {
     try {
         const { simulationId } = req.params;
         const status = wpilibUtils.getSimulationStatus(simulationId);
@@ -319,16 +382,19 @@ const wss = new WebSocketServer({
     server,
     verifyClient: (info) => {
         const pathname = new URL(info.req.url, 'http://localhost').pathname;
-        return pathname === '/build';
+
+        // Support ALB session-aware endpoints: /session/{sessionId}/build
+        const sessionMatch = pathname.match(/^\/session\/([^\/]+)\/build$/);
+        return sessionMatch !== null;
     }
 });
-
-console.log('Starting Eclipse JDT Language Server...');
 
 wss.on('connection', (ws, req) => {
     const pathname = new URL(req.url, 'http://localhost').pathname;
 
-    if (pathname === '/build') {
+    // Handle ALB session-aware endpoints: /session/{sessionId}/build
+    const sessionMatch = pathname.match(/^\/session\/([^\/]+)\/build$/);
+    if (sessionMatch) {
         handleBuildConnection(ws); // This now handles both builds and simulations
     } else {
         console.log('Unknown WebSocket path:', pathname);

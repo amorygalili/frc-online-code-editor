@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See LICENSE in the package root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ThemeProvider,
   createTheme,
@@ -20,11 +20,10 @@ import { FileBrowser } from "./components/FileBrowser.tsx";
 import { SimulationView } from "./components/SimulationView.tsx";
 import { ResizableSplitter } from "./components/ResizableSplitter.tsx";
 import { BuildControls } from "./components/BuildControls.tsx";
-import { EditorProvider, useEditor } from "./contexts/EditorContext";
-import { BuildProvider } from "./contexts/BuildContext.tsx";
-import { NT4Provider } from "./nt4/useNetworktables";
-import { HalSimProvider } from "./contexts/HalSimContext";
+import { useEditor } from "./contexts/EditorContext";
 import { eclipseJdtLsConfig } from "./config";
+import { ConfigProvider, AppConfig } from "./contexts/ConfigContext";
+import { setFileServiceConfig } from "./fileService";
 
 const theme = createTheme({
   palette: {
@@ -74,7 +73,10 @@ export function EditorAppContent() {
   );
 
   // TODO: Use these handlers in EditorTabs component
-  console.log('File handlers available:', { handleFileClose, handleFileSwitch });
+  console.log("File handlers available:", {
+    handleFileClose,
+    handleFileSwitch,
+  });
 
   return (
     <ThemeProvider theme={theme}>
@@ -82,7 +84,11 @@ export function EditorAppContent() {
       <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
         <AppBar position="static" elevation={1} sx={{ minHeight: 48 }}>
           <Toolbar variant="dense" sx={{ minHeight: 48, py: 0.5 }}>
-            <Typography variant="subtitle1" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
+            <Typography
+              variant="subtitle1"
+              component="div"
+              sx={{ flexGrow: 1, fontWeight: 600 }}
+            >
               FRC Challenge Editor
             </Typography>
             <Box sx={{ ml: 1 }}>
@@ -126,7 +132,7 @@ export function EditorAppContent() {
               {/* Editor area */}
               <Box
                 sx={{
-                  height: '100%',
+                  height: "100%",
                   display: "flex",
                   flexDirection: "column",
                   overflow: "hidden",
@@ -145,19 +151,33 @@ export function EditorAppContent() {
   );
 }
 
-// Main EditorApp component with context providers
-export function EditorApp() {
-  return (
-    <NT4Provider serverAddress="localhost">
-      <HalSimProvider hostname="localhost" port={3300}>
-        <EditorProvider>
-          <BuildProvider>
-            <EditorAppContent />
-          </BuildProvider>
-        </EditorProvider>
-      </HalSimProvider>
-    </NT4Provider>
-  );
+// Wrapper component that provides configuration context
+interface EditorAppWithConfigProps {
+  config?: AppConfig;
 }
 
-export default EditorApp;
+export function EditorAppWithConfig({ config }: EditorAppWithConfigProps) {
+  // Default configuration for local development
+  const defaultConfig: AppConfig = {
+    serverUrl: config?.serverUrl || "localhost",
+    sessionId: config?.sessionId || "local-dev-session",
+  };
+
+  const [initialized, setInitialized] = useState(false);
+
+  // Set global config for FileService
+  useEffect(() => {
+    setFileServiceConfig(defaultConfig);
+    setInitialized(true);
+  }, [defaultConfig]);
+
+  if (!initialized) {
+    return null;
+  }
+
+  return (
+    <ConfigProvider config={defaultConfig}>
+      <EditorAppContent />
+    </ConfigProvider>
+  );
+}

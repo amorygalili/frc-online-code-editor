@@ -11,7 +11,23 @@ import * as vscode from "vscode";
  * Service for interacting with the file server API
  */
 
-const FILE_SERVER_BASE_URL = 'http://localhost:30003';
+import { AppConfig, buildSessionUrl } from './contexts/ConfigContext';
+
+// Global config reference - will be set by the ConfigProvider
+let globalConfig: AppConfig | null = null;
+
+// Set the global config (called by ConfigProvider)
+export function setFileServiceConfig(config: AppConfig) {
+  globalConfig = config;
+}
+
+// Helper function to build session-aware URLs
+function buildFileServiceUrl(endpoint: string): string {
+  if (!globalConfig) {
+    throw new Error("FileServiceConfig not set");
+  }
+  return buildSessionUrl(globalConfig, endpoint, 30003);
+}
 
 export interface FileInfo {
     name: string;
@@ -59,13 +75,14 @@ export class FileService {
      * Get the content of a file
      */
     static async getFileContent(filePath: string): Promise<string> {
-        const response = await fetch(`${FILE_SERVER_BASE_URL}/files/${filePath}`);
-        
+        const url = buildFileServiceUrl(`/files/${filePath}`);
+        const response = await fetch(url);
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(`Failed to get file content: ${error.error || response.statusText}`);
         }
-        
+
         const data: FileContent = await response.json();
         return data.content;
     }
@@ -74,7 +91,8 @@ export class FileService {
      * Save content to a file
      */
     static async saveFileContent(filePath: string, content: string): Promise<void> {
-        const response = await fetch(`${FILE_SERVER_BASE_URL}/files/${filePath}`, {
+        const url = buildFileServiceUrl(`/files/${filePath}`);
+        const response = await fetch(url, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -92,7 +110,8 @@ export class FileService {
      * List files and directories in a path
      */
     static async listDirectory(dirPath: string = ''): Promise<DirectoryListing> {
-        const url = new URL(`${FILE_SERVER_BASE_URL}/files`);
+        const baseUrl = buildFileServiceUrl('/files');
+        const url = new URL(baseUrl);
         if (dirPath) {
             url.searchParams.set('path', dirPath);
         }
@@ -110,21 +129,17 @@ export class FileService {
     /**
      * Get all Java files in the workspace recursively
      */
-    static async getJavaFiles(dirPath: string = ''): Promise<FileInfo[]> {
-        const listing = await this.listDirectory(dirPath);
-        const javaFiles: FileInfo[] = [];
-        
-        for (const file of listing.files) {
-            if (file.type === 'file' && file.name.endsWith('.java')) {
-                javaFiles.push(file);
-            } else if (file.type === 'directory') {
-                // Recursively get Java files from subdirectories
-                const subFiles = await this.getJavaFiles(file.path);
-                javaFiles.push(...subFiles);
-            }
+    static async getJavaFiles(): Promise<FileInfo[]> {
+        const url = buildFileServiceUrl('/java-files');
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to get Java files: ${error.error || response.statusText}`);
         }
-        
-        return javaFiles;
+
+        const data = await response.json();
+        return data.files || [];
     }
 
     /**
@@ -132,7 +147,8 @@ export class FileService {
      */
     static async isAvailable(): Promise<boolean> {
         try {
-            const response = await fetch(`${FILE_SERVER_BASE_URL}/health`);
+            const url = buildFileServiceUrl('/health');
+            const response = await fetch(url);
             return response.ok;
         } catch {
             return false;
@@ -144,7 +160,8 @@ export class FileService {
      */
     static async generateWPILibProject(options: ProjectGenerationOptions): Promise<ProjectGenerationResult> {
         try {
-            const response = await fetch(`${FILE_SERVER_BASE_URL}/wpilib/generate-project`, {
+            const url = buildFileServiceUrl('/wpilib/generate-project');
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -172,7 +189,8 @@ export class FileService {
      */
     static async listWPILibProjects(): Promise<WPILibProject[]> {
         try {
-            const response = await fetch(`${FILE_SERVER_BASE_URL}/wpilib/projects`);
+            const url = buildFileServiceUrl('/wpilib/projects');
+            const response = await fetch(url);
 
             if (!response.ok) {
                 const error = await response.json();
@@ -192,7 +210,8 @@ export class FileService {
      */
     static async getWPILibProjectInfo(projectName: string): Promise<WPILibProject | null> {
         try {
-            const response = await fetch(`${FILE_SERVER_BASE_URL}/wpilib/projects/${projectName}`);
+            const url = buildFileServiceUrl(`/wpilib/projects/${projectName}`);
+            const response = await fetch(url);
 
             if (!response.ok) {
                 if (response.status === 404) {
@@ -228,6 +247,7 @@ export async function loadWorkspaceFiles(
     }
 
     // Get all Java files from the workspace
+    console.log("loadWorkspaceFiles");
     const javaFiles = await FileService.getJavaFiles();
     const loadedFiles: string[] = [];
 
