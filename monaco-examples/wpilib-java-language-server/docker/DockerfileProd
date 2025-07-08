@@ -7,6 +7,8 @@ COPY server ${HOME_DIR}/server/
 
 USER root
 RUN chown -R frcuser:frcuser ${HOME_DIR}/server
+RUN chown -R frcuser:frcuser /home/frcuser/workspace
+RUN chmod -R 755 /home/frcuser/workspace
 USER frcuser
 
 WORKDIR ${HOME_DIR}/server

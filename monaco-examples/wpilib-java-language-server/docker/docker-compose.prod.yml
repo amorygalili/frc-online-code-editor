@@ -5,12 +5,10 @@ services:
       dockerfile: ./DockerfileProd
     container_name: wpilib-sim-prod
     ports:
-      - "30003:30003"
-      - "30004:30004"
-      - "30005:30005"
-      - "5901:5901"
-      - "6901:6901"
-      - "3300:3300"   # HAL Simulation WebSocket port
+      - "30003:30003" # Main server
+      - "30004:30004" # NT4 Proxy
+      - "30005:30005" # Hal Sim proxy
+      - "30006:30006" # Language Server
     volumes:
       - ./workspace:/home/frcuser/workspace
     environment:

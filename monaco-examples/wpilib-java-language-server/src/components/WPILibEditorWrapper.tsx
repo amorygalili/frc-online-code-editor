@@ -20,6 +20,12 @@ import {
   type WrapperConfig,
 } from "monaco-editor-wrapper";
 import { configureDefaultWorkerFactory } from "monaco-editor-wrapper/workers/workerLoaders";
+
+interface WPILibEditorConfig {
+  serverUrl: string;
+  sessionId: string;
+  port: number;
+}
 import { eclipseJdtLsConfig } from "../config.js";
 import { loadWorkspaceFiles } from "../fileService";
 import type { IStoredWorkspace } from "@codingame/monaco-vscode-configuration-service-override";
@@ -51,7 +57,8 @@ const createDefaultWorkspaceContent = (workspacePath: string) => {
 
 async function initEditor(
   container: HTMLDivElement,
-  wrapper: MonacoEditorLanguageClientWrapper
+  wrapper: MonacoEditorLanguageClientWrapper,
+  config: WPILibEditorConfig,
 ) {
   try {
     const fileSystemProvider = new RegisteredFileSystemProvider(false);
@@ -67,6 +74,10 @@ async function initEditor(
     registerFileSystemOverlay(1, fileSystemProvider);
 
     await loadWorkspaceFiles(fileSystemProvider);
+
+    // Build WebSocket URL based on configuration
+    const { serverUrl, sessionId, port } = config;
+    let wsUrl = `ws://${serverUrl}:${port}/session/${sessionId}/jdtls`;
 
     const wrapperConfig: WrapperConfig = {
       $type: "extended",
@@ -111,7 +122,7 @@ async function initEditor(
             connection: {
               options: {
                 $type: "WebSocketUrl",
-                url: "ws://localhost:30003/jdtls",
+                url: wsUrl,
               },
             },
             clientOptions: {
@@ -134,17 +145,26 @@ async function initEditor(
   }
 }
 
-export const WPILibEditorWrapper = memo(() => {
+interface WPILibEditorWrapperProps {
+  config?: WPILibEditorConfig;
+}
+
+export const WPILibEditorWrapper = memo(({ config }: WPILibEditorWrapperProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
   const { editorWrapper: wrapper } = useEditor();
 
   useEffect(() => {
+
+    if (!config) {
+      return;
+    }
+
     const initializeEditor = async () => {
       if (!containerRef.current || isInitialized.current) return;
       isInitialized.current = true;
       try {
-        await initEditor(containerRef.current, wrapper);
+        await initEditor(containerRef.current, wrapper, config);
       } catch (error) {
         console.error("Failed to initialize editor:", error);
       }
@@ -169,7 +189,7 @@ export const WPILibEditorWrapper = memo(() => {
 
       wrapper.dispose().catch(console.error);
     };
-  }, []);
+  }, [config]);
 
   return (
     <div

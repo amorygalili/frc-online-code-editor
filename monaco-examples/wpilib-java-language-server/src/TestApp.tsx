@@ -14,7 +14,6 @@ import {
   Alert,
   Chip,
 } from "@mui/material";
-import { EditorAppContent } from './EditorApp';
 import { EditorProvider } from './contexts/EditorContext';
 import { BuildProvider } from './contexts/BuildContext';
 import { NT4Provider } from './nt4/useNetworktables';
@@ -280,7 +279,12 @@ const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({ useSessionR
                 overflow: "hidden",
               }}
             >
-              <WPILibEditorWrapper />
+              <WPILibEditorWrapper config={{
+                serverUrl: DOCKER_HOST,
+                sessionId: TEST_SESSION_ID,
+                port: 30006,
+              }}
+              />
             </Box>
 
             {/* Simulation view */}
