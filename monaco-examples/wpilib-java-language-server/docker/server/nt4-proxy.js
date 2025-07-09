@@ -4,23 +4,6 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const app = express();
 
-const wsProxy = createProxyMiddleware({
-  target: 'http://localhost:5810/nt/frc-challenges', // include your WS path
-  ws: true,
-});
-
-app.use('/session/:sessionId/nt/frc-challenges', wsProxy);
-
-
-const server = createServer(app);
-
-
-server.on('upgrade', (req, socket, head) => {
-  if (req.url.includes('/nt/frc-challenges')) {
-    wsProxy.upgrade(req, socket, head);
-  }
-});
-
 // Enable CORS for all routes
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -38,12 +21,27 @@ app.use((req, res, next) => {
 const port = 30004;
 
 // Session-aware health check endpoint for ALB
-app.get('/session/:sessionId/nt4/health', (req, res) => {
+app.get('/session/:sessionId/nt/health', (req, res) => {
     res.json({
         status: 'ok',
         service: 'NT4 WebSocket Proxy',
         timestamp: new Date().toISOString()
     });
+});
+
+const wsProxy = createProxyMiddleware({
+  target: 'http://localhost:5810/nt/frc-challenges', // include your WS path
+  ws: true,
+});
+
+app.use('/session/:sessionId/nt/frc-challenges', wsProxy);
+
+const server = createServer(app);
+
+server.on('upgrade', (req, socket, head) => {
+  if (req.url.includes('/nt/frc-challenges')) {
+    wsProxy.upgrade(req, socket, head);
+  }
 });
 
 server.listen(port, () => {

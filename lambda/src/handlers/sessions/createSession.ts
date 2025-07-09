@@ -24,10 +24,15 @@ interface CreateSessionRequest {
   resourceProfile?: 'development' | 'basic' | 'advanced' | 'competition';
 }
 
+type ServiceType = 'main' | 'nt' | 'halsim' | 'jdtls';
+
 // ALB Helper Functions
-async function createSessionTargetGroup(sessionId: string, port: number, healthCheckPath: string, serviceType: string): Promise<string> {
+async function createSessionTargetGroup(sessionId: string, port: number, serviceType: ServiceType): Promise<string> {
   const shortSessionId = sessionId.substring(0, 8);
   const targetGroupName = `frc-${serviceType}-${shortSessionId}`;
+
+  const healthCheckPath = `/session/${sessionId}/${serviceType}/health`;
+
 
   const command = new CreateTargetGroupCommand({
     Name: targetGroupName,
@@ -54,12 +59,12 @@ async function createSessionTargetGroup(sessionId: string, port: number, healthC
   return result.TargetGroups?.[0]?.TargetGroupArn || '';
 }
 
-async function createSessionListenerRule(sessionId: string, targetGroupArn: string, serviceType: string): Promise<string> {
+async function createSessionListenerRule(sessionId: string, targetGroupArn: string, serviceType: ServiceType): Promise<string> {
   const priority = 1 + Math.floor(Math.random() * 50000); // Random priority between 1-5000
 
   // Different path patterns for different services
-  const pathPattern = `/session/${sessionId}/*`;
-
+  const pathPattern = `/session/${sessionId}/${serviceType}/*`;
+ 
   const command = new CreateRuleCommand({
     ListenerArn: config.alb.listenerArn,
     Priority: priority,
@@ -611,23 +616,23 @@ async function setupALBIntegration(sessionId: string): Promise<{
 
   try {
     // Step 1: Create target groups for different services
-    const mainTargetGroupArn = await createSessionTargetGroup(sessionId, 30003, `/session/${sessionId}/main/health`, 'main');
+    const mainTargetGroupArn = await createSessionTargetGroup(sessionId, 30003, 'main');
     console.log(`Created main target group: ${mainTargetGroupArn}`);
 
-    const nt4TargetGroupArn = await createSessionTargetGroup(sessionId, 30004, `/session/${sessionId}/nt4/health`, 'nt4');
+    const nt4TargetGroupArn = await createSessionTargetGroup(sessionId, 30004, 'nt');
     console.log(`Created NT4 target group: ${nt4TargetGroupArn}`);
 
-    const halsimTargetGroupArn = await createSessionTargetGroup(sessionId, 30005, `/session/${sessionId}/halsim/health`, 'halsim');
+    const halsimTargetGroupArn = await createSessionTargetGroup(sessionId, 30005, 'halsim');
     console.log(`Created HALSim target group: ${halsimTargetGroupArn}`);
 
-    const jdtlsTargetGroupArn = await createSessionTargetGroup(sessionId, 30006, `/session/${sessionId}/jdtls/health`, 'jdtls');
+    const jdtlsTargetGroupArn = await createSessionTargetGroup(sessionId, 30006, 'jdtls');
     console.log(`Created JDTLS target group: ${jdtlsTargetGroupArn}`);
 
     // Step 2: Create listener rules for different services
     const mainRuleArn = await createSessionListenerRule(sessionId, mainTargetGroupArn, 'main');
     console.log(`Created main listener rule: ${mainRuleArn}`);
 
-    const nt4RuleArn = await createSessionListenerRule(sessionId, nt4TargetGroupArn, 'nt4');
+    const nt4RuleArn = await createSessionListenerRule(sessionId, nt4TargetGroupArn, 'nt');
     console.log(`Created NT4 listener rule: ${nt4RuleArn}`);
 
     const halsimRuleArn = await createSessionListenerRule(sessionId, halsimTargetGroupArn, 'halsim');
@@ -639,7 +644,7 @@ async function setupALBIntegration(sessionId: string): Promise<{
     // Step 3: Generate the public endpoint URLs
     const endpoints = {
       main: `http://${config.alb.dnsName}/session/${sessionId}/`,
-      nt4: `http://${config.alb.dnsName}/session/${sessionId}/nt4/`,
+      nt4: `http://${config.alb.dnsName}/session/${sessionId}/nt/`,
       halsim: `http://${config.alb.dnsName}/session/${sessionId}/halsim/`,
       jdtls: `http://${config.alb.dnsName}/session/${sessionId}/jdtls/`,
       health: `http://${config.alb.dnsName}/session/${sessionId}/main/health`

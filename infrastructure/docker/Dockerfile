@@ -6,15 +6,11 @@
 # - WPILib 2025 installation
 # - Node.js and all dependencies
 # - Configured frcuser and environment
-FROM agalili/wpilib-2025-base:v1
+FROM agalili/wpilib-2025-base:v4
 
 # Set production environment variables
 ENV NODE_ENV=production
 ENV JAVA_OPTS="-Xmx1536m"
-
-# Health check for ECS Fargate - use a simple curl command instead
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:30003/health || exit 1
 
 # Expose the required ports for ECS
 EXPOSE 30003 30004 30005 30006

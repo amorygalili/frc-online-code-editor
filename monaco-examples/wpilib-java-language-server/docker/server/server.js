@@ -50,7 +50,7 @@ app.get('/session/:sessionId/main/health', (req, res) => {
 const workspacePath = '/home/frcuser/workspace';
 
 // Session-aware get file content endpoint
-app.get('/session/:sessionId/files/*', async (req, res) => {
+app.get('/session/:sessionId/main/files/*', async (req, res) => {
     const sessionId = req.params.sessionId;
     const filePath = req.params[0]; // Get the path after /files/
     const fullPath = path.join(workspacePath, filePath);
@@ -82,7 +82,7 @@ app.get('/session/:sessionId/files/*', async (req, res) => {
 });
 
 // Session-aware list directory contents endpoint
-app.get('/session/:sessionId/files', async (req, res) => {
+app.get('/session/:sessionId/main/files', async (req, res) => {
     const dirPath = req.query.path || '';
     const fullPath = path.join(workspacePath, dirPath);
 
@@ -117,7 +117,7 @@ app.get('/session/:sessionId/files', async (req, res) => {
 });
 
 // Session-aware get all Java files recursively endpoint
-app.get('/session/:sessionId/java-files', async (req, res) => {
+app.get('/session/:sessionId/main/java-files', async (req, res) => {
     const sessionId = req.params.sessionId;
 
     try {
@@ -173,7 +173,7 @@ app.get('/session/:sessionId/java-files', async (req, res) => {
 });
 
 // Session-aware save file content endpoint
-app.put('/session/:sessionId/files/*', express.json(), async (req, res) => {
+app.put('/session/:sessionId/main/files/*', express.json(), async (req, res) => {
     try {
         const filePath = req.params[0]; // Get the path after /files/
         const fullPath = path.join(workspacePath, filePath);
@@ -208,7 +208,7 @@ app.put('/session/:sessionId/files/*', express.json(), async (req, res) => {
 // WPILib project management endpoints
 
 // Session-aware list robot projects
-app.get('/session/:sessionId/wpilib/projects', async (req, res) => {
+app.get('/session/:sessionId/main/wpilib/projects', async (req, res) => {
     try {
         const projects = await wpilibUtils.listRobotProjects();
         res.json({ projects });
@@ -219,7 +219,7 @@ app.get('/session/:sessionId/wpilib/projects', async (req, res) => {
 });
 
 // Session-aware get project information
-app.get('/session/:sessionId/wpilib/projects/:projectName', async (req, res) => {
+app.get('/session/:sessionId/main/wpilib/projects/:projectName', async (req, res) => {
     try {
         const { projectName } = req.params;
         const projectPath = path.join(workspacePath, projectName);
@@ -245,7 +245,7 @@ app.get('/session/:sessionId/wpilib/projects/:projectName', async (req, res) => 
 });
 
 // Session-aware build project endpoint
-app.post('/session/:sessionId/wpilib/build/:projectName', express.json(), async (req, res) => {
+app.post('/session/:sessionId/main/wpilib/build/:projectName', express.json(), async (req, res) => {
     try {
         const { projectName } = req.params;
         const { task = 'build' } = req.body; // 'build', 'clean', 'deploy', etc.
@@ -274,7 +274,7 @@ app.post('/session/:sessionId/wpilib/build/:projectName', express.json(), async 
 });
 
 // Session-aware get build status endpoint
-app.get('/session/:sessionId/wpilib/build/:buildId/status', async (req, res) => {
+app.get('/session/:sessionId/main/wpilib/build/:buildId/status', async (req, res) => {
     try {
         const { buildId } = req.params;
         const status = await wpilibUtils.getBuildStatus(buildId);
@@ -286,7 +286,7 @@ app.get('/session/:sessionId/wpilib/build/:buildId/status', async (req, res) => 
 });
 
 // Session-aware start simulation endpoint
-app.post('/session/:sessionId/wpilib/simulate/:projectName', express.json(), async (req, res) => {
+app.post('/session/:sessionId/main/wpilib/simulate/:projectName', express.json(), async (req, res) => {
     try {
         const { projectName } = req.params;
         const { simulationType = 'debug' } = req.body;
@@ -318,7 +318,7 @@ app.post('/session/:sessionId/wpilib/simulate/:projectName', express.json(), asy
 });
 
 // Session-aware stop simulation endpoint
-app.post('/session/:sessionId/wpilib/simulate/:simulationId/stop', async (req, res) => {
+app.post('/session/:sessionId/main/wpilib/simulate/:simulationId/stop', async (req, res) => {
     try {
         const { simulationId } = req.params;
         const result = await wpilibUtils.stopSimulation(simulationId);
@@ -333,7 +333,7 @@ app.post('/session/:sessionId/wpilib/simulate/:simulationId/stop', async (req, r
 });
 
 // Session-aware get simulation status endpoint
-app.get('/session/:sessionId/wpilib/simulate/:simulationId/status', async (req, res) => {
+app.get('/session/:sessionId/main/wpilib/simulate/:simulationId/status', async (req, res) => {
     try {
         const { simulationId } = req.params;
         const status = wpilibUtils.getSimulationStatus(simulationId);
@@ -358,8 +358,8 @@ const wss = new WebSocketServer({
     verifyClient: (info) => {
         const pathname = new URL(info.req.url, 'http://localhost').pathname;
 
-        // Support ALB session-aware endpoints: /session/{sessionId}/build
-        const sessionMatch = pathname.match(/^\/session\/([^\/]+)\/build$/);
+        // Support ALB session-aware endpoints: /session/{sessionId}/main/build
+        const sessionMatch = pathname.match(/^\/session\/([^\/]+)\/main\/build$/);
         return sessionMatch !== null;
     }
 });
@@ -367,8 +367,8 @@ const wss = new WebSocketServer({
 wss.on('connection', (ws, req) => {
     const pathname = new URL(req.url, 'http://localhost').pathname;
 
-    // Handle ALB session-aware endpoints: /session/{sessionId}/build
-    const sessionMatch = pathname.match(/^\/session\/([^\/]+)\/build$/);
+    // Handle ALB session-aware endpoints: /session/{sessionId}/main/build
+    const sessionMatch = pathname.match(/^\/session\/([^\/]+)\/main\/build$/);
     if (sessionMatch) {
         handleBuildConnection(ws); // This now handles both builds and simulations
     } else {
@@ -420,6 +420,6 @@ function handleBuildConnection(ws) {
 server.listen(port, () => {
     console.log(`FRC Simulation Server running on port ${port}`);
     console.log(`WebSocket endpoints:`);
-    console.log(`  - Build/Simulation: ws://localhost:${port}/build`);
+    console.log(`  - Build/Simulation: ws://localhost:${port}/session/{sessionId}/main/build`);
     console.log(`Health check: http://localhost:${port}/session/{sessionId}/main/health`);
 });

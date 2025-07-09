@@ -180,7 +180,7 @@ export class NT4_Client {
       let healthCheckUrl: string;
       if (this.sessionId) {
         // ALB routing: use session-based health check
-        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/nt4/health`;
+        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/nt/health`;
       } else {
         // Direct connection: use base address
         healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}`;

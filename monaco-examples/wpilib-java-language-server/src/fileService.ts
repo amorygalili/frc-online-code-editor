@@ -75,7 +75,7 @@ export class FileService {
      * Get the content of a file
      */
     static async getFileContent(filePath: string): Promise<string> {
-        const url = buildFileServiceUrl(`/files/${filePath}`);
+        const url = buildFileServiceUrl(`/main/files/${filePath}`);
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -91,7 +91,7 @@ export class FileService {
      * Save content to a file
      */
     static async saveFileContent(filePath: string, content: string): Promise<void> {
-        const url = buildFileServiceUrl(`/files/${filePath}`);
+        const url = buildFileServiceUrl(`/main/files/${filePath}`);
         const response = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -110,7 +110,7 @@ export class FileService {
      * List files and directories in a path
      */
     static async listDirectory(dirPath: string = ''): Promise<DirectoryListing> {
-        const baseUrl = buildFileServiceUrl('/files');
+        const baseUrl = buildFileServiceUrl('/main/files');
         const url = new URL(baseUrl);
         if (dirPath) {
             url.searchParams.set('path', dirPath);
@@ -130,7 +130,7 @@ export class FileService {
      * Get all Java files in the workspace recursively
      */
     static async getJavaFiles(): Promise<FileInfo[]> {
-        const url = buildFileServiceUrl('/java-files');
+        const url = buildFileServiceUrl('/main/java-files');
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -189,7 +189,7 @@ export class FileService {
      */
     static async listWPILibProjects(): Promise<WPILibProject[]> {
         try {
-            const url = buildFileServiceUrl('/wpilib/projects');
+            const url = buildFileServiceUrl('/main/wpilib/projects');
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -210,7 +210,7 @@ export class FileService {
      */
     static async getWPILibProjectInfo(projectName: string): Promise<WPILibProject | null> {
         try {
-            const url = buildFileServiceUrl(`/wpilib/projects/${projectName}`);
+            const url = buildFileServiceUrl(`/main/wpilib/projects/${projectName}`);
             const response = await fetch(url);
 
             if (!response.ok) {

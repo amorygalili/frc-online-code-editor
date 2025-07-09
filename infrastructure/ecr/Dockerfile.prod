@@ -6,19 +6,11 @@
 # - WPILib 2025 installation
 # - Node.js and all dependencies
 # - Configured frcuser and environment
-FROM agalili/wpilib-2025-base:v1
+FROM agalili/wpilib-2025-base:v4
 
 # Set production environment variables
 ENV NODE_ENV=production
 ENV JAVA_OPTS="-Xmx1536m"
-
-# Add health check script for ECS
-COPY healthcheck.sh /home/frcuser/
-RUN chmod +x /home/frcuser/healthcheck.sh
-
-# Health check for ECS Fargate
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD /home/frcuser/healthcheck.sh
 
 # Expose the required ports for ECS
 EXPOSE 30003 30004 30005 30006

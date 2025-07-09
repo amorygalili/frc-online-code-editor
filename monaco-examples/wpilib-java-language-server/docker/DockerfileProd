@@ -1,4 +1,4 @@
-FROM agalili/wpilib-2025-base:v1
+FROM agalili/wpilib-2025-base:v4
 
 USER frcuser
 

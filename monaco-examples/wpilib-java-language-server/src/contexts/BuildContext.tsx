@@ -71,7 +71,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     }
 
     try {
-      const wsUrl = `ws://${config.serverUrl}:30003/session/${config.sessionId}/build`;
+      const wsUrl = `ws://${config.serverUrl}:30003/session/${config.sessionId}/main/build`;
       console.log('Creating new WebSocket connection to:', wsUrl);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -201,7 +201,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const startBuild = useCallback(async (projectName: string, task: BuildTask): Promise<string | null> => {
     try {
-      const url = buildSessionUrl(config, `/wpilib/build/${projectName}`, 30003);
+      const url = buildSessionUrl(config, `/main/wpilib/build/${projectName}`, 30003);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -257,7 +257,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const startSimulation = useCallback(async (projectName: string, simulationType: string = 'debug'): Promise<string | null> => {
     try {
-      const url = buildSessionUrl(config, `/wpilib/simulate/${projectName}`, 30003);
+      const url = buildSessionUrl(config, `/main/wpilib/simulate/${projectName}`, 30003);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -311,7 +311,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     }
 
     try {
-      const url = buildSessionUrl(config, `/wpilib/simulate/${idToStop}/stop`, 30003);
+      const url = buildSessionUrl(config, `/main/wpilib/simulate/${idToStop}/stop`, 30003);
       const response = await fetch(url, {
         method: 'POST',
       });
@@ -370,7 +370,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const getBuildStatus = useCallback(async (buildId: string): Promise<BuildStatusResponse | null> => {
     try {
-      const url = buildSessionUrl(config, `/wpilib/build/${buildId}/status`, 30003);
+      const url = buildSessionUrl(config, `/main/wpilib/build/${buildId}/status`, 30003);
       const response = await fetch(url);
 
       if (!response.ok) {
