@@ -18,10 +18,14 @@ interface ContainerSetupEvent {
   taskArn: string;
   albIntegration: {
     mainTargetGroupArn: string;
-    vscodeTargetGroupArn: string;
+    nt4TargetGroupArn: string;
+    halsimTargetGroupArn: string;
+    jdtlsTargetGroupArn: string;
     endpoints: {
       main: string;
-      vscode: string;
+      nt4: string;
+      halsim: string;
+      jdtls: string;
       health: string;
     };
   };
@@ -121,7 +125,6 @@ async function waitForTaskAndGetIP(taskArn: string): Promise<string> {
 async function registerTaskWithTargetGroups(privateIp: string, albIntegration: any): Promise<void> {
   console.log(`Registering task ${privateIp} with target groups...`);
   console.log(`Main TG ARN: ${albIntegration.mainTargetGroupArn}`);
-  console.log(`VSCode TG ARN: ${albIntegration.vscodeTargetGroupArn}`);
   
   const maxRetries = 3;
   
@@ -135,15 +138,30 @@ async function registerTaskWithTargetGroups(privateIp: string, albIntegration: a
       }));
       console.log(`✅ Successfully registered with main target group`);
 
-      // Register with VS Code target group (port 3300)
-      console.log(`Registering with VSCode target group (port 3300)... (attempt ${retry}/${maxRetries})`);
+      // Register with NT4 target group (port 30004)
+      console.log(`Registering with NT4 target group (port 30004)... (attempt ${retry}/${maxRetries})`);
       await elbClient.send(new RegisterTargetsCommand({
-        TargetGroupArn: albIntegration.vscodeTargetGroupArn,
-        Targets: [{ Id: privateIp, Port: 3300 }]
+        TargetGroupArn: albIntegration.nt4TargetGroupArn,
+        Targets: [{ Id: privateIp, Port: 30004 }]
       }));
-      console.log(`✅ Successfully registered with VSCode target group`);
-      
-      // If we get here, both registrations succeeded
+      console.log(`✅ Successfully registered with NT4 target group`);
+
+      // Register with HALSim target group (port 30005)
+      console.log(`Registering with HALSim target group (port 30005)... (attempt ${retry}/${maxRetries})`);
+      await elbClient.send(new RegisterTargetsCommand({
+        TargetGroupArn: albIntegration.halsimTargetGroupArn,
+        Targets: [{ Id: privateIp, Port: 30005 }]
+      }));
+      console.log(`✅ Successfully registered with HALSim target group`);
+
+      // Register with JDTLS target group (port 30006)
+      console.log(`Registering with JDTLS target group (port 30006)... (attempt ${retry}/${maxRetries})`);
+      await elbClient.send(new RegisterTargetsCommand({
+        TargetGroupArn: albIntegration.jdtlsTargetGroupArn,
+        Targets: [{ Id: privateIp, Port: 30006 }]
+      }));
+      console.log(`✅ Successfully registered with JDTLS target group`);
+      // If we get here, all registrations succeeded
       return;
       
     } catch (error) {

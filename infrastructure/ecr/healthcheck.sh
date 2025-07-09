@@ -6,7 +6,8 @@
 set -e
 
 # Configuration
-HEALTH_CHECK_URL="http://localhost:30003/health"
+# Note: Docker health checks use process and port monitoring
+# ALB uses session-aware health checks like /session/{sessionId}/main/health
 TIMEOUT=10
 MAX_RETRIES=3
 
@@ -77,17 +78,9 @@ health_check() {
         fi
     done
     
-    # Check HTTP health endpoint
-    if command -v curl >/dev/null 2>&1; then
-        if curl -f -s --max-time $TIMEOUT "$HEALTH_CHECK_URL" >/dev/null; then
-            log "${GREEN}✅ HTTP health check passed${NC}"
-        else
-            log "${RED}❌ HTTP health check failed${NC}"
-            exit_code=1
-        fi
-    else
-        log "${YELLOW}⚠️  curl not available, skipping HTTP health check${NC}"
-    fi
+    # Note: HTTP health checks are handled by ALB with session-aware endpoints
+    # Docker health check relies on process and port monitoring only
+    log "${GREEN}✅ HTTP health check skipped (handled by ALB)${NC}"
     
     # Check disk space (warn if less than 1GB free)
     if command -v df >/dev/null 2>&1; then

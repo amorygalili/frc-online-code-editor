@@ -37,22 +37,7 @@ app.use((req, res, next) => {
 
 const port = 30004;
 
-// // Session root endpoint for NT4 proxy
-// app.get('/session/:sessionId/nt4', (req, res) => {
-//     const sessionId = req.params.sessionId;
-//     res.json({
-//         message: 'FRC Challenge Session Active',
-//         sessionId: sessionId,
-//         service: 'NT4 WebSocket Proxy',
-//         timestamp: new Date().toISOString(),
-//         endpoints: {
-//             health: `/session/${sessionId}/nt4/health`,
-//             websocket: `ws://localhost:${port}/session/${sessionId}/nt/frc-challenges`
-//         }
-//     });
-// });
-
-// Session-aware health check endpoint for NT4 proxy
+// Session-aware health check endpoint for ALB
 app.get('/session/:sessionId/nt4/health', (req, res) => {
     res.json({
         status: 'ok',

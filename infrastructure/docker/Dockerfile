@@ -6,7 +6,7 @@
 # - WPILib 2025 installation
 # - Node.js and all dependencies
 # - Configured frcuser and environment
-FROM agalili/wpilib-2025:v5
+FROM agalili/wpilib-2025-base:v1
 
 # Set production environment variables
 ENV NODE_ENV=production

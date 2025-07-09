@@ -26,7 +26,7 @@ app.use((req, res, next) => {
     }
 });
 
-// Session-aware health check endpoint for language server
+// Session-aware health check endpoint for ALB
 app.get('/session/:sessionId/jdtls/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -206,5 +206,5 @@ server.listen(port, () => {
     console.log(`Eclipse JDT Language Server running on port ${port}`);
     console.log(`WebSocket endpoints (ALB session-aware):`);
     console.log(`  - JDT LS: ws://localhost:${port}/session/{sessionId}/jdtls`);
-    console.log(`Health check: http://localhost:${port}/health`);
+    console.log(`Health check: http://localhost:${port}/session/{sessionId}/jdtls/health`);
 });

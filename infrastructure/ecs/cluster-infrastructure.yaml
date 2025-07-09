@@ -316,6 +316,8 @@ Resources:
           Value: !Ref ProjectName
 
   # Default Target Group (for health checks)
+  # Note: This is a default target group - actual session target groups are created dynamically
+  # with session-aware health check paths like /session/{sessionId}/main/health
   DefaultTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:

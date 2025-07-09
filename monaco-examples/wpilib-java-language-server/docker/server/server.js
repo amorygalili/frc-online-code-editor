@@ -34,42 +34,7 @@ app.use((req, res, next) => {
     }
 });
 
-// // Session-aware health check endpoint
-// app.get('/health', (req, res) => {
-//     res.json({
-//         status: 'ok',
-//         service: 'FRC Simulation Server',
-//         timestamp: new Date().toISOString()
-//     });
-// });
-
-// app.get('/session/:sessionId/health', (req, res) => {
-//     res.json({
-//         status: 'ok',
-//         service: 'FRC Simulation Server',
-//         timestamp: new Date().toISOString()
-//     });
-// });
-
-// Session root endpoint for main server
-// app.get('/session/:sessionId/main', (req, res) => {
-//     const sessionId = req.params.sessionId;
-//     res.json({
-//         message: 'FRC Challenge Session Active',
-//         sessionId: sessionId,
-//         service: 'FRC Main Server',
-//         timestamp: new Date().toISOString(),
-//         endpoints: {
-//             health: `/session/${sessionId}/health`,
-//             files: `/session/${sessionId}/files/`,
-//             javaFiles: `/session/${sessionId}/java-files`,
-//             wpilib: `/session/${sessionId}/wpilib/`,
-//             build: `ws://localhost:${port}/session/${sessionId}/build`
-//         }
-//     });
-// });
-
-// Session-aware health check endpoint for NT4 proxy
+// Session-aware health check endpoint for ALB
 app.get('/session/:sessionId/main/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -456,5 +421,5 @@ server.listen(port, () => {
     console.log(`FRC Simulation Server running on port ${port}`);
     console.log(`WebSocket endpoints:`);
     console.log(`  - Build/Simulation: ws://localhost:${port}/build`);
-    console.log(`Health check: http://localhost:${port}/health`);
+    console.log(`Health check: http://localhost:${port}/session/{sessionId}/main/health`);
 });

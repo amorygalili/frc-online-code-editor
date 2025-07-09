@@ -58,9 +58,7 @@ async function createSessionListenerRule(sessionId: string, targetGroupArn: stri
   const priority = 1 + Math.floor(Math.random() * 50000); // Random priority between 1-5000
 
   // Different path patterns for different services
-  const pathPattern = serviceType === 'vscode'
-    ? `/vscode/${sessionId}/*`
-    : `/session/${sessionId}/*`;
+  const pathPattern = `/session/${sessionId}/*`;
 
   const command = new CreateRuleCommand({
     ListenerArn: config.alb.listenerArn,
@@ -227,11 +225,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       lastActivity: new Date().toISOString(),
       // ALB integration details
       mainTargetGroupArn: albIntegration.mainTargetGroupArn,
-      vscodeTargetGroupArn: albIntegration.vscodeTargetGroupArn,
+      nt4TargetGroupArn: albIntegration.nt4TargetGroupArn,
+      halsimTargetGroupArn: albIntegration.halsimTargetGroupArn,
+      jdtlsTargetGroupArn: albIntegration.jdtlsTargetGroupArn,
       mainRuleArn: albIntegration.mainRuleArn,
-      vscodeRuleArn: albIntegration.vscodeRuleArn,
+      nt4RuleArn: albIntegration.nt4RuleArn,
+      halsimRuleArn: albIntegration.halsimRuleArn,
+      jdtlsRuleArn: albIntegration.jdtlsRuleArn,
       containerEndpoint: albIntegration.endpoints.main,
-      vscodeEndpoint: albIntegration.endpoints.vscode,
+      nt4Endpoint: albIntegration.endpoints.nt4,
+      halsimEndpoint: albIntegration.endpoints.halsim,
+      jdtlsEndpoint: albIntegration.endpoints.jdtls,
       healthEndpoint: albIntegration.endpoints.health
     });
 
@@ -485,7 +489,9 @@ async function waitForTaskAndGetIP(taskArn: string): Promise<string> {
 async function registerTaskWithTargetGroups(privateIp: string, albIntegration: any): Promise<void> {
   console.log(`Registering task ${privateIp} with target groups...`);
   console.log(`Main TG ARN: ${albIntegration.mainTargetGroupArn}`);
-  console.log(`VSCode TG ARN: ${albIntegration.vscodeTargetGroupArn}`);
+  console.log(`NT4 TG ARN: ${albIntegration.nt4TargetGroupArn}`);
+  console.log(`HALSim TG ARN: ${albIntegration.halsimTargetGroupArn}`);
+  console.log(`JDTLS TG ARN: ${albIntegration.jdtlsTargetGroupArn}`);
 
   const maxRetries = 3;
 
@@ -499,15 +505,31 @@ async function registerTaskWithTargetGroups(privateIp: string, albIntegration: a
       }));
       console.log(`✅ Successfully registered with main target group`);
 
-      // Register with VS Code target group (port 3300)
-      console.log(`Registering with VSCode target group (port 3300)... (attempt ${retry}/${maxRetries})`);
+      // Register with NT4 target group (port 30004)
+      console.log(`Registering with NT4 target group (port 30004)... (attempt ${retry}/${maxRetries})`);
       await elbClient.send(new RegisterTargetsCommand({
-        TargetGroupArn: albIntegration.vscodeTargetGroupArn,
-        Targets: [{ Id: privateIp, Port: 3300 }]
+        TargetGroupArn: albIntegration.nt4TargetGroupArn,
+        Targets: [{ Id: privateIp, Port: 30004 }]
       }));
-      console.log(`✅ Successfully registered with VSCode target group`);
+      console.log(`✅ Successfully registered with NT4 target group`);
 
-      // If we get here, both registrations succeeded
+      // Register with HALSim target group (port 30005)
+      console.log(`Registering with HALSim target group (port 30005)... (attempt ${retry}/${maxRetries})`);
+      await elbClient.send(new RegisterTargetsCommand({
+        TargetGroupArn: albIntegration.halsimTargetGroupArn,
+        Targets: [{ Id: privateIp, Port: 30005 }]
+      }));
+      console.log(`✅ Successfully registered with HALSim target group`);
+
+      // Register with JDTLS target group (port 30006)
+      console.log(`Registering with JDTLS target group (port 30006)... (attempt ${retry}/${maxRetries})`);
+      await elbClient.send(new RegisterTargetsCommand({
+        TargetGroupArn: albIntegration.jdtlsTargetGroupArn,
+        Targets: [{ Id: privateIp, Port: 30006 }]
+      }));
+      console.log(`✅ Successfully registered with JDTLS target group`);
+
+      // If we get here, all registrations succeeded
       return;
 
     } catch (error) {
@@ -570,12 +592,18 @@ async function updateSessionStatus(sessionId: string, status: string): Promise<v
 
 async function setupALBIntegration(sessionId: string): Promise<{
   mainTargetGroupArn: string;
-  vscodeTargetGroupArn: string;
+  nt4TargetGroupArn: string;
+  halsimTargetGroupArn: string;
+  jdtlsTargetGroupArn: string;
   mainRuleArn: string;
-  vscodeRuleArn: string;
+  nt4RuleArn: string;
+  halsimRuleArn: string;
+  jdtlsRuleArn: string;
   endpoints: {
     main: string;
-    vscode: string;
+    nt4: string;
+    halsim: string;
+    jdtls: string;
     health: string;
   }
 }> {
@@ -583,31 +611,49 @@ async function setupALBIntegration(sessionId: string): Promise<{
 
   try {
     // Step 1: Create target groups for different services
-    const mainTargetGroupArn = await createSessionTargetGroup(sessionId, 30003, '/health', 'main');
+    const mainTargetGroupArn = await createSessionTargetGroup(sessionId, 30003, `/session/${sessionId}/main/health`, 'main');
     console.log(`Created main target group: ${mainTargetGroupArn}`);
 
-    const vscodeTargetGroupArn = await createSessionTargetGroup(sessionId, 3300, '/', 'vscode');
-    console.log(`Created VS Code target group: ${vscodeTargetGroupArn}`);
+    const nt4TargetGroupArn = await createSessionTargetGroup(sessionId, 30004, `/session/${sessionId}/nt4/health`, 'nt4');
+    console.log(`Created NT4 target group: ${nt4TargetGroupArn}`);
+
+    const halsimTargetGroupArn = await createSessionTargetGroup(sessionId, 30005, `/session/${sessionId}/halsim/health`, 'halsim');
+    console.log(`Created HALSim target group: ${halsimTargetGroupArn}`);
+
+    const jdtlsTargetGroupArn = await createSessionTargetGroup(sessionId, 30006, `/session/${sessionId}/jdtls/health`, 'jdtls');
+    console.log(`Created JDTLS target group: ${jdtlsTargetGroupArn}`);
 
     // Step 2: Create listener rules for different services
     const mainRuleArn = await createSessionListenerRule(sessionId, mainTargetGroupArn, 'main');
     console.log(`Created main listener rule: ${mainRuleArn}`);
 
-    const vscodeRuleArn = await createSessionListenerRule(sessionId, vscodeTargetGroupArn, 'vscode');
-    console.log(`Created VS Code listener rule: ${vscodeRuleArn}`);
+    const nt4RuleArn = await createSessionListenerRule(sessionId, nt4TargetGroupArn, 'nt4');
+    console.log(`Created NT4 listener rule: ${nt4RuleArn}`);
+
+    const halsimRuleArn = await createSessionListenerRule(sessionId, halsimTargetGroupArn, 'halsim');
+    console.log(`Created HALSim listener rule: ${halsimRuleArn}`);
+
+    const jdtlsRuleArn = await createSessionListenerRule(sessionId, jdtlsTargetGroupArn, 'jdtls');
+    console.log(`Created JDTLS listener rule: ${jdtlsRuleArn}`);
 
     // Step 3: Generate the public endpoint URLs
     const endpoints = {
       main: `http://${config.alb.dnsName}/session/${sessionId}/`,
-      vscode: `http://${config.alb.dnsName}/vscode/${sessionId}/`,
-      health: `http://${config.alb.dnsName}/session/${sessionId}/`
+      nt4: `http://${config.alb.dnsName}/session/${sessionId}/nt4/`,
+      halsim: `http://${config.alb.dnsName}/session/${sessionId}/halsim/`,
+      jdtls: `http://${config.alb.dnsName}/session/${sessionId}/jdtls/`,
+      health: `http://${config.alb.dnsName}/session/${sessionId}/main/health`
     };
 
     return {
       mainTargetGroupArn,
-      vscodeTargetGroupArn,
+      nt4TargetGroupArn,
+      halsimTargetGroupArn,
+      jdtlsTargetGroupArn,
       mainRuleArn,
-      vscodeRuleArn,
+      nt4RuleArn,
+      halsimRuleArn,
+      jdtlsRuleArn,
       endpoints
     };
 
