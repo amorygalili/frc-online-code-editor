@@ -121,4 +121,21 @@ WORKDIR ${HOME_DIR}/server
 RUN npm install
 WORKDIR ${HOME_DIR}
 
+# Copy robot project and server
+USER root
+COPY server ${HOME_DIR}/server/
+COPY workspace/RobotProject ${HOME_DIR}/workspace/RobotProject
+
+RUN chown -R frcuser:frcuser ${HOME_DIR}/server
+RUN chown -R frcuser:frcuser ${HOME_DIR}/workspace
+RUN chmod -R 755 /home/frcuser/server
+RUN chmod -R 755 /home/frcuser/workspace
+USER frcuser
+
+# Install server dependencies
+WORKDIR ${HOME_DIR}/server
+RUN npm install
+WORKDIR ${HOME_DIR}
+
+# Start the container with the custom start script
 CMD ["/home/frcuser/start.sh"]

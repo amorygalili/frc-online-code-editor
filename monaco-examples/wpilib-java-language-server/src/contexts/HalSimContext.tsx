@@ -87,6 +87,20 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
         ">new_data": false,
       });
     const [halSimData, setHalSimData] = useState<HalSimDataMap>({});
+    const halSimDataBufferRef = useRef<HalSimDataMap>({});
+
+    // Periodic update effect - flushes buffered data to state every 100ms
+    useEffect(() => {
+      const interval = setInterval(() => {
+        const bufferedData = halSimDataBufferRef.current;
+        if (Object.keys(bufferedData).length > 0) {
+          setHalSimData(bufferedData);
+          // Keep the buffer for next updates (don't clear it)
+        }
+      }, 100); // Update every 100ms
+
+      return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
       if (clientRef.current || !sessionId) {
@@ -108,11 +122,6 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
       );
 
       clientRef.current = client;
-
-      client.on("closeConnection", () => {
-        console.log("HAL Sim WebSocket connection closed");
-        setConnected(false);
-      });
 
       // Set up event listeners
       client.on("ready", () => {
@@ -142,19 +151,22 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
 
       // Listen for driver station events
       client.on("driverStationEvent", (payload: DriverStationPayload) => {
-        console.log("driverStationEvent:", payload);
         setDriverStationData((prevData) => ({
           ...prevData,
           ...payload,
         }));
       });
 
-      // Helper function to update HAL simulation data
+      // Helper function to update HAL simulation data - now buffers updates in ref
       const updateHalSimData = (type: string, device: string, data: any) => {
-        setHalSimData((prevData) => ({
-          ...prevData,
+        // console.log('updateHalSimData:', type, device, data);
+
+        // Update the buffer ref instead of directly setting state
+        const currentBuffer = halSimDataBufferRef.current;
+        halSimDataBufferRef.current = {
+          ...currentBuffer,
           [type]: {
-            ...prevData[type],
+            ...currentBuffer[type],
             [device]: {
               type,
               device,
@@ -162,7 +174,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
               timestamp: Date.now(),
             },
           },
-        }));
+        };
       };
 
       // Listen for various HAL simulation events

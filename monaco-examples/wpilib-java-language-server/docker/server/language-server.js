@@ -26,26 +26,15 @@ app.use((req, res, next) => {
     }
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', service: 'Eclipse JDT Language Server' });
-});
-
-// Session root endpoint
-app.get('/session/:sessionId/', (req, res) => {
-    const sessionId = req.params.sessionId;
+// Session-aware health check endpoint for language server
+app.get('/session/:sessionId/jdtls/health', (req, res) => {
     res.json({
-        message: 'FRC Challenge Session Active',
-        sessionId: sessionId,
+        status: 'ok',
         service: 'Eclipse JDT Language Server',
-        timestamp: new Date().toISOString(),
-        endpoints: {
-            health: `/session/${sessionId}/`,
-            files: `/files/`,
-            websocket: `ws://localhost:1735` // Language Server WebSocket
-        }
+        timestamp: new Date().toISOString()
     });
 });
+
 
 // Create single WebSocket server with ALB session-aware routing
 const wss = new WebSocketServer({

@@ -1,1 +1,5 @@
-FROM agalili/wpilib-2025:v5
+FROM agalili/wpilib-2025-base:v1
+
+USER frcuser
+
+CMD ["npm", "start", "--prefix", "server"]

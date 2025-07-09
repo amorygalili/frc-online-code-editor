@@ -147,7 +147,7 @@ export class FileService {
      */
     static async isAvailable(): Promise<boolean> {
         try {
-            const url = buildFileServiceUrl('/health');
+            const url = buildFileServiceUrl('/main/health');
             const response = await fetch(url);
             return response.ok;
         } catch {

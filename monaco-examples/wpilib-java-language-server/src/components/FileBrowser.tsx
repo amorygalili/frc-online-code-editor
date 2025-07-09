@@ -138,26 +138,29 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
       setFileTree(tree);
 
       // Only set initial expanded state if we don't have any expanded nodes yet
-      if (expandedNodes.size === 0) {
-        // Auto-expand common folders for better UX
-        const initialExpanded = new Set<string>();
+      setExpandedNodes(prevExpanded => {
+        if (prevExpanded.size === 0) {
+          // Auto-expand common folders for better UX
+          const initialExpanded = new Set<string>();
 
-        // Expand any directory that contains files directly
-        const addExpandedDirectories = (nodes: TreeNode[]) => {
-          nodes.forEach(node => {
-            if (node.type === 'directory' && node.children) {
-              const hasFiles = node.children.some(child => child.type === 'file');
-              if (hasFiles) {
-                initialExpanded.add(node.path);
+          // Expand any directory that contains files directly
+          const addExpandedDirectories = (nodes: TreeNode[]) => {
+            nodes.forEach(node => {
+              if (node.type === 'directory' && node.children) {
+                const hasFiles = node.children.some(child => child.type === 'file');
+                if (hasFiles) {
+                  initialExpanded.add(node.path);
+                }
+                addExpandedDirectories(node.children);
               }
-              addExpandedDirectories(node.children);
-            }
-          });
-        };
+            });
+          };
 
-        addExpandedDirectories(tree);
-        setExpandedNodes(initialExpanded);
-      }
+          addExpandedDirectories(tree);
+          return initialExpanded;
+        }
+        return prevExpanded;
+      });
 
       if (javaFiles.length === 0) {
         setError("No Java files found in workspace");
@@ -170,18 +173,22 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
         setLoading(false);
       }
     }
-  }, [buildFileTree, expandedNodes]);
+  }, [buildFileTree]);
 
+  // Separate effect for initial load
   useEffect(() => {
-    // Load files initially with loading spinner
     loadFiles(true);
+  }, []); // Empty dependency array - only run on mount
 
-    // Set up periodic refresh every 5 seconds without loading spinner
-    const interval = setInterval(() => loadFiles(false), 5000);
+  // Separate effect for periodic refresh
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadFiles(false);
+    }, 5000);
 
     // Cleanup interval on unmount
     return () => clearInterval(interval);
-  }, [loadFiles]);
+  }, []); // Empty dependency array - set up once and never recreate
 
   const toggleNodeExpansion = useCallback((nodePath: string) => {
     setExpandedNodes(prev => {

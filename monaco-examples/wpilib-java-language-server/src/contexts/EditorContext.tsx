@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
   ReactNode,
 } from "react";
 import { MonacoEditorLanguageClientWrapper } from "monaco-editor-wrapper";
@@ -79,6 +80,14 @@ interface EditorProviderProps {
 export const EditorProvider: React.FC<EditorProviderProps> = ({ children }) => {
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFileIndex, setActiveFileIndex] = useState<number>(-1);
+
+  // Cleanup the shared editor wrapper when the provider unmounts
+  useEffect(() => {
+    return () => {
+      console.log('EditorProvider unmounting, disposing wrapper...');
+      editorWrapper.dispose().catch(console.error);
+    };
+  }, []);
 
   // Open a file and add it to tabs
   const openFile = useCallback(

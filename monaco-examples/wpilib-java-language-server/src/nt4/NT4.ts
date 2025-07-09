@@ -180,13 +180,12 @@ export class NT4_Client {
       let healthCheckUrl: string;
       if (this.sessionId) {
         // ALB routing: use session-based health check
-        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/`;
+        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/nt4/health`;
       } else {
         // Direct connection: use base address
         healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}`;
       }
       console.log(`[NT4] Checking health of ${healthCheckUrl}...`);
-      console.trace();
 
       result = await fetch(healthCheckUrl, {
         signal: AbortSignal.timeout(250),
@@ -774,7 +773,7 @@ export class NT4_Client {
       this.ws_onOpen(ws);
     });
     ws.addEventListener('message', (event: MessageEvent) => {
-      console.log('[NT4] WebSocket message received:', event.data);
+      // console.log('[NT4] WebSocket message received:', event.data);
       this.ws_onMessage(event, rttWs);
     });
     if (!rttWs) {

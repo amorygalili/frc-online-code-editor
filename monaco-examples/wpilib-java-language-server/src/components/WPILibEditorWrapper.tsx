@@ -5,6 +5,7 @@
 
 import { memo, useEffect, useRef } from "react";
 import { useEditor } from "../contexts/EditorContext";
+import { useConfig } from "../contexts/ConfigContext";
 import * as vscode from "vscode";
 import getKeybindingsServiceOverride from "@codingame/monaco-vscode-keybindings-service-override";
 import {
@@ -145,20 +146,19 @@ async function initEditor(
   }
 }
 
-interface WPILibEditorWrapperProps {
-  config?: WPILibEditorConfig;
-}
-
-export const WPILibEditorWrapper = memo(({ config }: WPILibEditorWrapperProps) => {
+export const WPILibEditorWrapper = memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
   const { editorWrapper: wrapper } = useEditor();
+  const { config: appConfig } = useConfig();
 
   useEffect(() => {
-
-    if (!config) {
-      return;
-    }
+    // Build the editor config from app config
+    const config: WPILibEditorConfig = {
+      serverUrl: appConfig.serverUrl,
+      sessionId: appConfig.sessionId,
+      port: 30006, // Language server port
+    };
 
     const initializeEditor = async () => {
       if (!containerRef.current || isInitialized.current) return;
@@ -187,9 +187,11 @@ export const WPILibEditorWrapper = memo(({ config }: WPILibEditorWrapperProps) =
         (vscode.window as any).showTextDocument = originalShowTextDocument;
       }
 
-      wrapper.dispose().catch(console.error);
+      // Don't dispose the wrapper here since it's a shared instance
+      // The wrapper should only be disposed when the entire app is unmounting
+      // wrapper.dispose().catch(console.error);
     };
-  }, [config]);
+  }, [appConfig.serverUrl, appConfig.sessionId]);
 
   return (
     <div

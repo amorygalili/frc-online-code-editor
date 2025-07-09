@@ -34,41 +34,51 @@ app.use((req, res, next) => {
     }
 });
 
-// Session-aware health check endpoint
-app.get('/health', (req, res) => {
+// // Session-aware health check endpoint
+// app.get('/health', (req, res) => {
+//     res.json({
+//         status: 'ok',
+//         service: 'FRC Simulation Server',
+//         timestamp: new Date().toISOString()
+//     });
+// });
+
+// app.get('/session/:sessionId/health', (req, res) => {
+//     res.json({
+//         status: 'ok',
+//         service: 'FRC Simulation Server',
+//         timestamp: new Date().toISOString()
+//     });
+// });
+
+// Session root endpoint for main server
+// app.get('/session/:sessionId/main', (req, res) => {
+//     const sessionId = req.params.sessionId;
+//     res.json({
+//         message: 'FRC Challenge Session Active',
+//         sessionId: sessionId,
+//         service: 'FRC Main Server',
+//         timestamp: new Date().toISOString(),
+//         endpoints: {
+//             health: `/session/${sessionId}/health`,
+//             files: `/session/${sessionId}/files/`,
+//             javaFiles: `/session/${sessionId}/java-files`,
+//             wpilib: `/session/${sessionId}/wpilib/`,
+//             build: `ws://localhost:${port}/session/${sessionId}/build`
+//         }
+//     });
+// });
+
+// Session-aware health check endpoint for NT4 proxy
+app.get('/session/:sessionId/main/health', (req, res) => {
     res.json({
         status: 'ok',
-        service: 'FRC Simulation Server',
+        service: 'FRC Main Server',
         timestamp: new Date().toISOString()
     });
 });
 
-app.get('/session/:sessionId/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        service: 'FRC Simulation Server',
-        timestamp: new Date().toISOString()
-    });
-});
 
-// Session root endpoint
-app.get('/session/:sessionId/', (req, res) => {
-    const sessionId = req.params.sessionId;
-    res.json({
-        message: 'FRC Challenge Session Active',
-        sessionId: sessionId,
-        service: 'Eclipse JDT Language Server',
-        timestamp: new Date().toISOString(),
-        endpoints: {
-            health: `/session/${sessionId}/health`,
-            files: `/session/${sessionId}/files/`,
-            javaFiles: `/session/${sessionId}/java-files`,
-            wpilib: `/session/${sessionId}/wpilib/`,
-            jdtls: `ws://localhost:${port}/session/${sessionId}/jdtls`,
-            build: `ws://localhost:${port}/session/${sessionId}/build`
-        }
-    });
-});
 
 // Static file server for workspace files
 // In container: server is in /home/frcuser/server, workspace is in /home/frcuser/workspace
@@ -443,9 +453,8 @@ function handleBuildConnection(ws) {
 }
 
 server.listen(port, () => {
-    console.log(`Eclipse JDT Language Server running on port ${port}`);
+    console.log(`FRC Simulation Server running on port ${port}`);
     console.log(`WebSocket endpoints:`);
-    console.log(`  - JDT LS: ws://localhost:${port}/jdtls`);
     console.log(`  - Build/Simulation: ws://localhost:${port}/build`);
     console.log(`Health check: http://localhost:${port}/health`);
 });

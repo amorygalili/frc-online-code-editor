@@ -9,8 +9,6 @@ services:
       - "5901:5901"
       - "6901:6901"
       - "3300:3300"   # HAL Simulation WebSocket port
-    # volumes:
-      # - ./workspace:/home/frcuser/workspace
     environment:
       - JAVA_OPTS=-Xmx2g
     restart: unless-stopped

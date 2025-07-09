@@ -9,8 +9,6 @@ services:
       - "30004:30004" # NT4 Proxy
       - "30005:30005" # Hal Sim proxy
       - "30006:30006" # Language Server
-    volumes:
-      - ./workspace:/home/frcuser/workspace
     environment:
       - JAVA_OPTS=-Xmx2g
     restart: unless-stopped

@@ -55,14 +55,27 @@ app.use((req, res, next) => {
 
 const port = 30005;
 
-// Session root endpoint
-app.get('/session/:sessionId/', (req, res) => {
-    const sessionId = req.params.sessionId;
+// Session root endpoint for HALSim proxy
+// app.get('/session/:sessionId/halsim', (req, res) => {
+//     const sessionId = req.params.sessionId;
+//     res.json({
+//         message: 'HALSim proxy service available',
+//         sessionId: sessionId,
+//         service: 'HALSim WebSocket Proxy',
+//         timestamp: new Date().toISOString(),
+//         endpoints: {
+//             health: `/session/${sessionId}/halsim/health`,
+//             websocket: `ws://localhost:${port}/session/${sessionId}/halsim`
+//         }
+//     });
+// });
+
+// Session-aware health check endpoint for HALSim proxy
+app.get('/session/:sessionId/halsim/health', (req, res) => {
     res.json({
-        message: 'HALSim proxy service available',
-        sessionId: sessionId,
-        service: 'Halsim websocket proxy',
-        timestamp: new Date().toISOString(),
+        status: 'ok',
+        service: 'HALSim WebSocket Proxy',
+        timestamp: new Date().toISOString()
     });
 });
 
