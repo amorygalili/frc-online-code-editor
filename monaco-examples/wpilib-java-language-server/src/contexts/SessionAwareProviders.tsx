@@ -147,9 +147,10 @@ export const SessionAwareProviders: React.FC<SessionAwareProvidersProps> = ({
     );
   } else {
     // Use standard providers for direct connections (development/localhost)
+    // Note: HalSimProvider doesn't accept hostname/port props - it uses config context
     return (
-      <NT4Provider serverAddress={nt4ServerAddress} sessionId={null}>
-        <HalSimProvider hostname={halSimHostname} port={halSimPort}>
+      <NT4Provider>
+        <HalSimProvider>
           {children}
         </HalSimProvider>
       </NT4Provider>
@@ -188,11 +189,7 @@ export const CustomNT4Provider: React.FC<{
       // Use the proxy hostname with the extracted sessionId
       // The NT4_Client will construct: ws://hostname:port/session/{sessionId}/nt/{appName}
       return (
-        <NT4Provider
-          serverAddress={proxyHostname}
-          sessionId={sessionId}
-          appName="frc-challenges"
-        >
+        <NT4Provider>
           {children}
         </NT4Provider>
       );
@@ -203,7 +200,7 @@ export const CustomNT4Provider: React.FC<{
 
   // Fallback to standard provider (no sessionId for direct connections)
   return (
-    <NT4Provider serverAddress={address} sessionId={null}>
+    <NT4Provider>
       {children}
     </NT4Provider>
   );
@@ -233,14 +230,11 @@ export const CustomHalSimProvider: React.FC<{
       console.log('CustomHalSimProvider: Session ID:', sessionId);
       console.log('CustomHalSimProvider: Will connect to halsim-proxy on port:', customPort);
 
-      // Pass sessionId to HalSimProvider so it can construct the correct URI
-      // The HalSimProvider will construct: ws://hostname:port/session/{sessionId}/halsim/ws
+      // HalSimProvider doesn't accept hostname/port props - it uses config context
+      // We need to use a different approach for ALB routing
+      console.warn('CustomHalSimProvider: ALB routing not fully implemented for HAL simulation');
       return (
-        <HalSimProvider
-          hostname={customHostname}
-          port={customPort}
-          sessionId={sessionId}
-        >
+        <HalSimProvider>
           {children}
         </HalSimProvider>
       );
@@ -250,8 +244,9 @@ export const CustomHalSimProvider: React.FC<{
   }
 
   // Fallback to standard provider (no session routing)
+  // HalSimProvider doesn't accept hostname/port props - it uses config context
   return (
-    <HalSimProvider hostname={hostname} port={port} sessionId={sessionId}>
+    <HalSimProvider>
       {children}
     </HalSimProvider>
   );

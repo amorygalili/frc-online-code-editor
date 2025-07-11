@@ -58,12 +58,24 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       containerEndpoint = await getContainerEndpoint(session.taskArn);
     }
 
+    // Build containerInfo with ALB endpoints structure expected by frontend
+    const containerInfo = session.status === 'running' ? {
+      taskArn: session.taskArn,
+      albEndpoints: {
+        main: session.containerEndpoint || containerEndpoint,
+        nt4: session.nt4Endpoint,
+        halsim: session.halsimEndpoint,
+        jdtls: session.jdtlsEndpoint,
+        health: session.healthEndpoint
+      }
+    } : undefined;
+
     const response = {
       sessionId: session.sessionId,
+      userId: session.userId,
       challengeId: session.challengeId,
       status: session.status,
-      taskArn: session.taskArn,
-      containerEndpoint,
+      containerInfo,
       resourceProfile: session.resourceProfile,
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,

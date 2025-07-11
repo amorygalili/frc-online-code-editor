@@ -34,9 +34,11 @@ export const config = {
   // ALB Configuration
   alb: {
     listenerArn: process.env.ALB_LISTENER_ARN || '',
+    httpsListenerArn: process.env.ALB_HTTPS_LISTENER_ARN || '',
     targetGroupArn: process.env.ALB_TARGET_GROUP_ARN || '',
     dnsName: process.env.ALB_DNS_NAME || '',
     vpcId: process.env.VPC_ID || '',
+    sslCertificateArn: process.env.SSL_CERTIFICATE_ARN || '',
   },
 
   // Development flags

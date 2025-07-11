@@ -21,6 +21,11 @@ Parameters:
     Description: Name of the existing Serverless deployment bucket to use for ALB access logs
     Default: ''
 
+  SSLCertificateArn:
+    Type: String
+    Default: ""
+    Description: Optional SSL certificate ARN for HTTPS support
+
   VpcCidr:
     Type: String
     Default: 10.0.0.0/16
@@ -28,6 +33,7 @@ Parameters:
 
 Conditions:
   HasServerlessBucket: !Not [!Equals [!Ref ServerlessDeploymentBucketName, '']]
+  HasSSLCertificate: !Not [!Equals [!Ref SSLCertificateArn, '']]
 
 Resources:
   # VPC and Networking
@@ -306,7 +312,7 @@ Resources:
         - Key: access_logs.s3.prefix
           Value: !If [HasServerlessBucket, !Sub 'alb-logs/${ProjectName}-${Environment}', !Ref 'AWS::NoValue']
         - Key: idle_timeout.timeout_seconds
-          Value: '60'
+          Value: '300'
       Tags:
         - Key: Name
           Value: !Sub '${ProjectName}-${Environment}-alb'
@@ -354,6 +360,24 @@ Resources:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: 80
       Protocol: HTTP
+
+  # ALB Listener (HTTPS) - Optional, requires SSL certificate
+  ALBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasSSLCertificate
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: 404
+            ContentType: text/plain
+            MessageBody: 'Session not found. Please create a new session.'
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateArn
+      SslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
 
   # CloudWatch Log Group
   LogGroup:
@@ -440,6 +464,19 @@ Outputs:
     Value: !Ref DefaultTargetGroup
     Export:
       Name: !Sub '${ProjectName}-${Environment}-default-tg-arn'
+
+  ALBListenerArn:
+    Description: ALB HTTP Listener ARN
+    Value: !Ref ALBListener
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-alb-listener-arn'
+
+  ALBListenerHTTPSArn:
+    Description: ALB HTTPS Listener ARN (if SSL certificate provided)
+    Condition: HasSSLCertificate
+    Value: !Ref ALBListenerHTTPS
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-alb-https-listener-arn'
 
   LoadBalancerSecurityGroupId:
     Description: Load Balancer Security Group ID

@@ -15,17 +15,60 @@ class SessionService {
   private activeSessions: Map<string, ChallengeSession> = new Map();
   private keepAliveIntervals: Map<string, number> = new Map();
   private readonly KEEP_ALIVE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  private creationPromise: Promise<ChallengeSession> | null = null;
+  private isCreatingSession = false;
 
-  // Create a new challenge session
-  async createSession(challengeId: string, resourceProfile: 'development' | 'basic' | 'advanced' | 'competition' = 'basic'): Promise<ChallengeSession> {
+  // Define what constitutes an "active" session (not stopped, stopping, or failed)
+  private isActiveSession(session: ChallengeSession): boolean {
+    return !['stopping', 'stopped', 'failed'].includes(session.status);
+  }
+
+  // Check if a session is currently being created
+  isCreating(): boolean {
+    return this.isCreatingSession;
+  }
+
+  // Get the current active session (if any)
+  async getCurrentActiveSession(): Promise<ChallengeSession | null> {
     try {
-      console.log(`Creating session for challenge ${challengeId} with profile ${resourceProfile}`);
-      
-      // Check if user already has an active session
       const existingSessions = await challengeService.listSessions();
-      const activeSession = existingSessions.find(s =>
-        s.status === 'running' || s.status === 'starting'
-      );
+      return existingSessions.find(s => this.isActiveSession(s)) || null;
+    } catch (error) {
+      console.error('Failed to get current active session:', error);
+      return null;
+    }
+  }
+
+  // Create a new challenge session with promise deduplication
+  async createSession(challengeId: string, resourceProfile: 'development' | 'basic' | 'advanced' | 'competition' = 'basic'): Promise<ChallengeSession> {
+    // If a session creation is already in progress, return the existing promise
+    if (this.creationPromise) {
+      console.log('Session creation already in progress, returning existing promise');
+      return this.creationPromise;
+    }
+
+    // Create and store the promise to prevent duplicate calls
+    this.creationPromise = this.createSessionInternal(challengeId, resourceProfile);
+
+    try {
+      const session = await this.creationPromise;
+      return session;
+    } finally {
+      // Clear the promise when done (success or failure)
+      this.creationPromise = null;
+      this.isCreatingSession = false;
+    }
+  }
+
+  // Internal session creation logic
+  private async createSessionInternal(challengeId: string, resourceProfile: 'development' | 'basic' | 'advanced' | 'competition' = 'basic'): Promise<ChallengeSession> {
+    try {
+      this.isCreatingSession = true;
+      console.log(`Creating session for challenge ${challengeId} with profile ${resourceProfile}`);
+
+      // Check if user already has an active session (not stopped, stopping, or failed)
+      const existingSessions = await challengeService.listSessions();
+      const activeSession = existingSessions.find(s => this.isActiveSession(s));
 
       if (activeSession) {
         console.log('Found existing active session:', activeSession.sessionId);

@@ -179,8 +179,19 @@ export class NT4_Client {
       // For ALB routing, construct the health check URL with session path
       let healthCheckUrl: string;
       if (this.sessionId) {
-        // ALB routing: use session-based health check
-        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/nt/health`;
+        // Check if this is an ALB endpoint
+        const isALBEndpoint = this.serverBaseAddr.includes('amazonaws.com') ||
+                             this.serverBaseAddr.includes('elb.amazonaws.com') ||
+                             (!this.serverBaseAddr.includes('localhost') && !this.serverBaseAddr.includes('127.0.0.1'));
+
+        if (isALBEndpoint) {
+          // ALB routing: don't include port, ALB handles routing
+          const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+          healthCheckUrl = `${protocol}://${this.serverBaseAddr}/session/${this.sessionId}/nt/health`;
+        } else {
+          // Localhost/development: use proxy port
+          healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/nt/health`;
+        }
       } else {
         // Direct connection: use base address
         healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}`;
@@ -733,22 +744,43 @@ export class NT4_Client {
   }
 
   private ws_connect(rttWs = false) {
+    // Determine if we should use secure WebSocket based on current page protocol
+    const isSecure = window.location.protocol === 'https:';
+    const wsProtocol = isSecure ? 'wss' : 'ws';
+
+    // Check if serverBaseAddr looks like an ALB domain
+    const isALBEndpoint = this.serverBaseAddr.includes('amazonaws.com') ||
+                         this.serverBaseAddr.includes('elb.amazonaws.com') ||
+                         (!this.serverBaseAddr.includes('localhost') && !this.serverBaseAddr.includes('127.0.0.1'));
+
     // Construct WebSocket URL based on whether we're using ALB routing or direct connection
     if (this.sessionId) {
       // ALB routing: /session/{SESSION_ID}/nt/{appName}
-      this.serverAddr =
-        'ws://' +
-        this.serverBaseAddr +
-        ':' +
-        this.PROXY_PORT.toString() +
-        '/session/' +
-        this.sessionId +
-        '/nt/' +
-        this.appName;
+      if (isALBEndpoint) {
+        // For ALB endpoints, don't include port - ALB handles routing
+        this.serverAddr =
+          wsProtocol + '://' +
+          this.serverBaseAddr +
+          '/session/' +
+          this.sessionId +
+          '/nt/' +
+          this.appName;
+      } else {
+        // For localhost/development, use the proxy port
+        this.serverAddr =
+          wsProtocol + '://' +
+          this.serverBaseAddr +
+          ':' +
+          this.PROXY_PORT.toString() +
+          '/session/' +
+          this.sessionId +
+          '/nt/' +
+          this.appName;
+      }
     } else {
       // Direct connection to NT4 server: ws://localhost:5810/nt/{appName}
       this.serverAddr =
-        'ws://' +
+        wsProtocol + '://' +
         this.serverBaseAddr +
         ':' +
         this.PORT.toString() +

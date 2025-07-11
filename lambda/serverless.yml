@@ -64,6 +64,7 @@ provider:
             - ecs:DescribeTasks
             - ecs:ListTasks
             - ecs:TagResource
+            - ecs:ExecuteCommand  # For ECS Exec debugging
             - iam:PassRole
           Resource:
             - "arn:aws:ecs:${self:provider.region}:*:cluster/${self:provider.environment.ECS_CLUSTER_NAME}"

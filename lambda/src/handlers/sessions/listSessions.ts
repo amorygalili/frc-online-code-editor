@@ -62,10 +62,23 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       const durationMinutes = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60));
       const isExpired = now > expiresAt;
 
+      // Build containerInfo with ALB endpoints structure for running sessions
+      const containerInfo = session.status === 'running' ? {
+        albEndpoints: {
+          main: session.containerEndpoint,
+          nt4: session.nt4Endpoint,
+          halsim: session.halsimEndpoint,
+          jdtls: session.jdtlsEndpoint,
+          health: session.healthEndpoint
+        }
+      } : undefined;
+
       return {
         sessionId: session.sessionId,
+        userId: session.userId,
         challengeId: session.challengeId,
         status: session.status,
+        containerInfo,
         resourceProfile: session.resourceProfile,
         createdAt: session.createdAt,
         expiresAt: session.expiresAt,

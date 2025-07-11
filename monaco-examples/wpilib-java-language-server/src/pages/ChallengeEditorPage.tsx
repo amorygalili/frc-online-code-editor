@@ -70,12 +70,15 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
         }
         setChallenge(challengeData);
 
-        // Check for existing sessions first (any active session can be reused)
-        console.log("Checking for existing sessions...");
-        const existingSessions = await sessionService.listSessions();
-        const activeSession = existingSessions.find(
-          (s) => s.status === "running" || s.status === "starting"
-        );
+        // Check if session creation is already in progress
+        if (sessionService.isCreating()) {
+          console.log("Session creation already in progress, waiting...");
+          setSessionStatus("creating");
+        }
+
+        // Check for existing active session first (using improved method)
+        console.log("Checking for existing active session...");
+        const activeSession = await sessionService.getCurrentActiveSession();
 
         if (activeSession) {
           console.log(
@@ -83,6 +86,9 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
             activeSession.sessionId
           );
           console.log("Reusing session for challenge:", challengeId);
+          console.log('Existing session data:', activeSession);
+          console.log('Existing container info:', activeSession.containerInfo);
+          console.log('Existing ALB endpoints:', activeSession.containerInfo?.albEndpoints);
 
           // Update session to track current challenge (locally)
           const updatedSession = { ...activeSession, challengeId };
@@ -95,12 +101,17 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
           }
         }
 
-        // Create or connect to existing session
-        setSessionStatus("creating");
+        // Create new session (with built-in deduplication and promise reuse)
+        if (!sessionService.isCreating()) {
+          setSessionStatus("creating");
+        }
         console.log(
-          `Creating/connecting to session for challenge ${challengeId}`
+          `Creating session for challenge ${challengeId}`
         );
         const sessionData = await sessionService.createSession(challengeId);
+        console.log('Session data received:', sessionData);
+        console.log('Container info:', sessionData.containerInfo);
+        console.log('ALB endpoints:', sessionData.containerInfo?.albEndpoints);
         setSession(sessionData);
 
         // Check if session is already ready
@@ -227,6 +238,12 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
                 const initializeSession = async () => {
                   try {
                     setLoading(true);
+
+                    // Check if session creation is already in progress
+                    if (!sessionService.isCreating()) {
+                      setSessionStatus("creating");
+                    }
+
                     const sessionData = await sessionService.createSession(
                       challengeId
                     );
@@ -332,17 +349,51 @@ const SessionAwareEditorApp: React.FC<SessionAwareEditorAppProps> = ({
   // Create config from session data
   // Extract server URL from ALB endpoints or fall back to localhost for development
   const albMainUrl = session.containerInfo?.albEndpoints?.main;
-  const serverUrl = albMainUrl ? new URL(albMainUrl).hostname : "localhost";
+  let serverUrl: string;
+
+  if (albMainUrl) {
+    // For ALB endpoints, use the full hostname (e.g., "frc-challenge-site-dev-alb-497635548.us-east-2.elb.amazonaws.com")
+    try {
+      const url = new URL(albMainUrl);
+      serverUrl = url.hostname;
+      console.log('✅ Using ALB endpoint for session configuration:', serverUrl);
+      console.log('Full ALB main URL:', albMainUrl);
+    } catch (error) {
+      console.warn('Invalid ALB URL, falling back to localhost:', albMainUrl, error);
+      serverUrl = "localhost";
+    }
+  } else {
+    // Check if we're in a production environment but don't have ALB endpoints
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    if (isProduction) {
+      // In production, try to use the current page's hostname as ALB domain
+      serverUrl = window.location.hostname;
+      console.log('⚠️ No ALB endpoints in session data, using page hostname:', serverUrl);
+    } else {
+      // Fallback to localhost for development
+      serverUrl = "localhost";
+      console.log('Using localhost for session configuration (development mode)');
+    }
+  }
 
   const editorConfig: AppConfig = {
     serverUrl,
     sessionId: session.sessionId,
   };
 
+  const [initialized, setInitialized] = React.useState(false);
+
+  console.log('Editor configuration:', editorConfig);
+
   // Set global config for FileService
   React.useEffect(() => {
     setFileServiceConfig(editorConfig);
+    setInitialized(true);
   }, [editorConfig]);
+
+  if (!initialized) {
+    return null;
+  }
 
   return (
     <SessionProvider initialSession={session} initialChallenge={challenge}>

@@ -1,0 +1,40 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ECSExecPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchLogsPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/ecs/frc-challenge-runtime",
+        "arn:aws:logs:*:*:log-group:/ecs/frc-challenge-runtime:*"
+      ]
+    },
+    {
+      "Sid": "SecretsManagerPermissions",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:frc-challenge-*"
+      ]
+    }
+  ]
+}

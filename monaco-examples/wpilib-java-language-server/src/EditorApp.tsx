@@ -22,8 +22,6 @@ import { ResizableSplitter } from "./components/ResizableSplitter.tsx";
 import { BuildControls } from "./components/BuildControls.tsx";
 import { useEditor } from "./contexts/EditorContext";
 import { eclipseJdtLsConfig } from "./config";
-import { ConfigProvider, AppConfig } from "./contexts/ConfigContext";
-import { setFileServiceConfig } from "./fileService";
 
 const theme = createTheme({
   palette: {
@@ -151,33 +149,3 @@ export function EditorAppContent() {
   );
 }
 
-// Wrapper component that provides configuration context
-interface EditorAppWithConfigProps {
-  config?: AppConfig;
-}
-
-export function EditorAppWithConfig({ config }: EditorAppWithConfigProps) {
-  // Default configuration for local development
-  const defaultConfig: AppConfig = {
-    serverUrl: config?.serverUrl || "localhost",
-    sessionId: config?.sessionId || "local-dev-session",
-  };
-
-  const [initialized, setInitialized] = useState(false);
-
-  // Set global config for FileService
-  useEffect(() => {
-    setFileServiceConfig(defaultConfig);
-    setInitialized(true);
-  }, [defaultConfig]);
-
-  if (!initialized) {
-    return null;
-  }
-
-  return (
-    <ConfigProvider config={defaultConfig}>
-      <EditorAppContent />
-    </ConfigProvider>
-  );
-}

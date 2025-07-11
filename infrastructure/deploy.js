@@ -562,6 +562,9 @@ async function registerTaskDefinition() {
       .replace(/\${AWS_REGION}/g, config.awsRegion)
       .replace(/\${ENVIRONMENT}/g, config.environment);
 
+    // Create ECS task role with ECS Exec permissions
+    await createECSTaskRole(awsAccountId);
+
     // Write processed task definition
     const tempTaskDefPath = path.join(os.tmpdir(), 'processed-task-definition.json');
     fs.writeFileSync(tempTaskDefPath, processedTaskDef);
@@ -615,6 +618,128 @@ async function deployLambda() {
   }
 
   process.chdir('../infrastructure');
+}
+
+// Setup user permissions
+async function setupUserPermissions() {
+  log('👤 Setting up user permissions...');
+
+  const policyPath = path.join('iam', 'frc-challenge-site-policy.json');
+  if (!fs.existsSync(policyPath)) {
+    warn('FRC challenge site policy file not found, skipping user setup');
+    return;
+  }
+
+  // Get current AWS user or use environment variable
+  let currentUser = process.env.AWS_USER_NAME;
+
+  if (!currentUser) {
+    try {
+      // Try to get current user from AWS CLI
+      const userInfo = runCommand('aws sts get-caller-identity --query "Arn" --output text');
+      const arnParts = userInfo.trim().split('/');
+      if (arnParts.length > 1 && arnParts[0].includes('user')) {
+        currentUser = arnParts[1];
+        log(`Detected current AWS user: ${currentUser}`);
+      }
+    } catch (error) {
+      warn('Could not detect current AWS user');
+    }
+  }
+
+  if (!currentUser) {
+    warn('No AWS user specified. Set AWS_USER_NAME environment variable or ensure AWS CLI is configured');
+    log('Example: set AWS_USER_NAME=frcSimUser');
+    log('Skipping user permission setup');
+    return;
+  }
+
+  try {
+    // Check if user exists
+    runCommand(`aws iam get-user --user-name ${currentUser} --region ${config.awsRegion}`);
+
+    // Apply the policy to the user
+    runCommand(
+      `aws iam put-user-policy ` +
+      `--user-name ${currentUser} ` +
+      `--policy-name FRCChallengeSitePolicy ` +
+      `--policy-document file://${policyPath} ` +
+      `--region ${config.awsRegion}`
+    );
+
+    log(`✅ FRC Challenge Site policy applied to user: ${currentUser}`);
+    log(`   User now has permissions for ECS Exec, ALB management, and more`);
+
+  } catch (error) {
+    warn(`Failed to apply policy to user ${currentUser}:`, error.message);
+    log('');
+    log('💡 Manual setup required:');
+    log(`   aws iam put-user-policy --user-name ${currentUser} --policy-name FRCChallengeSitePolicy --policy-document file://${policyPath}`);
+    log('   Or apply the policy through AWS Console');
+  }
+}
+
+// Create ECS Task Role with ECS Exec permissions
+async function createECSTaskRole(awsAccountId) {
+  log('🔐 Creating ECS task role with ECS Exec permissions...');
+
+  try {
+    // Check if role already exists
+    try {
+      runCommand(`aws iam get-role --role-name ecsTaskRole --region ${config.awsRegion}`);
+      log('ECS task role already exists, updating policy...');
+    } catch (error) {
+      // Role doesn't exist, create it
+      log('Creating new ECS task role...');
+
+      // Create trust policy for ECS tasks
+      const trustPolicy = {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": "ecs-tasks.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+          }
+        ]
+      };
+
+      const trustPolicyPath = path.join(os.tmpdir(), 'ecs-task-trust-policy.json');
+      fs.writeFileSync(trustPolicyPath, JSON.stringify(trustPolicy, null, 2));
+
+      runCommand(
+        `aws iam create-role ` +
+        `--role-name ecsTaskRole ` +
+        `--assume-role-policy-document file://${trustPolicyPath} ` +
+        `--description "ECS Task Role with ECS Exec permissions for FRC Challenge containers" ` +
+        `--region ${config.awsRegion}`
+      );
+
+      // Clean up temp file
+      fs.unlinkSync(trustPolicyPath);
+    }
+
+    // Attach the custom policy for ECS Exec
+    const policyPath = path.join('iam', 'ecs-task-role-policy.json');
+    if (fs.existsSync(policyPath)) {
+      runCommand(
+        `aws iam put-role-policy ` +
+        `--role-name ecsTaskRole ` +
+        `--policy-name ECSExecPolicy ` +
+        `--policy-document file://${policyPath} ` +
+        `--region ${config.awsRegion}`
+      );
+      log('✅ ECS task role policy attached successfully');
+    } else {
+      warn('ECS task role policy file not found, skipping policy attachment');
+    }
+
+  } catch (error) {
+    error('Failed to create ECS task role:', error.message);
+    throw error;
+  }
 }
 
 // Deploy infrastructure
@@ -673,12 +798,13 @@ async function main() {
   if (!command) {
     console.log('Usage: node deploy.js <command>');
     console.log('Commands:');
-    console.log('  infrastructure - Deploy ECS cluster infrastructure only');
-    console.log('  ecr           - Setup ECR repository only');
-    console.log('  container     - Build and push container image only');
-    console.log('  task-def      - Register ECS task definition only');
-    console.log('  lambda        - Deploy Lambda functions only');
-    console.log('  all           - Deploy everything (full deployment)');
+    console.log('  infrastructure   - Deploy ECS cluster infrastructure only');
+    console.log('  ecr             - Setup ECR repository only');
+    console.log('  container       - Build and push container image only');
+    console.log('  task-def        - Register ECS task definition only');
+    console.log('  lambda          - Deploy Lambda functions only');
+    console.log('  user-permissions - Setup IAM permissions for current user');
+    console.log('  all             - Deploy everything (full deployment)');
     process.exit(1);
   }
 
@@ -705,6 +831,9 @@ async function main() {
       case 'lambda':
         await deployLambda();
         break;
+      case 'user-permissions':
+        await setupUserPermissions();
+        break;
       case 'all':
         log('🚀 Starting full deployment...');
         await deployInfrastructure();
@@ -712,6 +841,7 @@ async function main() {
         await buildContainer();
         await registerTaskDefinition();
         await deployLambda();
+        await setupUserPermissions();
 
         // Output deployment summary
         log('\n📋 Deployment Summary:');
@@ -744,6 +874,7 @@ module.exports = {
   setupECR,
   buildContainer,
   registerTaskDefinition,
+  setupUserPermissions,
   deployLambda,
   getServerlessBucket
 };

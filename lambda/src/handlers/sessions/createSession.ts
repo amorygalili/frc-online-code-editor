@@ -7,7 +7,8 @@ import {
   ElasticLoadBalancingV2Client,
   CreateTargetGroupCommand,
   CreateRuleCommand,
-  RegisterTargetsCommand
+  RegisterTargetsCommand,
+  ModifyTargetGroupAttributesCommand
 } from '@aws-sdk/client-elastic-load-balancing-v2';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../../config';
@@ -56,17 +57,45 @@ async function createSessionTargetGroup(sessionId: string, port: number, service
   });
 
   const result = await elbClient.send(command);
-  return result.TargetGroups?.[0]?.TargetGroupArn || '';
+  const targetGroupArn = result.TargetGroups?.[0]?.TargetGroupArn || '';
+
+  // Configure WebSocket-friendly target group attributes
+  if (targetGroupArn) {
+    try {
+      await elbClient.send(new ModifyTargetGroupAttributesCommand({
+        TargetGroupArn: targetGroupArn,
+        Attributes: [
+          {
+            Key: 'deregistration_delay.timeout_seconds',
+            Value: '30'
+          },
+          {
+            Key: 'stickiness.enabled',
+            Value: 'false'
+          }
+        ]
+      }));
+      console.log(`✅ Configured WebSocket-friendly attributes for ${serviceType} target group`);
+    } catch (error) {
+      console.warn(`⚠️ Failed to set target group attributes for ${serviceType}:`, error);
+    }
+  }
+
+  return targetGroupArn;
 }
 
 async function createSessionListenerRule(sessionId: string, targetGroupArn: string, serviceType: ServiceType): Promise<string> {
-  const priority = 1 + Math.floor(Math.random() * 50000); // Random priority between 1-5000
+  const priority = 1 + Math.floor(Math.random() * 50000); // Random priority between 1-50000
 
-  // Different path patterns for different services
-  const pathPattern = `/session/${sessionId}/${serviceType}/*`;
- 
+  // Path pattern that matches both exact path and paths with trailing content
+  // This matches: /session/{sessionId}/{serviceType}, /session/{sessionId}/{serviceType}/, /session/{sessionId}/{serviceType}/*
+  const pathPattern = `/session/${sessionId}/${serviceType}*`;
+
+  // Use HTTPS listener if available, otherwise HTTP
+  const listenerArn = config.alb.httpsListenerArn || config.alb.listenerArn;
+
   const command = new CreateRuleCommand({
-    ListenerArn: config.alb.listenerArn,
+    ListenerArn: listenerArn,
     Priority: priority,
     Conditions: [
       {
@@ -299,6 +328,7 @@ async function createECSTask(userId: string, challengeId: string, sessionId: str
     taskDefinition: process.env.ECS_TASK_DEFINITION || 'frc-challenge-runtime',
     launchType: 'FARGATE',
     count: 1,
+    enableExecuteCommand: true, // Enable ECS Exec for debugging
     networkConfiguration: {
       awsvpcConfiguration: {
         subnets: [
@@ -642,12 +672,14 @@ async function setupALBIntegration(sessionId: string): Promise<{
     console.log(`Created JDTLS listener rule: ${jdtlsRuleArn}`);
 
     // Step 3: Generate the public endpoint URLs
+    // Use HTTPS if SSL certificate is configured, otherwise HTTP
+    const protocol = config.alb.sslCertificateArn ? 'https' : 'http';
     const endpoints = {
-      main: `http://${config.alb.dnsName}/session/${sessionId}/`,
-      nt4: `http://${config.alb.dnsName}/session/${sessionId}/nt/`,
-      halsim: `http://${config.alb.dnsName}/session/${sessionId}/halsim/`,
-      jdtls: `http://${config.alb.dnsName}/session/${sessionId}/jdtls/`,
-      health: `http://${config.alb.dnsName}/session/${sessionId}/main/health`
+      main: `${protocol}://${config.alb.dnsName}/session/${sessionId}/`,
+      nt4: `${protocol}://${config.alb.dnsName}/session/${sessionId}/nt/`,
+      halsim: `${protocol}://${config.alb.dnsName}/session/${sessionId}/halsim/`,
+      jdtls: `${protocol}://${config.alb.dnsName}/session/${sessionId}/jdtls/`,
+      health: `${protocol}://${config.alb.dnsName}/session/${sessionId}/main/health`
     };
 
     return {

@@ -38,6 +38,7 @@
                 "ecs:DeleteService",
                 "ecs:DescribeServices",
                 "ecs:ListServices",
+                "ecs:ExecuteCommand",
                 "ecs:TagResource",
                 "ecs:UntagResource",
                 "ecs:ListTagsForResource"
