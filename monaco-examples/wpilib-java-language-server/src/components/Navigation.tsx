@@ -29,23 +29,11 @@ const LogoutIcon = () => <span>🚪</span>;
 const SchoolIcon = () => <span>🎓</span>;
 const TestIcon = () => <span>🧪</span>;
 
-interface NavigationProps {
-  isAuthenticated?: boolean;
-  user?: {
-    name: string;
-    email: string;
-    avatar?: string;
-  };
-}
-
-const Navigation: React.FC<NavigationProps> = ({
-  isAuthenticated = false,
-  user
-}) => {
+const Navigation = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { signOut } = useAuth();
+  const { signOut, isAuthenticated, user } = useAuth();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

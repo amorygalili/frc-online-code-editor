@@ -19,7 +19,7 @@ const TrophyIcon = () => <span>🏆</span>;
 const PlayIcon = () => <span>▶️</span>;
 
 const HomePage: React.FC = () => {
-  const { user, isAuthenticated, isConfigured } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const features = [
     {
@@ -147,7 +147,7 @@ const HomePage: React.FC = () => {
 
       <Container maxWidth="lg">
         {/* Authentication Status Indicator */}
-        {isConfigured && isAuthenticated && user && (
+        {isAuthenticated && user && (
           <Alert
             severity="success"
             sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 1 }}

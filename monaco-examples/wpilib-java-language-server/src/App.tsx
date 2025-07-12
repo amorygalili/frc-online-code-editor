@@ -66,7 +66,6 @@ const LoadingScreen = () => (
 // Component that conditionally shows navigation
 function AppLayout() {
   const location = useLocation();
-  const { user, isAuthenticated, isConfigured } = useAuth();
 
   // Hide main navigation for editor routes
   const isEditorRoute = location.pathname.includes('/editor');
@@ -74,7 +73,7 @@ function AppLayout() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {!isEditorRoute && (
-        <Navigation isAuthenticated={isAuthenticated} user={user || undefined} />
+        <Navigation  />
       )}
 
       <Box component="main" sx={{ flexGrow: 1 }}>
@@ -91,26 +90,6 @@ function AppLayout() {
           <Route path="*" element={<HomePage />} />
         </Routes>
       </Box>
-
-      {/* Development indicator */}
-      {!isConfigured && (
-        <Box
-          sx={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            bgcolor: 'warning.main',
-            color: 'warning.contrastText',
-            px: 2,
-            py: 1,
-            borderRadius: 1,
-            fontSize: '0.875rem',
-            zIndex: 1000,
-          }}
-        >
-          Demo Mode - Configure AWS Cognito for production
-        </Box>
-      )}
     </Box>
   );
 }

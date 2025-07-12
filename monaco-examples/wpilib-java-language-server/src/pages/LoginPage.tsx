@@ -17,7 +17,7 @@ const CodeIcon = () => <span>💻</span>;
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { signIn, isAuthenticated, isConfigured } = useAuth();
+  const { signIn, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -71,7 +71,7 @@ const LoginPage: React.FC = () => {
           size="large"
           fullWidth
           onClick={handleGoogleSignIn}
-          disabled={isLoading || !isConfigured}
+          disabled={isLoading}
           sx={{
             mb: 3,
             py: 1.5,
@@ -81,7 +81,7 @@ const LoginPage: React.FC = () => {
             },
           }}
         >
-          <GoogleIcon /> {isLoading ? 'Signing in...' : !isConfigured ? 'Authentication Not Configured' : 'Continue with Google'}
+          <GoogleIcon /> {isLoading ? 'Signing in...' : 'Continue with Google'}
         </Button>
 
         <Divider sx={{ mb: 3 }}>
@@ -89,23 +89,6 @@ const LoginPage: React.FC = () => {
             or
           </Typography>
         </Divider>
-
-        {/* Configuration Info */}
-        {!isConfigured && (
-          <Alert severity="warning" sx={{ mb: 3, textAlign: 'left' }}>
-            <Typography variant="body2" gutterBottom>
-              <strong>Authentication Setup Required:</strong> AWS Cognito is not configured.
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              To enable sign in:
-            </Typography>
-            <Typography variant="body2" component="ol" sx={{ pl: 2, fontSize: '0.875rem' }}>
-              <li>Set up AWS Cognito (see AWS_COGNITO_SETUP.md)</li>
-              <li>Configure environment variables (see .env.example)</li>
-              <li>Restart the application</li>
-            </Typography>
-          </Alert>
-        )}
 
         {/* Browse as Guest */}
         <Button
