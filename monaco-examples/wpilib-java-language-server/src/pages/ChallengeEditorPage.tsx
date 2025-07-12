@@ -2,20 +2,20 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
-  AppBar,
-  Toolbar,
-  Typography,
   Button,
   Alert,
   CircularProgress,
-  Breadcrumbs,
-  Link,
+  Typography,
 } from "@mui/material";
 import { EditorProvider } from "../contexts/EditorContext";
 import { BuildProvider } from "../contexts/BuildContext";
 import { SessionProvider } from "../contexts/SessionContext";
-import { SessionAwareProviders } from "../contexts/SessionAwareProviders";
-import { EditorAppContent } from "../EditorApp";
+import { EditorBody } from "../EditorApp";
+import { useEditor } from "../contexts/EditorContext";
+import { useCallback } from "react";
+import * as vscode from "vscode";
+import { eclipseJdtLsConfig } from "../config";
+import { EditorHeader, BreadcrumbItem } from "../components/EditorHeader";
 import { ConfigProvider, AppConfig } from "../contexts/ConfigContext";
 import { setFileServiceConfig } from "../fileService";
 import { sessionService } from "../services/sessionService";
@@ -25,10 +25,11 @@ import {
   ChallengeSession,
 } from "../services/challengeService";
 import { useAuth } from "../contexts/AuthContext";
+import { NT4Provider } from "../nt4/useNetworktables";
+import { HalSimProvider } from "../contexts/HalSimContext";
 
 // Icons
 const BackIcon = () => <span>←</span>;
-const ExitIcon = () => <span>🚪</span>;
 
 interface ChallengeEditorPageProps {}
 
@@ -154,28 +155,6 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
     initializeSession();
   }, [challengeId, isAuthenticated]);
 
-  // Handle session cleanup on unmount
-  useEffect(() => {
-    return () => {
-      // Note: We don't automatically terminate sessions on unmount
-      // Sessions are designed to persist and be reused
-      // Users can explicitly exit via the exit button
-    };
-  }, []);
-
-  const handleExitSession = async () => {
-    if (!session) return;
-
-    try {
-      // Note: For now we just navigate back without terminating the session
-      // The session will remain active for reuse or timeout naturally
-      navigate(`/challenge/${challengeId}`);
-    } catch (err) {
-      console.error("Error exiting session:", err);
-      // Navigate anyway
-      navigate(`/challenge/${challengeId}`);
-    }
-  };
 
   const handleBackToChallenge = () => {
     navigate(`/challenge/${challengeId}`);
@@ -289,49 +268,20 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
     );
   }
 
+  // Create breadcrumbs for challenge editor
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: "Challenges" },
+    { label: challenge.title, onClick: handleBackToChallenge },
+    { label: "Editor" }
+  ];
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      {/* Custom header for challenge editor */}
-      <AppBar position="static" elevation={1} sx={{ minHeight: 48 }}>
-        <Toolbar variant="dense" sx={{ minHeight: 48, py: 0.5 }}>
-          {/* Breadcrumbs */}
-          <Box sx={{ flexGrow: 1 }}>
-            <Breadcrumbs sx={{ color: "inherit" }}>
-              <Link
-                component="button"
-                variant="body2"
-                onClick={handleBackToChallenge}
-                sx={{ color: "inherit", textDecoration: "none" }}
-              >
-                {challenge.title}
-              </Link>
-              <Typography variant="body2" sx={{ color: "inherit" }}>
-                Editor
-              </Typography>
-            </Breadcrumbs>
-          </Box>
-
-          {/* Session info */}
-          <Typography variant="body2" sx={{ mr: 2, opacity: 0.8 }}>
-            Container: {session.sessionId.slice(0, 8)}...
-          </Typography>
-
-          {/* Exit button */}
-          <Button
-            color="inherit"
-            size="small"
-            onClick={handleExitSession}
-            sx={{ minWidth: "auto" }}
-          >
-            <ExitIcon /> Exit
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      {/* Editor content */}
-      <Box sx={{ flex: 1, overflow: "hidden" }}>
-        <SessionAwareEditorApp session={session} challenge={challenge} />
-      </Box>
+      <SessionAwareEditorApp
+        session={session}
+        challenge={challenge}
+        breadcrumbs={breadcrumbs}
+      />
     </Box>
   );
 };
@@ -340,40 +290,31 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
 interface SessionAwareEditorAppProps {
   session: ChallengeSession;
   challenge: Challenge;
+  breadcrumbs: BreadcrumbItem[];
 }
 
 const SessionAwareEditorApp: React.FC<SessionAwareEditorAppProps> = ({
   session,
   challenge,
+  breadcrumbs,
 }) => {
   // Create config from session data
   // Extract server URL from ALB endpoints or fall back to localhost for development
   const albMainUrl = session.containerInfo?.albEndpoints?.main;
   let serverUrl: string;
 
-  if (albMainUrl) {
-    // For ALB endpoints, use the full hostname (e.g., "frc-challenge-site-dev-alb-497635548.us-east-2.elb.amazonaws.com")
-    try {
-      const url = new URL(albMainUrl);
-      serverUrl = url.hostname;
-      console.log('✅ Using ALB endpoint for session configuration:', serverUrl);
-      console.log('Full ALB main URL:', albMainUrl);
-    } catch (error) {
-      console.warn('Invalid ALB URL, falling back to localhost:', albMainUrl, error);
-      serverUrl = "localhost";
-    }
-  } else {
-    // Check if we're in a production environment but don't have ALB endpoints
-    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    if (isProduction) {
-      // In production, try to use the current page's hostname as ALB domain
-      serverUrl = window.location.hostname;
-      console.log('⚠️ No ALB endpoints in session data, using page hostname:', serverUrl);
-    } else {
-      // Fallback to localhost for development
-      serverUrl = "localhost";
-      console.log('Using localhost for session configuration (development mode)');
-    }
+  if (!albMainUrl) {
+    return null;
+  }
+
+  try {
+    const url = new URL(albMainUrl);
+    serverUrl = url.hostname;
+    console.log('✅ Using ALB endpoint for session configuration:', serverUrl);
+    console.log('Full ALB main URL:', albMainUrl);
+  } catch (error) {
+    console.warn('Invalid ALB URL:', albMainUrl, error);
+    return null;
   }
 
   const editorConfig: AppConfig = {
@@ -398,16 +339,50 @@ const SessionAwareEditorApp: React.FC<SessionAwareEditorAppProps> = ({
   return (
     <SessionProvider initialSession={session} initialChallenge={challenge}>
       <ConfigProvider config={editorConfig}>
-        <SessionAwareProviders session={session}>
-          <EditorProvider>
-            <BuildProvider>
-              <EditorAppContent />
-            </BuildProvider>
-          </EditorProvider>
-        </SessionAwareProviders>
+        <NT4Provider>
+          <HalSimProvider>
+            <EditorProvider>
+              <BuildProvider>
+                <ChallengeEditorContent
+                  breadcrumbs={breadcrumbs}
+                />
+              </BuildProvider>
+            </EditorProvider>
+          </HalSimProvider>
+        </NT4Provider>
       </ConfigProvider>
     </SessionProvider>
   );
 };
+
+// Challenge editor content component that uses EditorContentWithoutHeader
+interface ChallengeEditorContentProps {
+  breadcrumbs: BreadcrumbItem[];
+}
+
+function ChallengeEditorContent({ breadcrumbs }: ChallengeEditorContentProps) {
+  const { openFile } = useEditor();
+
+  const handleFileOpen = useCallback(
+    async (filePath: string) => {
+      // Convert file path to URI
+      const uri = vscode.Uri.file(`${eclipseJdtLsConfig.basePath}/${filePath}`);
+      await openFile(uri);
+    },
+    [openFile]
+  );
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <EditorHeader
+        breadcrumbs={breadcrumbs}
+        projectName="RobotProject"
+      />
+      <Box sx={{ flex: 1, overflow: "hidden" }}>
+        <EditorBody onFileOpen={handleFileOpen} />
+      </Box>
+    </Box>
+  );
+}
 
 export default ChallengeEditorPage;

@@ -3,12 +3,7 @@ import {
   ThemeProvider,
   createTheme,
   CssBaseline,
-  AppBar,
-  Toolbar,
-  Typography,
   Box,
-  Button,
-  Chip,
 } from "@mui/material";
 import { EditorProvider } from "./contexts/EditorContext";
 import { BuildProvider } from "./contexts/BuildContext";
@@ -19,12 +14,9 @@ import { setFileServiceConfig } from "./fileService";
 import { useCallback } from "react";
 import { useEditor } from "./contexts/EditorContext";
 import * as vscode from "vscode";
-import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
-import { FileBrowser } from "./components/FileBrowser.tsx";
-import { SimulationView } from "./components/SimulationView.tsx";
-import { ResizableSplitter } from "./components/ResizableSplitter.tsx";
-import { BuildControls } from "./components/BuildControls.tsx";
+import { EditorHeader, BreadcrumbItem } from "./components/EditorHeader";
 import { eclipseJdtLsConfig } from "./config.js";
+import { EditorBody } from "./EditorApp.tsx";
 
 const theme = createTheme({
   palette: {
@@ -40,25 +32,24 @@ const theme = createTheme({
 
 // Fixed configuration for localhost Docker container
 const DOCKER_HOST = "localhost";
-const DOCKER_PORT = 30003;
 const TEST_SESSION_ID = "test-session-123";
 
 export function TestApp() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <TestEditorWrapper onClose={() => {}} />
+      <TestEditorWrapper />
     </ThemeProvider>
   );
 }
 
 // Custom EditorAppContent for test page that includes close button in header
 interface TestEditorAppContentProps {
-  onClose: () => void;
+  breadcrumbs: BreadcrumbItem[];
 }
 
 const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({
-  onClose,
+  breadcrumbs,
 }) => {
   const { openFile } = useEditor();
 
@@ -73,95 +64,20 @@ const TestEditorAppContent: React.FC<TestEditorAppContentProps> = ({
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <AppBar position="static" elevation={1} sx={{ minHeight: 48 }}>
-        <Toolbar variant="dense" sx={{ minHeight: 48, py: 0.5 }}>
-          <Typography
-            variant="subtitle1"
-            component="div"
-            sx={{ fontWeight: 600, mr: 2 }}
-          >
-            FRC Challenge Editor
-          </Typography>
-
-          {/* Connection status indicators */}
-          <Chip
-            label={`${DOCKER_HOST}:${DOCKER_PORT}`}
-            size="small"
-            variant="outlined"
-            sx={{ mr: 1, height: 24, fontSize: "0.75rem" }}
-          />
-
-          {/* Spacer to push everything to the right */}
-          <Box sx={{ flexGrow: 1 }} />
-
-          <Box sx={{ ml: 1 }}>
-            <BuildControls
-              projectName="RobotProject" // TODO: Get from current project
-            />
-          </Box>
-
-          {/* Close button */}
-          <Button
-            color="inherit"
-            onClick={onClose}
-            size="small"
-            sx={{ ml: 2, minWidth: "auto", px: 1 }}
-          >
-            Close
-          </Button>
-        </Toolbar>
-      </AppBar>
-
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <Box sx={{ width: 250, borderRight: 1, borderColor: "divider" }}>
-          <FileBrowser onFileOpen={handleFileOpen} onClose={() => {}} />
-        </Box>
-
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            overflow: "hidden",
-          }}
-        >
-          <ResizableSplitter
-            direction="horizontal"
-            initialSizes={[70, 30]} // 70% for editor, 30% for simulation
-            minSizes={[400, 300]} // Minimum widths in pixels
-          >
-            {/* Editor area */}
-            <Box
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                overflow: "hidden",
-              }}
-            >
-              <WPILibEditorWrapper
-                config={{
-                  serverUrl: DOCKER_HOST,
-                  sessionId: TEST_SESSION_ID,
-                  port: 30006,
-                }}
-              />
-            </Box>
-
-            {/* Simulation view */}
-            <SimulationView />
-          </ResizableSplitter>
-        </Box>
+      {/* Header with build controls inside BuildProvider context */}
+      <EditorHeader
+        breadcrumbs={breadcrumbs}
+        projectName="RobotProject"
+      />
+      <Box sx={{ flex: 1, overflow: "hidden" }}>
+        <EditorBody onFileOpen={handleFileOpen} />
       </Box>
     </Box>
   );
 };
 
-// Wrapper component that provides the editor with the test configuration
-interface TestEditorWrapperProps {
-  onClose: () => void;
-}
 
-const TestEditorWrapper: React.FC<TestEditorWrapperProps> = ({ onClose }) => {
+const TestEditorWrapper: React.FC = () => {
   // Create test configuration
   const testConfig: AppConfig = {
     serverUrl: DOCKER_HOST,
@@ -180,6 +96,11 @@ const TestEditorWrapper: React.FC<TestEditorWrapperProps> = ({ onClose }) => {
     return null;
   }
 
+  // Create breadcrumbs for test editor
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: "FRC Challenge Editor" }
+  ];
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
       <ConfigProvider config={testConfig}>
@@ -187,7 +108,9 @@ const TestEditorWrapper: React.FC<TestEditorWrapperProps> = ({ onClose }) => {
           <HalSimProvider>
             <EditorProvider>
               <BuildProvider>
-                <TestEditorAppContent onClose={onClose} />
+                <TestEditorAppContent
+                  breadcrumbs={breadcrumbs}
+                />
               </BuildProvider>
             </EditorProvider>
           </HalSimProvider>
