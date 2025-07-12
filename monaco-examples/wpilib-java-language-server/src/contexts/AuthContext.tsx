@@ -70,6 +70,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   }
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!user) {
+        checkAuthState();
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   // Sign in function
   const handleSignIn = async () => {
     try {
@@ -94,8 +103,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Listen for authentication events
   useEffect(() => {
-    // Only check auth state on mount
-    checkAuthState();
     // Listen for auth state changes
     const unsubscribe = Hub.listen('auth', ({ payload }) => {
       const { event } = payload;
