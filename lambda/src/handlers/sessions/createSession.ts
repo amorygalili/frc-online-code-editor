@@ -185,13 +185,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // Get user from JWT token
     const user = getUserFromEvent(event);
     if (!user) {
-      return createResponse(401, { error: 'Unauthorized' });
+      return createResponse(401, { error: 'Unauthorized' }, event);
     }
 
     // Parse request body
     const body = parseJSONBody<CreateSessionRequest>(event.body);
     if (!body || !body.challengeId) {
-      return createResponse(400, { error: 'challengeId is required' });
+      return createResponse(400, { error: 'challengeId is required' }, event);
     }
 
     const { challengeId, resourceProfile = 'basic' } = body;
@@ -209,7 +209,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           currentChallenge: userContainer.currentChallengeId,
           sessionId: userContainer.sessionId,
           action: 'exit_current_challenge_required'
-        });
+        }, event);
       }
 
       if (userContainer.currentChallengeId === challengeId) {
@@ -220,7 +220,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           challengeId,
           status: userContainer.status,
           containerEndpoint: userContainer.containerEndpoint
-        });
+        }, event);
       }
 
       // Container exists but no current challenge - load the new challenge
@@ -232,7 +232,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         challengeId,
         status: 'loading_challenge',
         containerEndpoint: userContainer.containerEndpoint
-      });
+      }, event);
     }
 
     // Generate session ID
@@ -285,14 +285,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       resourceProfile,
       endpoints: albIntegration.endpoints,
       estimatedStartupTime: '3-5 minutes (includes container startup, ALB registration, and session initialization)'
-    });
+    }, event);
 
   } catch (error) {
     console.error('Error creating session:', error);
     return createResponse(500, {
       error: 'Failed to create session',
       details: config.isDevelopment ? (error as Error).message : undefined
-    });
+    }, event);
   }
 };
 

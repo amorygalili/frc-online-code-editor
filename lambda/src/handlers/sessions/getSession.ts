@@ -16,23 +16,23 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // Get user from JWT token
     const user = getUserFromEvent(event);
     if (!user) {
-      return createResponse(401, { error: 'Unauthorized' });
+      return createResponse(401, { error: 'Unauthorized' }, event);
     }
 
     const sessionId = event.pathParameters?.sessionId;
     if (!sessionId) {
-      return createResponse(400, { error: 'Session ID is required' });
+      return createResponse(400, { error: 'Session ID is required' }, event);
     }
 
     // Get session from DynamoDB
     const session = await getSessionFromDB(sessionId);
     if (!session) {
-      return createResponse(404, { error: 'Session not found' });
+      return createResponse(404, { error: 'Session not found' }, event);
     }
 
     // Verify user owns this session
     if (session.userId !== user.sub) {
-      return createResponse(403, { error: 'Access denied' });
+      return createResponse(403, { error: 'Access denied' }, event);
     }
 
     // Get current task status from ECS
@@ -85,14 +85,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       healthStatus: taskStatus === 'running' ? 'healthy' : 'unknown'
     };
 
-    return createResponse(200, response);
+    return createResponse(200, response, event);
 
   } catch (error) {
     console.error('Error getting session:', error);
-    return createResponse(500, { 
+    return createResponse(500, {
       error: 'Failed to get session',
       details: config.isDevelopment ? (error as Error).message : undefined
-    });
+    }, event);
   }
 };
 

@@ -14,7 +14,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // Get user from JWT token
     const user = getUserFromEvent(event);
     if (!user) {
-      return createResponse(401, { error: 'Unauthorized' });
+      return createResponse(401, { error: 'Unauthorized' }, event);
     }
 
     const userId = user.sub;
@@ -112,13 +112,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }
     };
 
-    return createResponse(200, response);
+    return createResponse(200, response, event);
 
   } catch (error) {
     console.error('Error listing sessions:', error);
-    return createResponse(500, { 
+    return createResponse(500, {
       error: 'Failed to list sessions',
       details: config.isDevelopment ? (error as Error).message : undefined
-    });
+    }, event);
   }
 };

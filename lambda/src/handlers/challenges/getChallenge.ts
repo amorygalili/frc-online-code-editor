@@ -15,7 +15,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         statusCode: 401,
         message: 'User not authenticated',
         code: 'UNAUTHORIZED',
-      });
+      }, event);
     }
 
     // Extract challenge ID from path parameters
@@ -25,7 +25,7 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
         statusCode: 400,
         message: 'Challenge ID is required',
         code: 'VALIDATION_ERROR',
-      });
+      }, event);
     }
 
     console.log(`Getting challenge ${challengeId} for user ${userId}`);
@@ -34,12 +34,12 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const challenge = await getItem<Challenge>(TABLES.CHALLENGES, { id: challengeId });
     
     if (!challenge) {
-      return notFoundResponse('Challenge');
+      return notFoundResponse('Challenge', event);
     }
 
     // Check if challenge is published
     if (!challenge.isPublished) {
-      return notFoundResponse('Challenge');
+      return notFoundResponse('Challenge', event);
     }
 
     // Get user progress for this challenge
@@ -74,11 +74,11 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     console.log(`Returning challenge ${challengeId} with progress:`, challengeWithProgress.userProgress?.status);
     
-    return successResponse(challengeWithProgress);
+    return successResponse(challengeWithProgress, 200,event);
 
   } catch (error) {
     console.error('getChallenge error:', error);
-    return internalErrorResponse('Failed to get challenge', error);
+    return internalErrorResponse('Failed to get challenge', error, event);
   }
 }
 

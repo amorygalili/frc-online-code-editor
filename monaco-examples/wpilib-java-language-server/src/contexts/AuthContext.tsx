@@ -17,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  clearAuthState: () => Promise<void>;
   isConfigured: boolean;
 }
 
@@ -128,6 +129,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [configured]);
 
+  // Clear authentication state function
+  const clearAuthState = useCallback(async () => {
+    console.log('Clearing authentication state...');
+
+    try {
+      // Clear user state
+      setUser(null);
+
+      // Clear any stored authentication data
+      localStorage.removeItem('amplify-signin-with-hostedUI');
+      localStorage.removeItem('amplify-redirected-from-hosted-ui');
+      sessionStorage.removeItem('amplify-signin-with-hostedUI');
+      sessionStorage.removeItem('amplify-redirected-from-hosted-ui');
+
+      // Clear any Amplify auth tokens
+      const authKeys = Object.keys(localStorage).filter(key =>
+        key.startsWith('CognitoIdentityServiceProvider') ||
+        key.startsWith('amplify-') ||
+        key.includes('LastAuthUser') ||
+        key.includes('accessToken') ||
+        key.includes('idToken') ||
+        key.includes('refreshToken')
+      );
+
+      authKeys.forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+
+      console.log('Authentication state cleared successfully');
+    } catch (error) {
+      console.error('Error clearing auth state:', error);
+    }
+  }, []);
+
   // Sign in function
   const handleSignIn = useCallback(async () => {
     if (!configured) {
@@ -141,9 +177,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await signInWithRedirect({ provider: 'Google' });
     } catch (error) {
       console.error('Sign in error:', error);
+
+      // Handle "already signed in" error by clearing state and retrying
+      if (error instanceof Error && error.message.includes('already signed in')) {
+        console.log('Detected "already signed in" error, clearing auth state and retrying...');
+        await clearAuthState();
+
+        // Wait a moment for state to clear, then retry
+        setTimeout(async () => {
+          try {
+            await signInWithRedirect({ provider: 'Google' });
+          } catch (retryError) {
+            console.error('Retry sign in error:', retryError);
+            throw retryError;
+          }
+        }, 500);
+        return;
+      }
+
       throw error;
     }
-  }, [configured]);
+  }, [configured, clearAuthState]);
 
   // Sign out function
   const handleSignOut = useCallback(async () => {
@@ -241,6 +295,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
     signIn: handleSignIn,
     signOut: handleSignOut,
+    clearAuthState,
     isConfigured: configured,
   };
 
