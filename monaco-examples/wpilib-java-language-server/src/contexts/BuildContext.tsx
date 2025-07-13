@@ -71,10 +71,6 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     }
 
     try {
-      // Determine if we should use secure WebSocket based on current page protocol
-      const isSecure = window.location.protocol === 'https:';
-      const wsProtocol = isSecure ? 'wss' : 'ws';
-
       // Check if serverUrl looks like an ALB domain (contains amazonaws.com or is not localhost)
       const isALBEndpoint = config.serverUrl.includes('amazonaws.com') ||
                            config.serverUrl.includes('elb.amazonaws.com') ||
@@ -83,14 +79,13 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
       let wsUrl: string;
       if (isALBEndpoint) {
         // For ALB endpoints, don't include port - ALB handles routing
-        wsUrl = `${wsProtocol}://${config.serverUrl}/session/${config.sessionId}/main/build`;
+        wsUrl = `ws://${config.serverUrl}/session/${config.sessionId}/main/build`;
       } else {
         // For localhost/development, use the specific port
-        wsUrl = `${wsProtocol}://${config.serverUrl}:30003/session/${config.sessionId}/main/build`;
+        wsUrl = `ws://${config.serverUrl}:30003/session/${config.sessionId}/main/build`;
       }
 
       console.log('Creating new WebSocket connection to:', wsUrl);
-      console.log('- Protocol:', wsProtocol, '(secure:', isSecure, ')');
       console.log('- ALB endpoint:', isALBEndpoint);
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

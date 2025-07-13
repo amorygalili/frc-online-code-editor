@@ -412,7 +412,7 @@ REPOSITORY_URI=${repositoryUri}
 async function buildContainer() {
   log('🚀 Building and pushing container image...');
 
-  const dockerContext = 'docker';
+  const dockerContext = 'ecr';
   const dockerfile = 'Dockerfile';
   const imageTag = 'latest';
 
