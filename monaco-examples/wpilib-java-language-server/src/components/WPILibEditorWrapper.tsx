@@ -79,6 +79,10 @@ async function initEditor(
     // Build WebSocket URL based on configuration
     const { serverUrl, sessionId, port } = config;
 
+    // Determine if we should use secure WebSocket based on current page protocol
+    const isSecure = window.location.protocol === 'https:';
+    const wsProtocol = isSecure ? 'wss' : 'ws';
+
     // Check if serverUrl looks like an ALB domain
     const isALBEndpoint = serverUrl.includes('amazonaws.com') ||
                          serverUrl.includes('elb.amazonaws.com') ||
@@ -87,13 +91,14 @@ async function initEditor(
     let wsUrl: string;
     if (isALBEndpoint) {
       // For ALB endpoints, don't include port - ALB handles routing
-      wsUrl = `ws://${serverUrl}/session/${sessionId}/jdtls`;
+      wsUrl = `${wsProtocol}://${serverUrl}/session/${sessionId}/jdtls`;
     } else {
       // For localhost/development, use the specific port
-      wsUrl = `ws://${serverUrl}:${port}/session/${sessionId}/jdtls`;
+      wsUrl = `${wsProtocol}://${serverUrl}:${port}/session/${sessionId}/jdtls`;
     }
 
     console.log('Java Language Server WebSocket URL:', wsUrl);
+    console.log('- Protocol:', wsProtocol, '(secure:', isSecure, ')');
     console.log('- ALB endpoint:', isALBEndpoint);
 
     const wrapperConfig: WrapperConfig = {
