@@ -41,6 +41,12 @@ export const config = {
     sslCertificateArn: process.env.SSL_CERTIFICATE_ARN || '',
   },
 
+  // CloudFront Configuration
+  cloudfront: {
+    domainName: process.env.CLOUDFRONT_DOMAIN_NAME || '',
+    enabled: process.env.USE_CLOUDFRONT === 'true',
+  },
+
   // Development flags
   isDevelopment: process.env.NODE_ENV !== 'production',
   isLocal: process.env.IS_OFFLINE === 'true',

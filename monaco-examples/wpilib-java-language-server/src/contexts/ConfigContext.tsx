@@ -45,12 +45,12 @@ export function ConfigProvider({ children, config }: ConfigProviderProps) {
 // Helper function to build session-aware URLs
 export function buildSessionUrl(config: AppConfig, endpoint: string, port: number): string {
   // Determine if we should use HTTPS based on current page protocol
-  const isSecure = window.location.protocol === 'https:';
-  const protocol = isSecure ? 'https' : 'http';
+  const protocol = 'https';
 
-  // Check if serverUrl looks like an ALB domain
+  // Check if serverUrl looks like an ALB or CloudFront domain
   const isALBEndpoint = config.serverUrl.includes('amazonaws.com') ||
                        config.serverUrl.includes('elb.amazonaws.com') ||
+                       config.serverUrl.includes('cloudfront.net') ||
                        (!config.serverUrl.includes('localhost') && !config.serverUrl.includes('127.0.0.1'));
 
   let baseUrl: string;

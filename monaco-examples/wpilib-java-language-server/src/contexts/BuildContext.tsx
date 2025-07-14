@@ -73,11 +73,12 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     try {
       // Determine if we should use secure WebSocket based on current page protocol
       const isSecure = window.location.protocol === 'https:';
-      const wsProtocol = isSecure ? 'wss' : 'ws';
+      const wsProtocol = 'wss';
 
-      // Check if serverUrl looks like an ALB domain (contains amazonaws.com or is not localhost)
+      // Check if serverUrl looks like an ALB or CloudFront domain (contains amazonaws.com or is not localhost)
       const isALBEndpoint = config.serverUrl.includes('amazonaws.com') ||
                            config.serverUrl.includes('elb.amazonaws.com') ||
+                           config.serverUrl.includes('cloudfront.net') ||
                            (!config.serverUrl.includes('localhost') && !config.serverUrl.includes('127.0.0.1'));
 
       let wsUrl: string;

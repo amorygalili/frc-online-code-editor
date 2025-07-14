@@ -81,11 +81,12 @@ async function initEditor(
 
     // Determine if we should use secure WebSocket based on current page protocol
     const isSecure = window.location.protocol === 'https:';
-    const wsProtocol = isSecure ? 'wss' : 'ws';
+    const wsProtocol = 'wss';
 
-    // Check if serverUrl looks like an ALB domain
+    // Check if serverUrl looks like an ALB or CloudFront domain
     const isALBEndpoint = serverUrl.includes('amazonaws.com') ||
                          serverUrl.includes('elb.amazonaws.com') ||
+                         serverUrl.includes('cloudfront.net') ||
                          (!serverUrl.includes('localhost') && !serverUrl.includes('127.0.0.1'));
 
     let wsUrl: string;

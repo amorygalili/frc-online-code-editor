@@ -111,9 +111,10 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
       let clientUri = `/session/${sessionId}/halsim`;
       console.log(`HAL Sim using session routing: ${clientUri}`);
 
-      // Check if this is an ALB endpoint
+      // Check if this is an ALB or CloudFront endpoint
       const isALBEndpoint = serverUrl.includes('amazonaws.com') ||
                            serverUrl.includes('elb.amazonaws.com') ||
+                           serverUrl.includes('cloudfront.net') ||
                            (!serverUrl.includes('localhost') && !serverUrl.includes('127.0.0.1'));
 
       let client: WPILibWebSocketClient;
@@ -127,6 +128,7 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
           hostname: serverUrl,
           uri: clientUri,
           noPort: true,
+          wss: true,
         });
         console.log(`HAL Sim WebSocket client created for ALB: ws://${serverUrl}${clientUri}`);
       } else {

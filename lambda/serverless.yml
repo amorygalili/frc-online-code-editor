@@ -31,6 +31,10 @@ provider:
     ALB_TARGET_GROUP_ARN: ${env:ALB_TARGET_GROUP_ARN}
     ALB_DNS_NAME: ${env:ALB_DNS_NAME}
     VPC_ID: ${env:VPC_ID}
+
+    # CloudFront Configuration
+    CLOUDFRONT_DOMAIN_NAME: ${env:CLOUDFRONT_DOMAIN_NAME, ''}
+    USE_CLOUDFRONT: ${env:USE_CLOUDFRONT, 'false'}
     
   # IAM permissions
   iam:

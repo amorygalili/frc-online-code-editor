@@ -672,14 +672,18 @@ async function setupALBIntegration(sessionId: string): Promise<{
     console.log(`Created JDTLS listener rule: ${jdtlsRuleArn}`);
 
     // Step 3: Generate the public endpoint URLs
-    // Use HTTPS if SSL certificate is configured, otherwise HTTP
-    const protocol = config.alb.sslCertificateArn ? 'https' : 'http';
+    // Use CloudFront if enabled, otherwise use ALB directly
+    const protocol = config.cloudfront.enabled ? 'https' : (config.alb.sslCertificateArn ? 'https' : 'http');
+    const domainName = config.cloudfront.enabled ? config.cloudfront.domainName : config.alb.dnsName;
+
+    console.log(`Using ${config.cloudfront.enabled ? 'CloudFront' : 'ALB'} endpoints with domain: ${domainName}`);
+
     const endpoints = {
-      main: `${protocol}://${config.alb.dnsName}/session/${sessionId}/`,
-      nt4: `${protocol}://${config.alb.dnsName}/session/${sessionId}/nt/`,
-      halsim: `${protocol}://${config.alb.dnsName}/session/${sessionId}/halsim/`,
-      jdtls: `${protocol}://${config.alb.dnsName}/session/${sessionId}/jdtls/`,
-      health: `${protocol}://${config.alb.dnsName}/session/${sessionId}/main/health`
+      main: `${protocol}://${domainName}/session/${sessionId}/`,
+      nt4: `${protocol}://${domainName}/session/${sessionId}/nt/`,
+      halsim: `${protocol}://${domainName}/session/${sessionId}/halsim/`,
+      jdtls: `${protocol}://${domainName}/session/${sessionId}/jdtls/`,
+      health: `${protocol}://${domainName}/session/${sessionId}/main/health`
     };
 
     return {

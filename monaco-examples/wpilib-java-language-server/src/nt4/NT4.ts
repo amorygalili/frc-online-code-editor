@@ -179,14 +179,15 @@ export class NT4_Client {
       // For ALB routing, construct the health check URL with session path
       let healthCheckUrl: string;
       if (this.sessionId) {
-        // Check if this is an ALB endpoint
+        // Check if this is an ALB or CloudFront endpoint
         const isALBEndpoint = this.serverBaseAddr.includes('amazonaws.com') ||
                              this.serverBaseAddr.includes('elb.amazonaws.com') ||
+                             this.serverBaseAddr.includes('cloudfront.net') ||
                              (!this.serverBaseAddr.includes('localhost') && !this.serverBaseAddr.includes('127.0.0.1'));
 
         if (isALBEndpoint) {
           // ALB routing: don't include port, ALB handles routing
-          const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+          const protocol = 'https';
           healthCheckUrl = `${protocol}://${this.serverBaseAddr}/session/${this.sessionId}/nt/health`;
         } else {
           // Localhost/development: use proxy port
@@ -745,12 +746,12 @@ export class NT4_Client {
 
   private ws_connect(rttWs = false) {
     // Determine if we should use secure WebSocket based on current page protocol
-    const isSecure = window.location.protocol === 'https:';
-    const wsProtocol = isSecure ? 'wss' : 'ws';
+    const wsProtocol = 'wss';
 
-    // Check if serverBaseAddr looks like an ALB domain
+    // Check if serverBaseAddr looks like an ALB or CloudFront domain
     const isALBEndpoint = this.serverBaseAddr.includes('amazonaws.com') ||
                          this.serverBaseAddr.includes('elb.amazonaws.com') ||
+                         this.serverBaseAddr.includes('cloudfront.net') ||
                          (!this.serverBaseAddr.includes('localhost') && !this.serverBaseAddr.includes('127.0.0.1'));
 
     // Construct WebSocket URL based on whether we're using ALB routing or direct connection
