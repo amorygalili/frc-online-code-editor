@@ -28,8 +28,20 @@ interface WPILibEditorConfig {
   port: number;
 }
 import { eclipseJdtLsConfig } from "../config.js";
-import { loadWorkspaceFiles } from "../fileService";
+import { loadWorkspaceFiles, FileService } from "../fileService";
 import type { IStoredWorkspace } from "@codingame/monaco-vscode-configuration-service-override";
+
+// Simple debounce utility
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: number;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
 
 
 export const defaultViewsInit = async () => {
@@ -137,6 +149,56 @@ function setupEditorFocusAndKeyHandling(container: HTMLDivElement) {
     container.removeEventListener('focus', handleContainerFocus);
     container.removeEventListener('keydown', handleKeyDown, true);
   };
+}
+
+/**
+ * Set up automatic file saving to keep the backend file system in sync with editor changes
+ */
+function setupAutoSave() {
+  // Debounced save function to avoid excessive API calls
+  const debouncedSave = debounce(async (uri: string, content: string) => {
+    try {
+      // Extract the relative file path from the URI
+      const basePath = eclipseJdtLsConfig.basePath;
+      let filePath = uri;
+
+      // Remove the base path prefix if present
+      if (filePath.startsWith(basePath)) {
+        filePath = filePath.substring(basePath.length);
+      }
+
+      // Remove leading slash if present
+      if (filePath.startsWith('/')) {
+        filePath = filePath.substring(1);
+      }
+
+      console.log(`Auto-saving file: ${filePath}`);
+      await FileService.saveFileContent(filePath, content);
+      console.log(`Successfully saved: ${filePath}`);
+    } catch (error) {
+      console.error(`Failed to auto-save file ${uri}:`, error);
+    }
+  }, 1000); // Save after 1 second of inactivity
+
+  // Listen for document changes in the workspace
+  const disposable = vscode.workspace.onDidChangeTextDocument((event) => {
+    const document = event.document;
+
+    // Only save Java files to avoid unnecessary saves
+    if (document.languageId === 'java' && document.uri.scheme === 'file') {
+      const content = document.getText();
+      const uri = document.uri.path;
+
+      // Trigger debounced save
+      debouncedSave(uri, content);
+    }
+  });
+
+  // Store the disposable for cleanup (you might want to store this in a ref or context)
+  console.log('Auto-save setup complete');
+
+  // Return disposable for cleanup if needed
+  return disposable;
 }
 
 async function initEditor(
@@ -256,10 +318,16 @@ async function initEditor(
     await wrapper.init(wrapperConfig);
     await wrapper.start();
 
+    // Set up automatic file saving to keep backend in sync with editor changes
+    // const disposable = setupAutoSave(wrapper);
+    setupAutoSave();
+
     // Focus the editor initially
     setTimeout(() => {
       Promise.resolve(vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup')).catch(console.error);
     }, 100);
+
+    // return disposable;
 
   } catch (error) {
     console.error("Failed to initialize editor:", error);
@@ -269,6 +337,7 @@ async function initEditor(
 export const WPILibEditorWrapper = memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
+  const autoSaveDisposable = useRef<vscode.Disposable | null>(null);
   const { editorWrapper: wrapper } = useEditor();
   const { config: appConfig } = useConfig();
 
@@ -285,6 +354,8 @@ export const WPILibEditorWrapper = memo(() => {
       isInitialized.current = true;
       try {
         await initEditor(containerRef.current, wrapper, config);
+        // const disposable = await initEditor(containerRef.current, wrapper, config);
+        // autoSaveDisposable.current = disposable || null;
       } catch (error) {
         console.error("Failed to initialize editor:", error);
       }
@@ -301,6 +372,12 @@ export const WPILibEditorWrapper = memo(() => {
     // Cleanup function
     return () => {
       cleanupFocusHandling();
+
+      // // Clean up auto-save listener
+      // if (autoSaveDisposable.current) {
+      //   autoSaveDisposable.current.dispose();
+      //   autoSaveDisposable.current = null;
+      // }
 
       // Clean up file navigation listeners
       const disposables = (wrapper as any)._fileNavigationDisposables;
