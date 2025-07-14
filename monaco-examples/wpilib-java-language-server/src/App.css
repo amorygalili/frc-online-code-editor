@@ -10,13 +10,49 @@
   min-height: 400px;
 }
 
+/* Ensure Monaco Editor receives focus properly */
+.monaco-editor-container:focus-within {
+  outline: none;
+}
+
+.monaco-editor-container .monaco-editor {
+  outline: none;
+}
+
+/* Ensure proper key event handling */
+.monaco-editor-container .monaco-editor .view-lines {
+  outline: none;
+}
+
+/* Make sure the input area can receive focus and handle keys */
+.monaco-editor-container .monaco-editor .inputarea {
+  outline: none !important;
+  border: none !important;
+}
+
+/* Ensure the editor content area handles events properly */
+.monaco-editor-container .monaco-editor .monaco-editor-background {
+  outline: none;
+}
+
+.monaco-editor-container .monaco-editor .decorationsOverviewRuler {
+  outline: none;
+}
 
 .monaco-workbench-part {
   display: none;
 }
 
-
 #wpilib-code-editor {
   position: relative;
   height: 100%;
+}
+
+/* Improve focus management for the workbench */
+#wpilib-code-editor .monaco-workbench {
+  outline: none;
+}
+
+#wpilib-code-editor .monaco-editor .inputarea {
+  outline: none;
 }

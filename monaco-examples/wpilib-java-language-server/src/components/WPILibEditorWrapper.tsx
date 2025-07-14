@@ -56,6 +56,89 @@ const createDefaultWorkspaceContent = (workspacePath: string) => {
   );
 };
 
+// Focus management and key event handling by finding Monaco Editor in DOM
+function setupEditorFocusAndKeyHandling(container: HTMLDivElement) {
+  // Ensure the editor container can receive focus
+  container.setAttribute('tabindex', '0');
+
+  // Handle focus events to ensure proper editor focus
+  const handleContainerFocus = (e: FocusEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const editorElement = container.querySelector('.monaco-editor .inputarea') as HTMLElement;
+    if (editorElement && editorElement.focus) {
+      editorElement.focus();
+    }
+  }
+
+
+  // Handle key events by finding the Monaco editor and executing commands
+  const handleKeyDown = (e: KeyboardEvent) => {
+    console.log('Key event:', e.key, 'Ctrl:', e.ctrlKey, 'Shift:', e.shiftKey);
+
+    // Handle Tab key - prevent default browser tab behavior
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      e.stopPropagation();
+
+      
+      if (e.shiftKey) {
+        Promise.resolve(vscode.commands.executeCommand('editor.action.outdentLines')).catch(console.error);
+      } else {
+        Promise.resolve(vscode.commands.executeCommand('editor.action.indentLines')).catch(console.error);
+      }
+      
+      return;
+    }
+
+    // Handle Ctrl+Z (Undo) and Ctrl+Y (Redo)
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        Promise.resolve(vscode.commands.executeCommand('undo')).catch(console.error);
+        return;
+      }
+
+      if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        Promise.resolve(vscode.commands.executeCommand('redo')).catch(console.error);
+        return;
+      }
+    }
+
+    // Handle Delete and Backspace for selected text
+    if (e.key === 'Delete') {
+      e.preventDefault();
+      e.stopPropagation();
+
+      Promise.resolve(vscode.commands.executeCommand('deleteRight')).catch(console.error);
+      return;
+    }
+
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      e.stopPropagation();
+      Promise.resolve(vscode.commands.executeCommand('deleteLeft')).catch(console.error);
+      return;
+    }
+  };
+
+  // Add event listeners
+  container.addEventListener('focus', handleContainerFocus);
+  container.addEventListener('keydown', handleKeyDown, true); // Use capture phase
+
+  // Return cleanup function
+  return () => {
+    container.removeEventListener('focus', handleContainerFocus);
+    container.removeEventListener('keydown', handleKeyDown, true);
+  };
+}
+
 async function initEditor(
   container: HTMLDivElement,
   wrapper: MonacoEditorLanguageClientWrapper,
@@ -133,6 +216,15 @@ async function initEditor(
             "editor.guides.bracketPairsHorizontal": "active",
             "editor.wordBasedSuggestions": "off",
             "editor.experimental.asyncTokenization": true,
+            "editor.tabFocusMode": false,
+            "editor.insertSpaces": true,
+            "editor.tabSize": 2,
+            "editor.detectIndentation": true,
+            "editor.useTabStops": true,
+            "editor.multiCursorModifier": "ctrlCmd",
+            "editor.selectionHighlight": true,
+            "editor.find.autoFindInSelection": "never",
+            "editor.find.seedSearchStringFromSelection": "always",
           }),
         },
       },
@@ -163,6 +255,12 @@ async function initEditor(
 
     await wrapper.init(wrapperConfig);
     await wrapper.start();
+
+    // Focus the editor initially
+    setTimeout(() => {
+      Promise.resolve(vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup')).catch(console.error);
+    }, 100);
+
   } catch (error) {
     console.error("Failed to initialize editor:", error);
   }
@@ -192,10 +290,18 @@ export const WPILibEditorWrapper = memo(() => {
       }
     };
 
-    initializeEditor();
+    let cleanupFocusHandling = () => {};
+
+    initializeEditor().then(() => {
+       if (containerRef.current) {
+         cleanupFocusHandling = setupEditorFocusAndKeyHandling(containerRef.current);
+       }
+    });
 
     // Cleanup function
     return () => {
+      cleanupFocusHandling();
+
       // Clean up file navigation listeners
       const disposables = (wrapper as any)._fileNavigationDisposables;
       if (disposables && Array.isArray(disposables)) {
@@ -213,18 +319,20 @@ export const WPILibEditorWrapper = memo(() => {
       // The wrapper should only be disposed when the entire app is unmounting
       // wrapper.dispose().catch(console.error);
     };
-  }, [appConfig.serverUrl, appConfig.sessionId]);
+  }, []);
 
   return (
     <div
       ref={containerRef}
       className="monaco-editor-container"
+      tabIndex={0}
       style={{
         width: "100%",
         height: "100%",
         minHeight: "400px",
         maxHeight: "100%",
         overflow: "hidden",
+        outline: "none", // Remove focus outline since Monaco handles its own focus styling
       }}
     />
   );
