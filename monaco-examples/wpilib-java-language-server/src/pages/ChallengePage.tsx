@@ -234,7 +234,7 @@ const ChallengePage: React.FC = () => {
                 },
               }}
             >
-              {challenge.instructions.split('\n').map((line, index) => {
+              {challenge.metadata.files.instructions.split('\n').map((line, index) => {
                 if (line.startsWith('# ')) {
                   return (
                     <Typography key={index} variant="h4" component="h2" sx={{ mt: 2, mb: 1 }}>
@@ -281,41 +281,6 @@ const ChallengePage: React.FC = () => {
 
         {/* Sidebar */}
         <Box sx={{ flex: 1 }}>
-          {/* Learning Objectives */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Learning Objectives
-            </Typography>
-            <Box component="ul" sx={{ pl: 2, m: 0 }}>
-              {challenge.learningObjectives.map((objective, index) => (
-                <Typography key={index} component="li" sx={{ mb: 1 }}>
-                  {objective}
-                </Typography>
-              ))}
-            </Box>
-          </Paper>
-
-          {/* Hints */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Hints
-            </Typography>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Stuck? Here are some hints to help you along!
-            </Alert>
-            <Box component="ul" sx={{ pl: 2, m: 0 }}>
-              {challenge.hints?.map((hint, index) => (
-                <Typography key={index} component="li" sx={{ mb: 1 }} color="text.secondary">
-                  {hint}
-                </Typography>
-              )) || (
-                <Typography color="text.secondary">
-                  No hints available for this challenge.
-                </Typography>
-              )}
-            </Box>
-          </Paper>
-
           {/* Challenge Stats */}
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>

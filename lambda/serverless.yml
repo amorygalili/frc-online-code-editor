@@ -355,8 +355,7 @@ resources:
             AttributeType: S
           - AttributeName: githubUrl
             AttributeType: S
-          - AttributeName: repositoryId
-            AttributeType: S
+
         KeySchema:
           - AttributeName: id
             KeyType: HASH
@@ -379,12 +378,7 @@ resources:
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
-          - IndexName: RepositoryIndex
-            KeySchema:
-              - AttributeName: repositoryId
-                KeyType: HASH
-            Projection:
-              ProjectionType: ALL
+
 
     UserProgressTable:
       Type: AWS::DynamoDB::Table

@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "repository": {
-    "name": "FRC Programming Fundamentals",
-    "description": "A collection of fundamental FRC programming challenges for beginners",
+    "name": "Example Challenges",
+    "description": "A collection of example challenges",
     "author": "FRC Team 1234",
     "license": "MIT",
     "website": "https://team1234.org",
@@ -10,20 +10,8 @@
   },
   "challenges": [
     {
-      "id": "hello-robot-world",
-      "path": "challenges/hello-robot-world",
-      "enabled": true,
-      "version": "1.0"
-    },
-    {
-      "id": "basic-motor-control",
-      "path": "challenges/basic-motor-control",
-      "enabled": true,
-      "version": "1.0"
-    },
-    {
-      "id": "sensor-reading",
-      "path": "challenges/sensor-reading",
+      "id": "some-example-challenge",
+      "path": "challenges/some-example",
       "enabled": true,
       "version": "1.0"
     }

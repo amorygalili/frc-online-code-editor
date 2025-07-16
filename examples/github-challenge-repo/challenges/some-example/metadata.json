@@ -1,0 +1,14 @@
+{
+  "id": "some-example-challenge",
+  "title": "Some example challenge",
+  "description": "This is just an example",
+  "difficulty": "Beginner",
+  "category": "Basics",
+  "estimatedTime": "15 min",
+  "version": "1.0",
+  "prerequisites": [],
+  "tags": ["basics", "robot-class", "simulation", "example"],
+  "files": {
+    "instructions": "instructions.md"
+  }
+}

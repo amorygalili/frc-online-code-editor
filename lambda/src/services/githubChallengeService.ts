@@ -190,11 +190,17 @@ export class GitHubChallengeService {
       throw new Error(`Failed to fetch directory ${path}: ${response.status}`);
     }
 
-    const items = await response.json();
+    const items = await response.json() as {
+      name: string;
+      path: string;
+      type: 'file' | 'dir';
+      download_url?: string;
+      sha: string;
+    }[];
     const files: GitHubFile[] = [];
 
     for (const item of items) {
-      if (item.type === 'file') {
+      if (item.type === 'file' && item.download_url) {
         // Fetch file content
         const contentResponse = await this.fetchWithAuth(item.download_url);
         if (contentResponse.ok) {
@@ -289,7 +295,11 @@ export class GitHubChallengeService {
       throw new Error(`Failed to fetch repository info: ${response.status}`);
     }
 
-    const repoData = await response.json();
+    const repoData = await response.json() as {
+      full_name: string;
+      description?: string;
+      default_branch?: string;
+    };
     return {
       name: repoData.full_name,
       description: repoData.description || '',

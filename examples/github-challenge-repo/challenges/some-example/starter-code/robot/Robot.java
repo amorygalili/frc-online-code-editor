@@ -44,7 +44,7 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousInit() {
     // TODO: Add autonomous initialization code here
-    System.out.println("Autonomous mode started!");
+    System.out.println("Autonomous mode started!!!!");
   }
 
   /** This function is called periodically during autonomous. */

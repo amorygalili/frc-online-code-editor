@@ -1,27 +1,28 @@
 // Lambda handler for importing challenges from GitHub repositories
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient, PutCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 
 import { GitHubChallengeService } from '../../services/githubChallengeService';
 import {
   ImportChallengeRepositoryRequest,
-  ImportChallengeRepositoryResponse
+  ImportChallengeRepositoryResponse,
+  Challenge
 } from '../../types/challenge';
 import { createResponse, errorResponse } from '../../utils/response';
-import { getUserFromEvent } from '../../utils/auth';
+import { getUserId } from '../../utils/auth';
 import { config } from '../../config';
 
-const dynamoClient = new DynamoDBClient({ region: config.region });
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     console.log('Import GitHub challenges request:', JSON.stringify(event, null, 2));
 
     // Get authenticated user
-    const userId = getUserFromEvent(event);
+    const userId = getUserId(event);
     if (!userId) {
       return errorResponse({
         statusCode: 401,
@@ -45,17 +46,6 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     const { githubUrl, branch = 'main', accessToken } = body;
 
-    // Check if repository is already imported
-    const existingRepo = await getExistingRepository(githubUrl, branch);
-    if (existingRepo) {
-      return errorResponse({
-        statusCode: 409,
-        message: 'Repository already imported',
-        code: 'ALREADY_EXISTS',
-        details: { repositoryId: existingRepo.id }
-      });
-    }
-
     // Initialize GitHub service
     const githubService = new GitHubChallengeService(accessToken);
 
@@ -72,31 +62,16 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     // Parse repository and challenges
     const parsedRepo = await githubService.parseRepository(githubUrl, branch);
-    
-    // Create repository record
+
+    // Generate repository ID for grouping challenges
     const repositoryId = uuidv4();
-    const now = new Date().toISOString();
-    
-    const repositoryEntity: ChallengeRepositoryEntity = {
-      id: repositoryId,
+
+    // Import individual challenges to unified challenges table
+    const challengeResults = await importChallenges(
+      repositoryId,
       githubUrl,
       branch,
-      repositoryMetadata: parsedRepo.metadata,
-      importStatus: 'imported',
-      lastImport: now,
-      importedBy: userId,
-      createdAt: now
-    };
-
-    // Save repository to database
-    await saveRepository(repositoryEntity);
-
-    // Import individual challenges
-    const challengeResults = await importChallenges(
-      repositoryId, 
-      githubUrl, 
-      branch, 
-      parsedRepo.challenges
+      parsedRepo.challenges,
     );
 
     // Prepare response
@@ -134,47 +109,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   }
 };
 
-async function getExistingRepository(githubUrl: string, branch: string): Promise<ChallengeRepositoryEntity | null> {
-  const command = new QueryCommand({
-    TableName: config.tables.challengeRepositories,
-    IndexName: 'GitHubUrlIndex', // Assuming we create this GSI
-    KeyConditionExpression: 'githubUrl = :url AND #branch = :branch',
-    ExpressionAttributeNames: {
-      '#branch': 'branch'
-    },
-    ExpressionAttributeValues: marshall({
-      ':url': githubUrl,
-      ':branch': branch
-    })
-  });
-
-  try {
-    const result = await dynamoClient.send(command);
-    if (result.Items && result.Items.length > 0) {
-      return unmarshall(result.Items[0]) as ChallengeRepositoryEntity;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error checking existing repository:', error);
-    return null;
-  }
-}
-
-async function saveRepository(repository: ChallengeRepositoryEntity): Promise<void> {
-  const command = new PutCommand({
-    TableName: config.tables.challengeRepositories,
-    Item: marshall(repository),
-    ConditionExpression: 'attribute_not_exists(id)'
-  });
-
-  await dynamoClient.send(command);
-}
+// Removed old repository functions - now using unified challenges table
 
 async function importChallenges(
   repositoryId: string,
   githubUrl: string,
   branch: string,
-  challenges: any[]
+  challenges: any[],
 ): Promise<{
   successful: { id: string; title: string }[];
   failed: { id: string; title?: string; error: string }[];
@@ -184,26 +125,42 @@ async function importChallenges(
 
   for (const challenge of challenges) {
     try {
-      const challengeEntity: GitHubChallengeEntity = {
+      const now = new Date().toISOString();
+      const challengeEntity: Challenge = {
         id: uuidv4(),
+        title: challenge.metadata.title || 'Untitled Challenge',
+        description: challenge.metadata.description || '',
+        difficulty: challenge.metadata.difficulty || 'Beginner',
+        category: challenge.metadata.category || 'General',
+        estimatedTime: challenge.metadata.estimatedTime || '30 min',
+        version: challenge.metadata.version || '1.0',
+        prerequisites: challenge.metadata.prerequisites || [],
+        tags: challenge.metadata.tags || [],
+        // Git repository fields
         githubUrl,
-        branch,
-        challengeId: challenge.metadata.id,
-        repositoryName: challenge.metadata.title,
-        lastSynced: new Date().toISOString(),
-        syncStatus: 'synced',
+        githubBranch: branch,
+        repositoryId,
+        challengePath: `challenges/${challenge.metadata.id}`, // Assuming standard path structure
+        // Metadata from the challenge
         metadata: challenge.metadata,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        // Sync information
+        lastSynced: now,
+        syncStatus: 'synced',
+        // Standard fields
+        isPublished: true,
+        createdAt: now,
+        updatedAt: now
       };
 
+      console.log('Importing challenge entity:', JSON.stringify(challengeEntity, null, 2));
+
       const command = new PutCommand({
-        TableName: config.tables.githubChallenges,
-        Item: marshall(challengeEntity)
+        TableName: config.tables.challenges,
+        Item: challengeEntity
       });
 
       await dynamoClient.send(command);
-      
+
       successful.push({
         id: challenge.metadata.id,
         title: challenge.metadata.title

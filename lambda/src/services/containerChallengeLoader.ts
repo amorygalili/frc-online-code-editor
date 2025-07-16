@@ -1,6 +1,7 @@
 // Service for loading GitHub-hosted challenges into containers
 
-import { DynamoDBClient, GetCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { GitHubChallengeService } from './githubChallengeService';
 import { Challenge } from '../types/challenge';
@@ -64,7 +65,7 @@ export class ContainerChallengeLoader {
    * Prepare setup for git-based challenge
    */
   private async prepareGitChallenge(challenge: Challenge): Promise<ContainerChallengeSetup> {
-    const { githubUrl, githubBranch, challengePath } = challenge;
+    const { githubUrl, githubBranch } = challenge;
 
     // Parse the repository to get challenge files
     const parsedRepo = await this.githubService.parseRepository(githubUrl, githubBranch);
