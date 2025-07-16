@@ -138,6 +138,25 @@ functions:
           path: /challenges/{id}
           method: options
 
+  # GitHub Challenge Management
+  importGitHubChallenges:
+    handler: src/handlers/challenges/importGitHubChallenges.handler
+    timeout: 60  # Longer timeout for GitHub operations
+    events:
+      - http:
+          path: /challenges/import
+          method: post
+          authorizer:
+            type: COGNITO_USER_POOLS
+            authorizerId: !Ref ApiGatewayAuthorizer
+
+  importGitHubChallengesOptions:
+    handler: src/handlers/cors/options.handler
+    events:
+      - http:
+          path: /challenges/import
+          method: options
+
   # User Progress Management
   getUserProgress:
     handler: src/handlers/progress/getUserProgress.handler
@@ -334,6 +353,10 @@ resources:
             AttributeType: S
           - AttributeName: difficulty
             AttributeType: S
+          - AttributeName: githubUrl
+            AttributeType: S
+          - AttributeName: repositoryId
+            AttributeType: S
         KeySchema:
           - AttributeName: id
             KeyType: HASH
@@ -347,6 +370,18 @@ resources:
           - IndexName: DifficultyIndex
             KeySchema:
               - AttributeName: difficulty
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          - IndexName: GitHubUrlIndex
+            KeySchema:
+              - AttributeName: githubUrl
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+          - IndexName: RepositoryIndex
+            KeySchema:
+              - AttributeName: repositoryId
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
@@ -373,6 +408,8 @@ resources:
                 KeyType: HASH
             Projection:
               ProjectionType: ALL
+
+
 
     ChallengeSessionsTable:
       Type: AWS::DynamoDB::Table

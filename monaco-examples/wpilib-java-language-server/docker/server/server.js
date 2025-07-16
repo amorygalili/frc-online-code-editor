@@ -205,6 +205,70 @@ app.put('/session/:sessionId/main/files/*', express.json(), async (req, res) => 
     }
 });
 
+// Session-aware challenge setup endpoint
+app.post('/session/:sessionId/main/setup-challenge', express.json(), async (req, res) => {
+    try {
+        const sessionId = req.params.sessionId;
+        const { challengeId, files, metadata } = req.body;
+
+        console.log(`Setting up git challenge ${challengeId} for session ${sessionId}`);
+        console.log(`Loading ${files.length} robot source files into workspace`);
+
+        const projectPath = path.join(workspacePath, 'RobotProject');
+        const robotCodePath = path.join(projectPath, 'src/main/java/frc/robot');
+
+        // All challenges are git-based, so always replace the robot code folder
+        console.log('Clearing existing robot code folder for git challenge');
+        try {
+            await fs.rm(robotCodePath, { recursive: true, force: true });
+            console.log('Existing robot code cleared');
+        } catch (error) {
+            console.warn('Could not clear existing robot code:', error.message);
+        }
+
+        // Write each file to the workspace
+        for (const file of files) {
+            const fullPath = path.join(projectPath, file.path);
+
+            // Security check: ensure the path is within project workspace
+            const resolvedPath = path.resolve(fullPath);
+            const resolvedProject = path.resolve(projectPath);
+            if (!resolvedPath.startsWith(resolvedProject)) {
+                console.warn(`Skipping file outside project: ${file.path}`);
+                continue;
+            }
+
+            // Ensure directory exists
+            const dirPath = path.dirname(fullPath);
+            await fs.mkdir(dirPath, { recursive: true });
+
+            // Write file content
+            await fs.writeFile(fullPath, file.content, 'utf8');
+            console.log(`Wrote robot source file: ${file.path}`);
+        }
+
+        // Note: We only modify robot Java source files, not build configuration
+
+        res.json({
+            status: 'success',
+            message: `Challenge ${challengeId} loaded successfully`,
+            filesLoaded: files.length,
+            metadata: {
+                title: metadata.title,
+                difficulty: metadata.difficulty,
+                category: metadata.category
+            }
+        });
+
+    } catch (error) {
+        console.error('Error setting up challenge:', error);
+        res.status(500).json({
+            error: 'Failed to setup challenge',
+            details: error.message
+        });
+    }
+});
+
 // WPILib project management endpoints
 
 // Session-aware list robot projects

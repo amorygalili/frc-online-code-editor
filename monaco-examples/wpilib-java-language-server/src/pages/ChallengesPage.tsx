@@ -20,8 +20,11 @@ import {
   CircularProgress,
   Alert,
   Grid,
+  Fab,
+  Tooltip,
 } from '@mui/material';
 import { challengeService, ChallengeWithProgress, ChallengeFilters } from '../services/challengeService';
+import ImportChallengeDialog from '../components/challenges/ImportChallengeDialog';
 
 // Simplified icons
 const PlayIcon = () => <span>▶️</span>;
@@ -29,6 +32,7 @@ const CompletedIcon = () => <span>✅</span>;
 const InProgressIcon = () => <span>🔄</span>;
 const LockedIcon = () => <span>🔒</span>;
 const SearchIcon = () => <span>🔍</span>;
+const GitHubIcon = () => <span>📁</span>;
 
 const ChallengesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +42,7 @@ const ChallengesPage: React.FC = () => {
   const [challenges, setChallenges] = useState<ChallengeWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Load challenges from service
   const loadChallenges = async () => {
@@ -274,8 +279,41 @@ const ChallengesPage: React.FC = () => {
           <Typography variant="h6" color="text.secondary">
             No challenges found matching your criteria
           </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => setImportDialogOpen(true)}
+            sx={{ mt: 2 }}
+            startIcon={<GitHubIcon />}
+          >
+            Import Challenges from GitHub
+          </Button>
         </Box>
       )}
+
+      {/* Floating Action Button for Import */}
+      <Tooltip title="Import challenges from GitHub">
+        <Fab
+          color="primary"
+          aria-label="import challenges"
+          onClick={() => setImportDialogOpen(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+          }}
+        >
+          <GitHubIcon />
+        </Fab>
+      </Tooltip>
+
+      {/* Import Dialog */}
+      <ImportChallengeDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImportSuccess={() => {
+          loadChallenges(); // Reload challenges after successful import
+        }}
+      />
     </Container>
   );
 };

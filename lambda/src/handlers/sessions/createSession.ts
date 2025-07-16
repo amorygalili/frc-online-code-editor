@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { config } from '../../config';
 import { createResponse, parseJSONBody } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
+import { ContainerChallengeLoader } from '../../services/containerChallengeLoader';
 
 const ecsClient = new ECSClient({ region: config.region });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
@@ -378,21 +379,67 @@ async function createECSTask(userId: string, challengeId: string, sessionId: str
 }
 
 async function loadChallengeInContainer(sessionId: string, challengeId: string) {
-  // TODO: Implement challenge loading logic
-  // This would typically involve calling the container API to load a specific challenge
   console.log(`Loading challenge ${challengeId} in session ${sessionId}`);
 
-  // For now, just update the session record
-  const command = new PutCommand({
-    TableName: config.tables.challengeSessions,
-    Item: {
-      sessionId,
-      currentChallengeId: challengeId,
-      lastActivity: new Date().toISOString()
-    }
-  });
+  try {
+    // Create the container challenge loader
+    const loader = new ContainerChallengeLoader();
 
-  await dynamoClient.send(command);
+    // Prepare challenge setup
+    const challengeSetup = await loader.prepareChallengeSetup(challengeId);
+    const setupPayload = loader.generateContainerSetupPayload(challengeSetup);
+
+    console.log(`Challenge setup prepared for ${challengeId}:`, JSON.stringify(setupPayload, null, 2));
+
+    // Send setup payload to container via API
+    await sendChallengeSetupToContainer(sessionId, setupPayload);
+
+    // Update the session record
+    const command = new PutCommand({
+      TableName: config.tables.challengeSessions,
+      Item: {
+        sessionId,
+        currentChallengeId: challengeId,
+        lastActivity: new Date().toISOString()
+      }
+    });
+
+    await dynamoClient.send(command);
+
+    console.log(`Challenge ${challengeId} loaded successfully in session ${sessionId}`);
+  } catch (error) {
+    console.error(`Failed to load challenge ${challengeId} in session ${sessionId}:`, error);
+    throw error;
+  }
+}
+
+async function sendChallengeSetupToContainer(sessionId: string, setupPayload: any): Promise<void> {
+  try {
+    // Get the container endpoint from ALB configuration
+    const containerEndpoint = `${process.env.ALB_DNS_NAME}/session/${sessionId}/main/setup-challenge`;
+
+    console.log(`Sending challenge setup to container: ${containerEndpoint}`);
+
+    const response = await fetch(`http://${containerEndpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(setupPayload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Container setup failed: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`Challenge setup successful:`, result);
+
+  } catch (error) {
+    console.error(`Failed to send challenge setup to container:`, error);
+    throw error;
+  }
 }
 
 function storeSession(session: any) {

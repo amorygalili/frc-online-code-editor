@@ -3,6 +3,22 @@
 
 import { fetchAuthSession } from 'aws-amplify/auth';
 
+// GitHub challenge metadata type (simplified for frontend)
+interface GitHubChallengeMetadata {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  category: string;
+  estimatedTime: string;
+  version: string;
+  prerequisites?: string[];
+  tags: string[];
+  files: {
+    instructions: string;
+  };
+}
+
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://6gn6mwav0j.execute-api.us-east-2.amazonaws.com/dev';
 
@@ -13,16 +29,21 @@ export interface Challenge {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   category: string;
   estimatedTime: string;
-  prerequisites?: string[];
-  learningObjectives: string[];
-  instructions: string;
-  hints?: string[];
-  starterCode?: string;
-  solutionCode?: string;
-  testCases?: any[];
+  version: string;
+  prerequisites: string[];
   tags: string[];
+  // Git repository fields (all challenges are now git-based)
+  githubUrl: string;
+  githubBranch: string;
+  repositoryId: string;
+  challengePath: string; // Path within the repository (e.g., "challenges/hello-world")
+  // Metadata from the challenge
+  metadata: GitHubChallengeMetadata;
+  // Sync information
+  lastSynced: string;
+  syncStatus: 'pending' | 'synced' | 'error';
+  // Standard fields
   isPublished: boolean;
-  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +93,40 @@ export interface ChallengeSession {
   updatedAt: string;
   lastActivity: string;
   expiresAt: string;
+}
+
+// GitHub Challenge Import Types
+export interface ImportResult {
+  repositoryId: string;
+  status: 'success' | 'error';
+  message: string;
+  challengesFound: number;
+  challenges: {
+    id: string;
+    title: string;
+    status: 'imported' | 'error';
+    error?: string;
+  }[];
+}
+
+export interface ImportedRepository {
+  id: string;
+  githubUrl: string;
+  branch: string;
+  name: string;
+  description: string;
+  author: string;
+  challengeCount: number;
+  lastImport: string;
+  importStatus: 'pending' | 'imported' | 'error';
+}
+
+export interface SyncResult {
+  status: 'success' | 'error';
+  message: string;
+  updatedChallenges: string[];
+  newChallenges: string[];
+  removedChallenges: string[];
 }
 
 export interface SessionCreateRequest {
@@ -368,6 +423,62 @@ class ChallengeService {
       });
     } catch (error) {
       console.error(`Failed to save code for session ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  // Import challenges from GitHub repository
+  async importGitHubChallenges(githubUrl: string, branch?: string, accessToken?: string): Promise<ImportResult> {
+    try {
+      const response = await apiRequest('/challenges/import', {
+        method: 'POST',
+        body: JSON.stringify({
+          githubUrl,
+          branch: branch || 'main',
+          accessToken
+        }),
+      });
+
+      return response as ImportResult;
+    } catch (error) {
+      console.error('Failed to import GitHub challenges:', error);
+      throw error;
+    }
+  }
+
+  // Get imported repositories
+  async getImportedRepositories(): Promise<ImportedRepository[]> {
+    try {
+      const response = await apiRequest('/challenges/repositories');
+      return response.repositories || [];
+    } catch (error) {
+      console.error('Failed to get imported repositories:', error);
+      throw error;
+    }
+  }
+
+  // Sync repository with latest changes
+  async syncRepository(repositoryId: string): Promise<SyncResult> {
+    try {
+      const response = await apiRequest(`/challenges/repositories/${repositoryId}/sync`, {
+        method: 'POST',
+      });
+
+      return response as SyncResult;
+    } catch (error) {
+      console.error(`Failed to sync repository ${repositoryId}:`, error);
+      throw error;
+    }
+  }
+
+  // Remove imported repository
+  async removeRepository(repositoryId: string): Promise<void> {
+    try {
+      await apiRequest(`/challenges/repositories/${repositoryId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error(`Failed to remove repository ${repositoryId}:`, error);
       throw error;
     }
   }
