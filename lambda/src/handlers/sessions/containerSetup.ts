@@ -1,11 +1,12 @@
 import { ECSClient, DescribeTasksCommand } from '@aws-sdk/client-ecs';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { 
-  ElasticLoadBalancingV2Client, 
+import {
+  ElasticLoadBalancingV2Client,
   RegisterTargetsCommand
 } from '@aws-sdk/client-elastic-load-balancing-v2';
 import { config } from '../../config';
+import { ContainerChallengeLoader } from '../../services/containerChallengeLoader';
 
 const ecsClient = new ECSClient({ region: config.region });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
@@ -32,27 +33,35 @@ interface ContainerSetupEvent {
 }
 
 export const handler = async (event: ContainerSetupEvent) => {
-  const { sessionId, taskArn, albIntegration } = event;
-  
+  const { sessionId, challengeId, taskArn, albIntegration } = event;
+
   console.log(`Setting up container integration for session ${sessionId}`);
-  
+
   try {
     // Step 1: Wait for ECS task to be running and get private IP
     const privateIp = await waitForTaskAndGetIP(taskArn);
     console.log(`Task is running with IP: ${privateIp}`);
-    
+
     // Step 2: Register task with ALB target groups
     await registerTaskWithTargetGroups(privateIp, albIntegration);
     console.log(`Task registered with ALB target groups`);
-    
+
     // Step 3: Wait for container to be healthy
     await waitForContainerHealth(albIntegration.endpoints.health);
     console.log(`Container is healthy`);
-    
-    // Step 4: Update session status to running
+
+    // Step 4: Initialize session in container (optional - container doesn't have /api/sessions endpoint yet)
+    // await initializeSessionInContainer(sessionId, challengeId, userId, albIntegration.endpoints.main);
+    console.log(`Skipping session initialization - container endpoint not implemented`);
+
+    // Step 5: Load challenge in container
+    await loadChallengeInContainer(sessionId, challengeId);
+    console.log(`Challenge ${challengeId} loaded in container`);
+
+    // Step 6: Update session status to running
     await updateSessionStatus(sessionId, 'running');
     console.log(`Session ${sessionId} is now running`);
-    
+
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -61,17 +70,17 @@ export const handler = async (event: ContainerSetupEvent) => {
         privateIp
       })
     };
-    
+
   } catch (error) {
     console.error(`Container integration failed for session ${sessionId}:`, error);
     console.error('Error details:', JSON.stringify(error, null, 2));
-    
+
     try {
       await updateSessionStatus(sessionId, 'failed');
     } catch (updateError) {
       console.error('Failed to update session status:', updateError);
     }
-    
+
     return {
       statusCode: 500,
       body: JSON.stringify({
@@ -218,6 +227,73 @@ async function updateSessionStatus(sessionId: string, status: string): Promise<v
       ':lastActivity': new Date().toISOString()
     }
   });
-  
+
   await dynamoClient.send(command);
+}
+
+
+
+async function loadChallengeInContainer(sessionId: string, challengeId: string) {
+  console.log(`Loading challenge ${challengeId} in session ${sessionId}`);
+
+  try {
+    // Create the container challenge loader
+    const loader = new ContainerChallengeLoader();
+
+    // Prepare challenge setup
+    const challengeSetup = await loader.prepareChallengeSetup(challengeId);
+    const setupPayload = loader.generateContainerSetupPayload(challengeSetup);
+
+    console.log(`Challenge setup prepared for ${challengeId}:`, JSON.stringify(setupPayload, null, 2));
+
+    // Send setup payload to container via API
+    await sendChallengeSetupToContainer(sessionId, setupPayload);
+
+    // Update the session record
+    const command = new UpdateCommand({
+      TableName: config.tables.challengeSessions,
+      Key: { sessionId },
+      UpdateExpression: 'SET currentChallengeId = :challengeId, lastActivity = :lastActivity',
+      ExpressionAttributeValues: {
+        ':challengeId': challengeId,
+        ':lastActivity': new Date().toISOString()
+      }
+    });
+
+    await dynamoClient.send(command);
+
+    console.log(`Challenge ${challengeId} loaded successfully in session ${sessionId}`);
+  } catch (error) {
+    console.error(`Failed to load challenge ${challengeId} in session ${sessionId}:`, error);
+    throw error;
+  }
+}
+
+async function sendChallengeSetupToContainer(sessionId: string, setupPayload: any): Promise<void> {
+  try {
+    // Get the container endpoint from ALB configuration
+    const containerEndpoint = `${process.env.ALB_DNS_NAME}/session/${sessionId}/main/setup-challenge`;
+
+    console.log(`Sending challenge setup to container: ${containerEndpoint}`);
+
+    const response = await fetch(`http://${containerEndpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(setupPayload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Container setup failed: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`Challenge setup successful:`, result);
+
+  } catch (error) {
+    console.error(`Failed to send challenge setup to container:`, error);
+    throw error;
+  }
 }

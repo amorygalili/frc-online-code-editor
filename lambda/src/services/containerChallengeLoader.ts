@@ -1,13 +1,12 @@
 // Service for loading GitHub-hosted challenges into containers
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { GetCommand } from '@aws-sdk/lib-dynamodb';
-import { unmarshall } from '@aws-sdk/util-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { GitHubChallengeService } from './githubChallengeService';
 import { Challenge } from '../types/challenge';
 import { config } from '../config';
 
-const dynamoClient = new DynamoDBClient({ region: config.region });
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
 
 export interface ContainerChallengeSetup {
   challengeData: Challenge;
@@ -34,6 +33,8 @@ export class ContainerChallengeLoader {
     // Get challenge from unified challenges table
     const challenge = await this.getChallenge(challengeId);
     if (!challenge) {
+      // List available challenges for debugging
+      await this.listAvailableChallenges();
       throw new Error(`Challenge ${challengeId} not found`);
     }
 
@@ -41,19 +42,51 @@ export class ContainerChallengeLoader {
   }
 
   /**
+   * List all available challenges for debugging
+   */
+  private async listAvailableChallenges(): Promise<void> {
+    try {
+      console.log('Listing all available challenges for debugging...');
+
+      const command = new ScanCommand({
+        TableName: config.tables.challenges,
+        Limit: 10 // Just get first 10 for debugging
+      });
+
+      const result = await dynamoClient.send(command);
+      console.log(`Found ${result.Items?.length || 0} challenges in database:`);
+
+      if (result.Items) {
+        result.Items.forEach((item, index) => {
+          console.log(`${index + 1}. ID: ${item.id}, Title: ${item.title || 'No title'}`);
+        });
+      }
+    } catch (error) {
+      console.error('Error listing challenges:', error);
+    }
+  }
+
+  /**
    * Get challenge from unified challenges table
    */
   private async getChallenge(challengeId: string): Promise<Challenge | null> {
     try {
+      console.log(`Looking for challenge with ID: ${challengeId} in table: ${config.tables.challenges}`);
+
       const command = new GetCommand({
         TableName: config.tables.challenges,
-        Key: { id: { S: challengeId } }
+        Key: { id: challengeId }
       });
 
       const result = await dynamoClient.send(command);
+      console.log(`DynamoDB result for challenge ${challengeId}:`, JSON.stringify(result, null, 2));
+
       if (result.Item) {
-        return unmarshall(result.Item) as Challenge;
+        console.log(`Found challenge: ${result.Item.title}`);
+        return result.Item as Challenge;
       }
+
+      console.log(`Challenge ${challengeId} not found in database`);
       return null;
     } catch (error) {
       console.error('Error fetching challenge:', error);
