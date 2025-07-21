@@ -7,7 +7,7 @@ import {
   Breadcrumbs,
   Link,
 } from "@mui/material";
-import { BuildControls } from "./BuildControls";
+import { BuildControls } from "frc-challenge-editor";
 
 // Breadcrumb item interface
 export interface BreadcrumbItem {

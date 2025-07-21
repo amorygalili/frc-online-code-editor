@@ -5,18 +5,21 @@ import {
   CssBaseline,
   Box,
 } from "@mui/material";
-import { EditorProvider } from "./contexts/EditorContext";
-import { BuildProvider } from "./contexts/BuildContext";
-import { NT4Provider } from "./nt4/useNetworktables";
-import { HalSimProvider } from "./contexts/HalSimContext";
-import { ConfigProvider, AppConfig } from "./contexts/ConfigContext";
-import { setFileServiceConfig } from "./fileService";
+import {
+  EditorProvider,
+  BuildProvider,
+  NT4Provider,
+  HalSimProvider,
+  ConfigProvider,
+  setFileServiceConfig,
+  useEditor,
+  eclipseJdtLsConfig,
+  EditorBody,
+  AppConfig
+} from "frc-challenge-editor";
 import { useCallback } from "react";
-import { useEditor } from "./contexts/EditorContext";
 import * as vscode from "vscode";
 import { EditorHeader, BreadcrumbItem } from "./components/EditorHeader";
-import { eclipseJdtLsConfig } from "./config.js";
-import { EditorBody } from "./EditorApp.tsx";
 
 const theme = createTheme({
   palette: {

@@ -8,6 +8,15 @@ import importMetaUrlPlugin from "@codingame/esbuild-import-meta-url-plugin";
 export default defineConfig({
   plugins: [vsixPlugin(), react()],
   build: {
+    // Enable tree shaking and minification for the application
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+      },
+    },
     rollupOptions: {
       input: {
         main: resolve("index.html"),
@@ -17,6 +26,28 @@ export default defineConfig({
       maxParallelFileOps: 5,
       output: {
         format: 'es',
+        // Enable manual chunks for better code splitting
+        manualChunks: (id) => {
+          // Group all @codingame packages together
+          if (id.indexOf('node_modules/@codingame/') !== -1) {
+            return 'monaco-vscode';
+          }
+          // Group Monaco packages
+          if (id.indexOf('node_modules/monaco-') !== -1) {
+            return 'monaco-editor';
+          }
+          // Group other large vendors
+          if (id.indexOf('node_modules/@mui/') !== -1) {
+            return 'mui';
+          }
+          if (id.indexOf('node_modules/aws-amplify') !== -1 || id.indexOf('node_modules/@aws-amplify/') !== -1) {
+            return 'aws';
+          }
+          // Default vendor chunk for other node_modules
+          if (id.indexOf('node_modules/') !== -1) {
+            return 'vendor';
+          }
+        },
       },
     },
   },

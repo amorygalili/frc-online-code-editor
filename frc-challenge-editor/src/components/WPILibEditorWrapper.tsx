@@ -337,7 +337,7 @@ async function initEditor(
 export const WPILibEditorWrapper = memo(() => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInitialized = useRef(false);
-  const autoSaveDisposable = useRef<vscode.Disposable | null>(null);
+  // const autoSaveDisposable = useRef<vscode.Disposable | null>(null);
   const { editorWrapper: wrapper } = useEditor();
   const { config: appConfig } = useConfig();
 

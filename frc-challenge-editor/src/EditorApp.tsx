@@ -7,10 +7,10 @@ import {
   Box,
   Drawer,
 } from "@mui/material";
-import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
-import { FileBrowser } from "./components/FileBrowser.tsx";
-import { SimulationView } from "./components/SimulationView.tsx";
-import { ResizableSplitter } from "./components/ResizableSplitter.tsx";
+import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper";
+import { FileBrowser } from "./components/FileBrowser";
+import { SimulationView } from "./components/SimulationView";
+import { ResizableSplitter } from "./components/ResizableSplitter";
 
 
 const DRAWER_WIDTH = 240; // Reduced from 320 to make more compact
@@ -71,4 +71,3 @@ export function EditorBody({ onFileOpen }: EditorBodyProps) {
     </Box>
   );
 }
-

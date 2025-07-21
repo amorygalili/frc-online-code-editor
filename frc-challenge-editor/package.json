@@ -1,28 +1,58 @@
 {
   "name": "frc-challenge-editor",
-  "private": true,
-  "version": "0.0.0",
+  "private": false,
+  "version": "0.1.0",
   "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build:types": "tsc",
+    "build": "tsc && cross-env NODE_OPTIONS=--max-old-space-size=16384 vite build",
+    "build:lib": "vite build --mode lib",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@frc-web-components/node-wpilib-ws": "^0.2.5",
+    "@frc-web-components/react": "^2.1.2",
+    "@msgpack/msgpack": "3.0.0-beta2",
+    "@mui/icons-material": "^7.1.2",
+    "@mui/material": "^7.1.2",
+    "vscode-uri": "^3.1.0",
+    "vscode-ws-jsonrpc": "^3.4.0"
   },
   "devDependencies": {
+    "@codingame/esbuild-import-meta-url-plugin": "^1.0.3",
+    "@codingame/monaco-vscode-rollup-vsix-plugin": "~17.2.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "cross-env": "^7.0.3",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "terser": "^5.43.1",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vite-plugin-dts": "^3.6.3"
+  },
+  "peerDependencies": {
+    "@codingame/monaco-vscode-api": "^17.2.1",
+    "@codingame/monaco-vscode-extension-api": "^17.2.1",
+    "@codingame/monaco-vscode-files-service-override": "^17.2.1",
+    "@codingame/monaco-vscode-java-default-extension": "^17.2.1",
+    "@codingame/monaco-vscode-keybindings-service-override": "^17.2.1",
+    "monaco-editor-wrapper": "^6.8.1",
+    "monaco-languageclient": "^9.7.1",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
   }
 }

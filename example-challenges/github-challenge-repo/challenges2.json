@@ -1,0 +1,16 @@
+{
+  "name": "Example Challenges",
+  "version": "1.0",
+  "description": "A collection of example challenges",
+  "author": "FRC Team 1234",
+  "website": "https://team1234.org",
+  "challenges": [
+    {
+      "name": "Some Example Challenge",
+      "description": "",
+      "robotCodeDir": "challenges/some-example/src/main/java/frc/robot",
+      "instructionsFile": "challenges/some-example/instructions.md",
+      "simVisualizationFile": "challenges/some-example/visualization.js"
+    }
+  ]
+}

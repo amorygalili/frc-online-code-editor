@@ -10,7 +10,9 @@ $ npm install --global frc-challenge-cli
 
 ## Architecture
 
-
+- Generate a base WPILib project with a `challenges.json` file, `instructions.md` file, a `gradle.build` file with sim websocket enabled, and a vite/react/typescript project to create the sim visualization section. 
+- Sim visualization
+  - 
 
 ## CLI
 

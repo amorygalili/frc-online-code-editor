@@ -7,17 +7,22 @@ import {
   CircularProgress,
   Typography,
 } from "@mui/material";
-import { EditorProvider } from "../contexts/EditorContext";
-import { BuildProvider } from "../contexts/BuildContext";
+import {
+  EditorProvider,
+  BuildProvider,
+  EditorBody,
+  useEditor,
+  eclipseJdtLsConfig,
+  ConfigProvider,
+  setFileServiceConfig,
+  NT4Provider,
+  HalSimProvider,
+  AppConfig
+} from "frc-challenge-editor";
 import { SessionProvider } from "../contexts/SessionContext";
-import { EditorBody } from "../EditorApp";
-import { useEditor } from "../contexts/EditorContext";
 import { useCallback } from "react";
 import * as vscode from "vscode";
-import { eclipseJdtLsConfig } from "../config";
 import { EditorHeader, BreadcrumbItem } from "../components/EditorHeader";
-import { ConfigProvider, AppConfig } from "../contexts/ConfigContext";
-import { setFileServiceConfig } from "../fileService";
 import { sessionService } from "../services/sessionService";
 import {
   challengeService,
@@ -25,8 +30,6 @@ import {
   ChallengeSession,
 } from "../services/challengeService";
 import { useAuth } from "../contexts/AuthContext";
-import { NT4Provider } from "../nt4/useNetworktables";
-import { HalSimProvider } from "../contexts/HalSimContext";
 
 // Icons
 const BackIcon = () => <span>←</span>;
