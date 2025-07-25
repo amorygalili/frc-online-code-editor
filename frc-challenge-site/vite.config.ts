@@ -3,22 +3,54 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import vsixPlugin from "@codingame/monaco-vscode-rollup-vsix-plugin";
 import importMetaUrlPlugin from "@codingame/esbuild-import-meta-url-plugin";
+import dts from "vite-plugin-dts";
 
 // https://vitejs.dev/config/
+// Unified configuration that builds both library and app
 export default defineConfig({
-  plugins: [vsixPlugin(), react()],
+  plugins: [
+    vsixPlugin(),
+    react(),
+    dts({
+      include: ['src/index.tsx'],
+      exclude: ['src/main.tsx', 'src/TestApp.tsx', '**/*.test.*', '**/*.spec.*'],
+      rollupTypes: true,
+      entryRoot: 'src',
+      outDir: 'dist',
+      insertTypesEntry: true
+    })
+  ],
   build: {
     rollupOptions: {
       input: {
+        // App entries
         main: resolve("index.html"),
         test: resolve("test.html"),
+        // Library entry
+        index: resolve('src/index.tsx')
       },
-      // Increase max parallel file operations
-      maxParallelFileOps: 5,
-      output: {
-        format: 'es',
-      },
+      output: [
+        // App build (ES modules for the website)
+        {
+          format: 'es',
+          entryFileNames: (chunkInfo) => {
+            // Library gets a clean name for npm distribution
+            if (chunkInfo.name === 'index') {
+              return 'index.js';
+            }
+            // App files get hashed names
+            return 'assets/[name]-[hash].js';
+          },
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]'
+        }
+      ],
+      // Don't externalize anything for the unified build
+      // The library entry will be self-contained
+      maxParallelFileOps: 5
     },
+    sourcemap: true,
+    target: 'esnext'
   },
   worker: {
     format: 'es',
@@ -63,32 +95,6 @@ export default defineConfig({
       "@aws-crypto/crc32",
       "@aws-crypto/util",
       "@aws-crypto/supports-web-crypto",
-
-      // "@codingame/monaco-vscode-api",
-      // "@codingame/monaco-vscode-environment-service-override",
-      // "@codingame/monaco-vscode-explorer-service-override",
-      // "@codingame/monaco-vscode-extension-api",
-      // "@codingame/monaco-vscode-files-service-override",
-      // "@codingame/monaco-vscode-java-default-extension",
-      // "@codingame/monaco-vscode-keybindings-service-override",
-      // "@codingame/monaco-vscode-lifecycle-service-override",
-      // "@codingame/monaco-vscode-localization-service-override",
-      // "@codingame/monaco-vscode-outline-service-override",
-      // "@codingame/monaco-vscode-remote-agent-service-override",
-      // "@codingame/monaco-vscode-search-result-default-extension",
-      // "@codingame/monaco-vscode-search-service-override",
-      // "@codingame/monaco-vscode-secret-storage-service-override",
-      // "@codingame/monaco-vscode-storage-service-override",
-      // "@codingame/monaco-vscode-textmate-service-override",
-      // "@codingame/monaco-vscode-typescript-basics-default-extension",
-      // "@codingame/monaco-vscode-typescript-language-features-default-extension",
-      // "@codingame/monaco-vscode-view-banner-service-override",
-      // "@codingame/monaco-vscode-view-status-bar-service-override",
-      // "@codingame/monaco-vscode-view-title-bar-service-override",
-      // "monaco-editor-wrapper",
-      // "monaco-languageclient",
-      // "@typefox/monaco-editor-react",
-      // "vscode-textmate",
     ],
   },
   server: {

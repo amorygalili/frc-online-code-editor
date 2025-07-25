@@ -9,6 +9,7 @@
   "prerequisites": [],
   "tags": ["basics", "robot-class", "simulation", "example"],
   "files": {
-    "instructions": "instructions.md"
+    "instructions": "instructions.md",
+    "simVisualization": "visualization/dist"
   }
 }

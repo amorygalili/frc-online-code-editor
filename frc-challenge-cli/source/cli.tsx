@@ -7,23 +7,33 @@ import App from './app.js';
 const cli = meow(
 	`
 	Usage
-	  $ frc-challenge-cli
+	  $ frc-challenge-cli <command>
+
+	Commands
+	  generate <name>    Generate a new challenge project
 
 	Options
-		--name  Your name
+	  --title <title>    Challenge title (for generate command)
+	  --help             Show help
 
 	Examples
-	  $ frc-challenge-cli --name=Jane
-	  Hello, Jane
+	  $ frc-challenge-cli generate my-challenge --title "My Awesome Challenge"
 `,
 	{
 		importMeta: import.meta,
 		flags: {
-			name: {
+			title: {
 				type: 'string',
+			},
+			help: {
+				type: 'boolean',
+				alias: 'h',
 			},
 		},
 	},
 );
 
-render(<App name={cli.flags.name} />);
+const command = cli.input[0];
+const challengeName = cli.input[1];
+
+render(<App command={command} challengeName={challengeName} title={cli.flags.title} />);
