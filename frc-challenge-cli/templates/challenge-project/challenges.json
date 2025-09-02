@@ -1,16 +1,16 @@
 {
   "version": "1.0",
   "repository": {
-    "name": "Example Challenges",
-    "description": "A collection of example challenges",
-    "author": "FRC Team 1234",
+    "name": "{{challengeTitle}} Repository",
+    "description": "Challenge repository for {{challengeTitle}}",
+    "author": "FRC Team",
     "license": "MIT",
-    "website": "https://team1234.org",
-    "contact": "programming@team1234.org"
+    "website": "",
+    "contact": ""
   },
   "challenges": [
     {
-      "id": "some-example-challenge",
+      "id": "{{challengeName}}",
       "path": "example-challenge",
       "enabled": true,
       "version": "1.0"

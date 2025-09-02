@@ -1,6 +1,6 @@
-# Hello Robot World Challenge
+# {{challengeTitle}}
 
-Welcome to your first FRC programming challenge! In this challenge, you'll learn the fundamentals of FRC robot programming by creating a basic robot program.
+Welcome to {{challengeTitle}}! This challenge was generated using frc-challenge-cli.
 
 ## Learning Objectives
 
