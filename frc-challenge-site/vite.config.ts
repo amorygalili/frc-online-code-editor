@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import vsixPlugin from "@codingame/monaco-vscode-rollup-vsix-plugin";
 import importMetaUrlPlugin from "@codingame/esbuild-import-meta-url-plugin";
-import dts from "vite-plugin-dts";
+
 
 // https://vitejs.dev/config/
 // Unified configuration that builds both library and app
@@ -11,42 +11,21 @@ export default defineConfig({
   plugins: [
     vsixPlugin(),
     react(),
-    dts({
-      include: ['src/index.tsx'],
-      exclude: ['src/main.tsx', 'src/TestApp.tsx', '**/*.test.*', '**/*.spec.*'],
-      rollupTypes: true,
-      entryRoot: 'src',
-      outDir: 'dist',
-      insertTypesEntry: true
-    })
+// DTS plugin removed - only needed for library builds
   ],
   build: {
     rollupOptions: {
       input: {
         // App entries
         main: resolve("index.html"),
-        test: resolve("test.html"),
-        // Library entry
-        index: resolve('src/index.tsx')
+        test: resolve("test.html")
       },
-      output: [
-        // App build (ES modules for the website)
-        {
-          format: 'es',
-          entryFileNames: (chunkInfo) => {
-            // Library gets a clean name for npm distribution
-            if (chunkInfo.name === 'index') {
-              return 'index.js';
-            }
-            // App files get hashed names
-            return 'assets/[name]-[hash].js';
-          },
-          chunkFileNames: 'assets/[name]-[hash].js',
-          assetFileNames: 'assets/[name]-[hash].[ext]'
-        }
-      ],
-      // Don't externalize anything for the unified build
-      // The library entry will be self-contained
+      output: {
+        format: 'es',
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      },
       maxParallelFileOps: 5
     },
     sourcemap: true,

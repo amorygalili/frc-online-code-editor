@@ -8,7 +8,7 @@ import "./test.css";
 
 let simVisualization = <></>;
 
-export async function mountEditor(element: HTMLElement) {
+async function mountEditor(element: HTMLElement) {
   await initLocaleLoader();
 
   ReactDOM.createRoot(element).render(
@@ -23,10 +23,16 @@ export async function mountEditor(element: HTMLElement) {
  * HalSimContext and NT4Context providers.
  * @param element 
  */
-export function setSimVisualization(element: JSX.Element) {
+function setSimVisualization(element: JSX.Element) {
     simVisualization = element;
 }
 
-export function getSimVisualization() {
+function getSimVisualization() {
     return simVisualization;
 }
+
+(window as any).frcChallengeApi = {
+  mountEditor,
+  setSimVisualization,
+  getSimVisualization
+};
