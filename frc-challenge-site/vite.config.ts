@@ -18,7 +18,9 @@ export default defineConfig({
       input: {
         // App entries
         main: resolve("index.html"),
-        test: resolve("test.html")
+        test: resolve("test.html"),
+        // Window API entry for the Vite plugin
+        'window-api': resolve("src/window-api.tsx")
       },
       output: {
         format: 'es',

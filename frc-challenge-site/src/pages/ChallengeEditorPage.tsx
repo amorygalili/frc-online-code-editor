@@ -7,16 +7,9 @@ import {
   CircularProgress,
   Typography,
 } from "@mui/material";
-import { EditorProvider } from "../contexts/EditorContext";
-import { BuildProvider } from "../contexts/BuildContext";
 import { SessionProvider } from "../contexts/SessionContext";
-import { EditorBody } from "../EditorApp";
-import { useEditor } from "../contexts/EditorContext";
-import { useCallback } from "react";
-import * as vscode from "vscode";
-import { eclipseJdtLsConfig } from "../config";
-import { EditorHeader, BreadcrumbItem } from "../components/EditorHeader";
-import { ConfigProvider, AppConfig } from "../contexts/ConfigContext";
+import { BreadcrumbItem } from "../components/EditorHeader";
+import { AppConfig } from "../contexts/ConfigContext";
 import { setFileServiceConfig } from "../fileService";
 import { sessionService } from "../services/sessionService";
 import {
@@ -25,15 +18,12 @@ import {
   ChallengeSession,
 } from "../services/challengeService";
 import { useAuth } from "../contexts/AuthContext";
-import { NT4Provider } from "../nt4/useNetworktables";
-import { HalSimProvider } from "../contexts/HalSimContext";
+import ChallengeEditor from "../ChallengeEditor";
 
 // Icons
 const BackIcon = () => <span>←</span>;
 
-interface ChallengeEditorPageProps {}
-
-export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
+export const ChallengeEditorPage = () => {
   const { id: challengeId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -87,9 +77,12 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
             activeSession.sessionId
           );
           console.log("Reusing session for challenge:", challengeId);
-          console.log('Existing session data:', activeSession);
-          console.log('Existing container info:', activeSession.containerInfo);
-          console.log('Existing ALB endpoints:', activeSession.containerInfo?.albEndpoints);
+          console.log("Existing session data:", activeSession);
+          console.log("Existing container info:", activeSession.containerInfo);
+          console.log(
+            "Existing ALB endpoints:",
+            activeSession.containerInfo?.albEndpoints
+          );
 
           // Update session to track current challenge (locally)
           const updatedSession = { ...activeSession, challengeId };
@@ -106,13 +99,11 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
         if (!sessionService.isCreating()) {
           setSessionStatus("creating");
         }
-        console.log(
-          `Creating session for challenge ${challengeId}`
-        );
+        console.log(`Creating session for challenge ${challengeId}`);
         const sessionData = await sessionService.createSession(challengeId);
-        console.log('Session data received:', sessionData);
-        console.log('Container info:', sessionData.containerInfo);
-        console.log('ALB endpoints:', sessionData.containerInfo?.albEndpoints);
+        console.log("Session data received:", sessionData);
+        console.log("Container info:", sessionData.containerInfo);
+        console.log("ALB endpoints:", sessionData.containerInfo?.albEndpoints);
         setSession(sessionData);
 
         // Check if session is already ready
@@ -154,7 +145,6 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
 
     initializeSession();
   }, [challengeId, isAuthenticated]);
-
 
   const handleBackToChallenge = () => {
     navigate(`/challenge/${challengeId}`);
@@ -272,17 +262,15 @@ export const ChallengeEditorPage: React.FC<ChallengeEditorPageProps> = () => {
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Challenges" },
     { label: challenge.title, onClick: handleBackToChallenge },
-    { label: "Editor" }
+    { label: "Editor" },
   ];
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <SessionAwareEditorApp
-        session={session}
-        challenge={challenge}
-        breadcrumbs={breadcrumbs}
-      />
-    </Box>
+    <SessionAwareEditorApp
+      session={session}
+      challenge={challenge}
+      breadcrumbs={breadcrumbs}
+    />
   );
 };
 
@@ -310,10 +298,10 @@ const SessionAwareEditorApp: React.FC<SessionAwareEditorAppProps> = ({
   try {
     const url = new URL(albMainUrl);
     serverUrl = url.hostname;
-    console.log('✅ Using ALB endpoint for session configuration:', serverUrl);
-    console.log('Full ALB main URL:', albMainUrl);
+    console.log("✅ Using ALB endpoint for session configuration:", serverUrl);
+    console.log("Full ALB main URL:", albMainUrl);
   } catch (error) {
-    console.warn('Invalid ALB URL:', albMainUrl, error);
+    console.warn("Invalid ALB URL:", albMainUrl, error);
     return null;
   }
 
@@ -324,7 +312,7 @@ const SessionAwareEditorApp: React.FC<SessionAwareEditorAppProps> = ({
 
   const [initialized, setInitialized] = React.useState(false);
 
-  console.log('Editor configuration:', editorConfig);
+  console.log("Editor configuration:", editorConfig);
 
   // Set global config for FileService
   React.useEffect(() => {
@@ -338,51 +326,13 @@ const SessionAwareEditorApp: React.FC<SessionAwareEditorAppProps> = ({
 
   return (
     <SessionProvider initialSession={session} initialChallenge={challenge}>
-      <ConfigProvider config={editorConfig}>
-        <NT4Provider>
-          <HalSimProvider>
-            <EditorProvider>
-              <BuildProvider>
-                <ChallengeEditorContent
-                  breadcrumbs={breadcrumbs}
-                />
-              </BuildProvider>
-            </EditorProvider>
-          </HalSimProvider>
-        </NT4Provider>
-      </ConfigProvider>
+      <ChallengeEditor
+        serverUrl={serverUrl}
+        sessionId={session.sessionId}
+        breadcrumbs={breadcrumbs}
+      />
     </SessionProvider>
   );
 };
-
-// Challenge editor content component that uses EditorContentWithoutHeader
-interface ChallengeEditorContentProps {
-  breadcrumbs: BreadcrumbItem[];
-}
-
-function ChallengeEditorContent({ breadcrumbs }: ChallengeEditorContentProps) {
-  const { openFile } = useEditor();
-
-  const handleFileOpen = useCallback(
-    async (filePath: string) => {
-      // Convert file path to URI
-      const uri = vscode.Uri.file(`${eclipseJdtLsConfig.basePath}/${filePath}`);
-      await openFile(uri);
-    },
-    [openFile]
-  );
-
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <EditorHeader
-        breadcrumbs={breadcrumbs}
-        projectName="RobotProject"
-      />
-      <Box sx={{ flex: 1, overflow: "hidden" }}>
-        <EditorBody onFileOpen={handleFileOpen} />
-      </Box>
-    </Box>
-  );
-}
 
 export default ChallengeEditorPage;

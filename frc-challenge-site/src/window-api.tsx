@@ -5,8 +5,9 @@ import TestApp from "./TestApp";
 import "./index.css";
 import "./App.css";
 import "./test.css";
+import SimulationVisualization from "./components/SimulationVisualization";
 
-let simVisualization = <></>;
+let simVisualization = <SimulationVisualization />;
 
 async function mountEditor(element: HTMLElement) {
   await initLocaleLoader();
@@ -16,23 +17,23 @@ async function mountEditor(element: HTMLElement) {
       <TestApp />
     </React.StrictMode>
   );
-};
+}
 
 /**
  * The sim visualization component used in the editor. Has access to NT4 and HALSim data provided by the
  * HalSimContext and NT4Context providers.
- * @param element 
+ * @param element
  */
-function setSimVisualization(element: JSX.Element) {
-    simVisualization = element;
+export function setSimVisualization(element: JSX.Element) {
+  simVisualization = element;
 }
 
-function getSimVisualization() {
-    return simVisualization;
+export function getSimVisualization() {
+  return simVisualization;
 }
 
 (window as any).frcChallengeApi = {
   mountEditor,
   setSimVisualization,
-  getSimVisualization
+  getSimVisualization,
 };
