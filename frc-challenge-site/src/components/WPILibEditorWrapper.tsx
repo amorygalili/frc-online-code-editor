@@ -30,6 +30,7 @@ interface WPILibEditorConfig {
 import { eclipseJdtLsConfig } from "../config.js";
 import { loadWorkspaceFiles, FileService } from "../fileService";
 import type { IStoredWorkspace } from "@codingame/monaco-vscode-configuration-service-override";
+import { getServiceUrl } from "../urls.js";
 
 // Simple debounce utility
 function debounce<T extends (...args: any[]) => any>(
@@ -39,7 +40,7 @@ function debounce<T extends (...args: any[]) => any>(
   let timeout: number;
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
+    timeout = setTimeout(() => func(...args), wait) as unknown as number;
   };
 }
 
@@ -222,30 +223,11 @@ async function initEditor(
     await loadWorkspaceFiles(fileSystemProvider);
 
     // Build WebSocket URL based on configuration
-    const { serverUrl, sessionId, port } = config;
+    const { serverUrl, sessionId } = config;
 
-    // Determine if we should use secure WebSocket based on current page protocol
-    const isSecure = window.location.protocol === 'https:';
-    const wsProtocol = 'wss';
-
-    // Check if serverUrl looks like an ALB or CloudFront domain
-    const isALBEndpoint = serverUrl.includes('amazonaws.com') ||
-                         serverUrl.includes('elb.amazonaws.com') ||
-                         serverUrl.includes('cloudfront.net') ||
-                         (!serverUrl.includes('localhost') && !serverUrl.includes('127.0.0.1'));
-
-    let wsUrl: string;
-    if (isALBEndpoint) {
-      // For ALB endpoints, don't include port - ALB handles routing
-      wsUrl = `${wsProtocol}://${serverUrl}/session/${sessionId}/jdtls`;
-    } else {
-      // For localhost/development, use the specific port
-      wsUrl = `${wsProtocol}://${serverUrl}:${port}/session/${sessionId}/jdtls`;
-    }
+    const wsUrl = getServiceUrl(serverUrl, sessionId, 'jdtls', true);
 
     console.log('Java Language Server WebSocket URL:', wsUrl);
-    console.log('- Protocol:', wsProtocol, '(secure:', isSecure, ')');
-    console.log('- ALB endpoint:', isALBEndpoint);
 
     const wrapperConfig: WrapperConfig = {
       $type: "extended",

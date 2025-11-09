@@ -41,27 +41,3 @@ export function ConfigProvider({ children, config }: ConfigProviderProps) {
     </ConfigContext.Provider>
   );
 }
-
-// Helper function to build session-aware URLs
-export function buildSessionUrl(config: AppConfig, endpoint: string, port: number): string {
-  // Determine if we should use HTTPS based on current page protocol
-  const protocol = 'https';
-
-  // Check if serverUrl looks like an ALB or CloudFront domain
-  const isALBEndpoint = config.serverUrl.includes('amazonaws.com') ||
-                       config.serverUrl.includes('elb.amazonaws.com') ||
-                       config.serverUrl.includes('cloudfront.net') ||
-                       (!config.serverUrl.includes('localhost') && !config.serverUrl.includes('127.0.0.1'));
-
-  let baseUrl: string;
-  if (isALBEndpoint) {
-    // For ALB endpoints, don't include port - ALB handles routing internally
-    baseUrl = `${protocol}://${config.serverUrl}`;
-  } else {
-    // For localhost/development, use the specific port
-    baseUrl = `${protocol}://${config.serverUrl}:${port}`;
-  }
-
-  const sessionPrefix = `/session/${config.sessionId}`;
-  return `${baseUrl}${sessionPrefix}${endpoint}`;
-}

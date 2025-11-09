@@ -1,4 +1,5 @@
 import { Decoder, Encoder } from '@msgpack/msgpack';
+import { getServiceUrl } from '../urls';
 
 const typestrIdxLookup: { [id: string]: number } = {
   boolean: 0,
@@ -85,15 +86,13 @@ export class NT4_Topic {
 }
 
 export class NT4_Client {
-  private PORT = 5810;
-  private PROXY_PORT = 30004;
   private RTT_PERIOD_MS_V40 = 1000;
   private RTT_PERIOD_MS_V41 = 250;
   private TIMEOUT_MS_V40 = 5000;
   private TIMEOUT_MS_V41 = 1000;
 
   private appName: string;
-  private sessionId: string | null;
+  private sessionId: string;
   private onTopicAnnounce: (topic: NT4_Topic) => void;
   private onTopicUnannounce: (topic: NT4_Topic) => void;
   private onNewTopicData: (
@@ -137,7 +136,7 @@ export class NT4_Client {
   constructor(
     serverAddr: string,
     appName: string,
-    sessionId: string | null,
+    sessionId: string,
     onTopicAnnounce: (topic: NT4_Topic) => void,
     onTopicUnannounce: (topic: NT4_Topic) => void,
     onNewTopicData: (
@@ -162,13 +161,13 @@ export class NT4_Client {
         // Use v4.0 timeout (RTT ws not created)
         this.ws_sendTimestamp();
       }
-    }, this.RTT_PERIOD_MS_V40);
+    }, this.RTT_PERIOD_MS_V40) as unknown as number;
     this.rttWsTimestampInterval = setInterval(() => {
       if (this.rttWs !== null) {
         // Use v4.1 timeout (RTT ws was created)
         this.ws_sendTimestamp();
       }
-    }, this.RTT_PERIOD_MS_V41);
+    }, this.RTT_PERIOD_MS_V41) as unknown as number;
   }
 
   private async connectOnAlive() {
@@ -177,26 +176,8 @@ export class NT4_Client {
     const requestStart = new Date().getTime();
     try {
       // For ALB routing, construct the health check URL with session path
-      let healthCheckUrl: string;
-      if (this.sessionId) {
-        // Check if this is an ALB or CloudFront endpoint
-        const isALBEndpoint = this.serverBaseAddr.includes('amazonaws.com') ||
-                             this.serverBaseAddr.includes('elb.amazonaws.com') ||
-                             this.serverBaseAddr.includes('cloudfront.net') ||
-                             (!this.serverBaseAddr.includes('localhost') && !this.serverBaseAddr.includes('127.0.0.1'));
-
-        if (isALBEndpoint) {
-          // ALB routing: don't include port, ALB handles routing
-          const protocol = 'https';
-          healthCheckUrl = `${protocol}://${this.serverBaseAddr}/session/${this.sessionId}/nt/health`;
-        } else {
-          // Localhost/development: use proxy port
-          healthCheckUrl = `http://${this.serverBaseAddr}:${this.PROXY_PORT.toString()}/session/${this.sessionId}/nt/health`;
-        }
-      } else {
-        // Direct connection: use base address
-        healthCheckUrl = `http://${this.serverBaseAddr}:${this.PORT.toString()}`;
-      }
+      const healthCheckUrl = getServiceUrl(this.serverBaseAddr, this.sessionId, 'nt') + '/health';
+      
       console.log(`[NT4] Checking health of ${healthCheckUrl}...`);
 
       result = await fetch(healthCheckUrl, {
@@ -741,54 +722,13 @@ export class NT4_Client {
       if (this.ws) {
         this.ws_onClose(new CloseEvent('close'), this.ws);
       }
-    }, timeout);
+    }, timeout) as unknown as number;
   }
 
   private ws_connect(rttWs = false) {
-    // Determine if we should use secure WebSocket based on current page protocol
-    const wsProtocol = 'wss';
-
-    // Check if serverBaseAddr looks like an ALB or CloudFront domain
-    const isALBEndpoint = this.serverBaseAddr.includes('amazonaws.com') ||
-                         this.serverBaseAddr.includes('elb.amazonaws.com') ||
-                         this.serverBaseAddr.includes('cloudfront.net') ||
-                         (!this.serverBaseAddr.includes('localhost') && !this.serverBaseAddr.includes('127.0.0.1'));
-
-    // Construct WebSocket URL based on whether we're using ALB routing or direct connection
-    if (this.sessionId) {
-      // ALB routing: /session/{SESSION_ID}/nt/{appName}
-      if (isALBEndpoint) {
-        // For ALB endpoints, don't include port - ALB handles routing
-        this.serverAddr =
-          wsProtocol + '://' +
-          this.serverBaseAddr +
-          '/session/' +
-          this.sessionId +
-          '/nt/' +
-          this.appName;
-      } else {
-        // For localhost/development, use the proxy port
-        this.serverAddr =
-          wsProtocol + '://' +
-          this.serverBaseAddr +
-          ':' +
-          this.PROXY_PORT.toString() +
-          '/session/' +
-          this.sessionId +
-          '/nt/' +
-          this.appName;
-      }
-    } else {
-      // Direct connection to NT4 server: ws://localhost:5810/nt/{appName}
-      this.serverAddr =
-        wsProtocol + '://' +
-        this.serverBaseAddr +
-        ':' +
-        this.PORT.toString() +
-        '/nt/' +
-        this.appName;
-    }
-
+   
+    this.serverAddr = getServiceUrl(this.serverBaseAddr, this.sessionId, 'nt', true) + `/${this.appName}`;
+ 
     const ws = new WebSocket(
       this.serverAddr,
       rttWs

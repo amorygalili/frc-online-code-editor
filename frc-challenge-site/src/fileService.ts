@@ -11,7 +11,8 @@ import * as vscode from "vscode";
  * Service for interacting with the file server API
  */
 
-import { AppConfig, buildSessionUrl } from './contexts/ConfigContext';
+import { AppConfig } from './contexts/ConfigContext';
+import { getServiceUrl } from "./urls";
 
 // Global config reference - will be set by the ConfigProvider
 let globalConfig: AppConfig | null = null;
@@ -26,7 +27,7 @@ function buildFileServiceUrl(endpoint: string): string {
   if (!globalConfig) {
     throw new Error("FileServiceConfig not set");
   }
-  return buildSessionUrl(globalConfig, endpoint, 30003);
+  return getServiceUrl(globalConfig.serverUrl, globalConfig.sessionId, 'main') + endpoint;
 }
 
 export interface FileInfo {
@@ -75,7 +76,7 @@ export class FileService {
      * Get the content of a file
      */
     static async getFileContent(filePath: string): Promise<string> {
-        const url = buildFileServiceUrl(`/main/files/${filePath}`);
+        const url = buildFileServiceUrl(`/files/${filePath}`);
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -91,7 +92,7 @@ export class FileService {
      * Save content to a file
      */
     static async saveFileContent(filePath: string, content: string): Promise<void> {
-        const url = buildFileServiceUrl(`/main/files/${filePath}`);
+        const url = buildFileServiceUrl(`/files/${filePath}`);
         const response = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -110,7 +111,7 @@ export class FileService {
      * List files and directories in a path
      */
     static async listDirectory(dirPath: string = ''): Promise<DirectoryListing> {
-        const baseUrl = buildFileServiceUrl('/main/files');
+        const baseUrl = buildFileServiceUrl('/files');
         const url = new URL(baseUrl);
         if (dirPath) {
             url.searchParams.set('path', dirPath);
@@ -130,7 +131,7 @@ export class FileService {
      * Get all Java files in the workspace recursively
      */
     static async getJavaFiles(): Promise<FileInfo[]> {
-        const url = buildFileServiceUrl('/main/java-files');
+        const url = buildFileServiceUrl('/java-files');
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -147,7 +148,7 @@ export class FileService {
      */
     static async isAvailable(): Promise<boolean> {
         try {
-            const url = buildFileServiceUrl('/main/health');
+            const url = buildFileServiceUrl('/health');
             const response = await fetch(url);
             return response.ok;
         } catch {
@@ -156,40 +157,11 @@ export class FileService {
     }
 
     /**
-     * Generate a new WPILib robot project
-     */
-    static async generateWPILibProject(options: ProjectGenerationOptions): Promise<ProjectGenerationResult> {
-        try {
-            const url = buildFileServiceUrl('/wpilib/generate-project');
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(options),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(`Failed to generate project: ${error.error || response.statusText}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            return {
-                success: false,
-                message: `Failed to generate WPILib project: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                error: error instanceof Error ? error.message : 'Unknown error'
-            };
-        }
-    }
-
-    /**
      * List all WPILib robot projects in the workspace
      */
     static async listWPILibProjects(): Promise<WPILibProject[]> {
         try {
-            const url = buildFileServiceUrl('/main/wpilib/projects');
+            const url = buildFileServiceUrl('/wpilib/projects');
             const response = await fetch(url);
 
             if (!response.ok) {
@@ -210,7 +182,7 @@ export class FileService {
      */
     static async getWPILibProjectInfo(projectName: string): Promise<WPILibProject | null> {
         try {
-            const url = buildFileServiceUrl(`/main/wpilib/projects/${projectName}`);
+            const url = buildFileServiceUrl(`/wpilib/projects/${projectName}`);
             const response = await fetch(url);
 
             if (!response.ok) {

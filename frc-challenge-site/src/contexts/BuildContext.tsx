@@ -13,7 +13,8 @@ import {
   BuildStatusResponse,
   BuildWebSocketMessage,
 } from '../types/build';
-import { useConfig, buildSessionUrl } from './ConfigContext';
+import { useConfig } from './ConfigContext';
+import { getServiceUrl } from '../urls';
 
 const BuildContext = createContext<BuildContextType | undefined>(undefined);
 
@@ -71,28 +72,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     }
 
     try {
-      // Determine if we should use secure WebSocket based on current page protocol
-      const isSecure = window.location.protocol === 'https:';
-      const wsProtocol = 'wss';
-
-      // Check if serverUrl looks like an ALB or CloudFront domain (contains amazonaws.com or is not localhost)
-      const isALBEndpoint = config.serverUrl.includes('amazonaws.com') ||
-                           config.serverUrl.includes('elb.amazonaws.com') ||
-                           config.serverUrl.includes('cloudfront.net') ||
-                           (!config.serverUrl.includes('localhost') && !config.serverUrl.includes('127.0.0.1'));
-
-      let wsUrl: string;
-      if (isALBEndpoint) {
-        // For ALB endpoints, don't include port - ALB handles routing
-        wsUrl = `${wsProtocol}://${config.serverUrl}/session/${config.sessionId}/main/build`;
-      } else {
-        // For localhost/development, use the specific port
-        wsUrl = `${wsProtocol}://${config.serverUrl}:30003/session/${config.sessionId}/main/build`;
-      }
-
-      console.log('Creating new WebSocket connection to:', wsUrl);
-      console.log('- Protocol:', wsProtocol, '(secure:', isSecure, ')');
-      console.log('- ALB endpoint:', isALBEndpoint);
+      const wsUrl = getServiceUrl(config.serverUrl, config.sessionId, 'main', true) + '/build';
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -124,7 +104,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
 
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
-          }, delay);
+          }, delay) as unknown as number;
         }
       };
 
@@ -221,7 +201,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const startBuild = useCallback(async (projectName: string, task: BuildTask): Promise<string | null> => {
     try {
-      const url = buildSessionUrl(config, `/main/wpilib/build/${projectName}`, 30003);
+      const url = getServiceUrl(config.serverUrl, config.sessionId, 'main') + `/wpilib/build/${projectName}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -277,7 +257,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const startSimulation = useCallback(async (projectName: string, simulationType: string = 'debug'): Promise<string | null> => {
     try {
-      const url = buildSessionUrl(config, `/main/wpilib/simulate/${projectName}`, 30003);
+      const url = getServiceUrl(config.serverUrl, config.sessionId, 'main') + `/wpilib/simulate/${projectName}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -331,7 +311,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
     }
 
     try {
-      const url = buildSessionUrl(config, `/main/wpilib/simulate/${idToStop}/stop`, 30003);
+      const url = getServiceUrl(config.serverUrl, config.sessionId, 'main') + `/wpilib/simulate/${idToStop}/stop`;
       const response = await fetch(url, {
         method: 'POST',
       });
@@ -390,7 +370,7 @@ export const BuildProvider: React.FC<BuildProviderProps> = ({
    */
   const getBuildStatus = useCallback(async (buildId: string): Promise<BuildStatusResponse | null> => {
     try {
-      const url = buildSessionUrl(config, `/main/wpilib/build/${buildId}/status`, 30003);
+      const url = getServiceUrl(config.serverUrl, config.sessionId, 'main') + `/wpilib/build/${buildId}/status`;
       const response = await fetch(url);
 
       if (!response.ok) {

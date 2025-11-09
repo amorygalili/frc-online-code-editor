@@ -25,6 +25,7 @@ import {
   SimDevicePayload,
 } from "@frc-web-components/node-wpilib-ws";
 import { useConfig } from "./ConfigContext";
+import { getServicePort, isALBEndpoint } from "../urls";
 
 // Robot modes enum for better type safety
 export enum RobotMode {
@@ -64,7 +65,6 @@ interface HalSimProviderProps {
 
 // Create context
 const HalSimContext = createContext<HalSimContextType | null>(null);
-const HAL_SIM_PORT = 30005;
 
 // Provider component
 export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
@@ -112,17 +112,12 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
       console.log(`HAL Sim using session routing: ${clientUri}`);
 
       // Check if this is an ALB or CloudFront endpoint
-      const isALBEndpoint = serverUrl.includes('amazonaws.com') ||
-                           serverUrl.includes('elb.amazonaws.com') ||
-                           serverUrl.includes('cloudfront.net') ||
-                           (!serverUrl.includes('localhost') && !serverUrl.includes('127.0.0.1'));
+      const isALB = isALBEndpoint(serverUrl);
 
       let client: WPILibWebSocketClient;
 
-        console.log('ALB endpoint??:', { isALBEndpoint, serverBaseAddr: serverUrl });
 
-
-      if (isALBEndpoint) {
+      if (isALB) {
         // For ALB endpoints, don't specify port - ALB handles routing
         client = new WPILibWebSocketClient({
           hostname: serverUrl,
@@ -135,20 +130,15 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
         // For localhost/development, use the specific port
         client = new WPILibWebSocketClient({
           hostname: serverUrl,
-          port: HAL_SIM_PORT,
+          port: getServicePort('halsim'),
           uri: clientUri,
         });
-        console.log(`HAL Sim WebSocket client created for localhost: ws://${serverUrl}:${HAL_SIM_PORT}${clientUri}`);
       }
 
       clientRef.current = client;
 
       // Set up event listeners
       client.on("ready", () => {
-        const connectionUrl = isALBEndpoint
-          ? `ws://${serverUrl}/wpilibws`
-          : `ws://${serverUrl}:${HAL_SIM_PORT}/wpilibws`;
-        console.log(`HAL Sim WebSocket connected to ${connectionUrl}`);
         setConnected(true);
       });
 
@@ -164,10 +154,6 @@ export const HalSimProvider: React.FC<HalSimProviderProps> = memo(
 
       client.on("error", (code: number, reason: string) => {
         console.error(`HAL Sim WebSocket error [${code}]:`, reason);
-        const attemptedUrl = isALBEndpoint
-          ? `ws://${serverUrl}/wpilibws`
-          : `ws://${serverUrl}:${HAL_SIM_PORT}/wpilibws`;
-        console.error(`Attempted connection to: ${attemptedUrl}`);
         setConnected(false);
       });
 
