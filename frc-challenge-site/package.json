@@ -1,6 +1,6 @@
 {
   "name": "frc-challenge-site",
-  "version": "1.0.0",
+  "version": "0.0.5",
   "type": "module",
   "main": "dist-lib/index.cjs",
   "module": "dist-lib/index.js",
@@ -10,11 +10,6 @@
       "import": "./dist-lib/index.js",
       "require": "./dist-lib/index.cjs",
       "types": "./dist-lib/index.d.ts"
-    },
-    "./plugin": {
-      "import": "./dist-vite-plugin/vite-plugin-frc-challenge-api.js",
-      "require": "./dist-vite-plugin/vite-plugin-frc-challenge-api.cjs",
-      "types": "./dist-vite-plugin/vite-plugin-frc-challenge-api.d.ts"
     }
   },
   "files": [
@@ -27,7 +22,6 @@
     "dev:test": "vite --open /test.html",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "build:lib": "vite build --config vite.config.lib.ts",
-    "build:plugin": "vite build --config vite.config.plugin.ts",
     "build-check": "tsc && npm run build",
     "build-check:lib": "tsc && npm run build:lib",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",

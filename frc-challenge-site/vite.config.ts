@@ -8,6 +8,7 @@ import importMetaUrlPlugin from "@codingame/esbuild-import-meta-url-plugin";
 // https://vitejs.dev/config/
 // Unified configuration that builds both library and app
 export default defineConfig({
+  base: './',
   plugins: [
     vsixPlugin(),
     react(),
@@ -18,15 +19,26 @@ export default defineConfig({
       input: {
         // App entries
         main: resolve("index.html"),
-        test: resolve("test.html"),
         // Window API entry for the Vite plugin
         'window-api': resolve("src/window-api.tsx")
       },
       output: {
         format: 'es',
-        entryFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: (chunkInfo) => {
+          // Remove hash from window-api entry
+          if (chunkInfo.name === 'window-api') {
+            return 'assets/[name].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        assetFileNames: (assetInfo) => {
+          // Remove hash from window-api CSS
+          if (assetInfo.names?.[0] === 'window-api.css') {
+            return 'assets/[name].[ext]';
+          }
+          return 'assets/[name]-[hash].[ext]';
+        }
       },
       maxParallelFileOps: 5
     },
