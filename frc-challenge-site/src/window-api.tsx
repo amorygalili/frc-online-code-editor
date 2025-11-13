@@ -6,6 +6,8 @@ import "./index.css";
 import "./App.css";
 import "./test.css";
 import SimulationVisualization from "./components/SimulationVisualization";
+import { useNTConnection, useNTKeyExists, useNTKeys, useNTValue } from "./nt4/useNetworktables";
+import { useDriverStation, useHalSimData } from "./contexts/HalSimContext";
 
 let simVisualization = <SimulationVisualization />;
 
@@ -36,4 +38,12 @@ export function getSimVisualization() {
   mountEditor,
   setSimVisualization,
   getSimVisualization,
+  // NT4
+  useNTValue,
+  useNTConnection,
+  useNTKeys,
+  useNTKeyExists,
+  // HALSim
+  useHalSimData,
+  useDriverStation,
 };
