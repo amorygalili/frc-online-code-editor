@@ -28,17 +28,11 @@ const SplitterHandle = styled(Box)<{ direction: 'horizontal' | 'vertical' }>(({ 
     width: '4px',
     '&:hover': {
       backgroundColor: theme.palette.primary.main,
-      width: '6px',
-      marginLeft: '-1px',
-      marginRight: '-1px',
     }
   } : {
     height: '4px',
     '&:hover': {
       backgroundColor: theme.palette.primary.main,
-      height: '6px',
-      marginTop: '-1px',
-      marginBottom: '-1px',
     }
   }),
   

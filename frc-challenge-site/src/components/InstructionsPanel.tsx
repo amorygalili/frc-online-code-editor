@@ -1,6 +1,7 @@
 import { Box, Paper, Typography } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ScrollableBox } from './ScrollableBox';
 
 interface InstructionsPanelProps {
   className?: string;
@@ -70,10 +71,9 @@ export const InstructionsPanel: React.FC<InstructionsPanelProps> = ({ className 
           </Typography>
         </Box>
         
-        <Box
+        <ScrollableBox
           sx={{
             flex: 1,
-            overflow: 'auto',
             p: 2,
             '& h1': {
               fontSize: '1.5rem',
@@ -120,7 +120,22 @@ export const InstructionsPanel: React.FC<InstructionsPanelProps> = ({ className 
               p: 1.5,
               borderRadius: 1,
               overflow: 'auto',
-              mb: 1
+              mb: 1,
+              // Custom scrollbar for code blocks
+              '&::-webkit-scrollbar': {
+                height: '8px',
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                },
+              },
             },
             '& pre code': {
               backgroundColor: 'transparent',
@@ -146,7 +161,7 @@ export const InstructionsPanel: React.FC<InstructionsPanelProps> = ({ className 
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {DUMMY_INSTRUCTIONS}
           </ReactMarkdown>
-        </Box>
+        </ScrollableBox>
       </Paper>
     </Box>
   );

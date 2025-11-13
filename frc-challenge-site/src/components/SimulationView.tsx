@@ -2,6 +2,7 @@ import { Box, Paper } from "@mui/material";
 import { OutputTabs } from "./BottomPanel";
 import { ResizableSplitter } from "./ResizableSplitter";
 import { getSimVisualization } from "../window-api";
+import ScrollableBox from "./ScrollableBox";
 
 export const SimulationView = () => {
   return (
@@ -12,6 +13,7 @@ export const SimulationView = () => {
         borderLeft: 1,
         borderColor: "divider",
         backgroundColor: "background.default",
+        paddingRight: '12px'
       }}
     >
       <ResizableSplitter
@@ -20,7 +22,7 @@ export const SimulationView = () => {
         minSizes={[200, 150]} // Minimum heights in pixels
       >
         {/* Simulation Visualization Area */}
-        <Box
+        <ScrollableBox
           sx={{
             p: 1,
             height: "100%",
@@ -29,7 +31,7 @@ export const SimulationView = () => {
           }}
         >
           {getSimVisualization()}
-        </Box>
+        </ScrollableBox>
 
         {/* Output Tabs Area */}
         <Box

@@ -22,6 +22,7 @@ import { FileService, type FileInfo } from '../fileService';
 import { eclipseJdtLsConfig } from '../config';
 import { createModelReference } from "@codingame/monaco-vscode-api/monaco";
 import { useEditor } from '../contexts/EditorContext';
+import { ScrollableBox } from './ScrollableBox';
 
 interface TreeNode {
   name: string;
@@ -325,7 +326,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
         </Typography>
       </Toolbar>
 
-      <Box sx={{ flex: 1, overflow: 'auto' }}>
+      <ScrollableBox sx={{ flex: 1 }}>
         {loading && fileTree.length === 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
             <CircularProgress size={24} />
@@ -353,7 +354,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
             {renderTreeItems(fileTree)}
           </SimpleTreeView>
         )}
-      </Box>
+      </ScrollableBox>
     </Box>
   );
 };
