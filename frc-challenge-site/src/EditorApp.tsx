@@ -5,15 +5,12 @@
 
 import {
   Box,
-  Drawer,
 } from "@mui/material";
 import { WPILibEditorWrapper } from "./components/WPILibEditorWrapper.tsx";
 import { FileBrowser } from "./components/FileBrowser.tsx";
 import { SimulationView } from "./components/SimulationView.tsx";
 import { ResizableSplitter } from "./components/ResizableSplitter.tsx";
-
-
-const DRAWER_WIDTH = 240; // Reduced from 320 to make more compact
+import { InstructionsPanel } from "./components/InstructionsPanel.tsx";
 
 // Editor content without header (for use in ChallengeEditorPage)
 interface EditorBodyProps {
@@ -23,51 +20,79 @@ interface EditorBodyProps {
 export function EditorBody({ onFileOpen }: EditorBodyProps) {
   return (
     <Box sx={{ display: "flex", height: "100%", overflow: "hidden" }}>
-      <Drawer
-        variant="persistent"
-        anchor="left"
-        open={true}
-        sx={{
-          width: DRAWER_WIDTH,
-          flexShrink: 0,
-          "& .MuiDrawer-paper": {
-            width: DRAWER_WIDTH,
-            boxSizing: "border-box",
-            position: "relative",
-          },
-        }}
+      {/* Left side: File browser and instructions with vertical splitter */}
+      <ResizableSplitter
+        direction="horizontal"
+        initialSizes={[20, 80]} // 20% for sidebar, 80% for main content
+        minSizes={[200, 600]} // Minimum widths in pixels
       >
-        <FileBrowser onClose={() => {}} onFileOpen={onFileOpen} />
-      </Drawer>
-
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          overflow: "hidden",
-        }}
-      >
-        <ResizableSplitter
-          direction="horizontal"
-          initialSizes={[70, 30]} // 70% for editor, 30% for simulation
-          minSizes={[400, 300]} // Minimum widths in pixels
+        {/* Left sidebar with file browser and instructions */}
+        <Box
+          sx={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            borderRight: 1,
+            borderColor: "divider",
+          }}
         >
-          {/* Editor area */}
-          <Box
-            sx={{
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
+          <ResizableSplitter
+            direction="vertical"
+            initialSizes={[60, 40]} // 60% for file browser, 40% for instructions
+            minSizes={[150, 150]} // Minimum heights in pixels
           >
-            <WPILibEditorWrapper />
-          </Box>
+            {/* File browser */}
+            <Box
+              sx={{
+                height: "100%",
+                overflow: "hidden",
+              }}
+            >
+              <FileBrowser onClose={() => {}} onFileOpen={onFileOpen} />
+            </Box>
 
-          {/* Simulation view */}
-          <SimulationView />
-        </ResizableSplitter>
-      </Box>
+            {/* Instructions panel */}
+            <Box
+              sx={{
+                height: "100%",
+                overflow: "hidden",
+              }}
+            >
+              <InstructionsPanel />
+            </Box>
+          </ResizableSplitter>
+        </Box>
+
+        {/* Right side: Editor and simulation */}
+        <Box
+          sx={{
+            height: "100%",
+            overflow: "hidden",
+          }}
+        >
+          <ResizableSplitter
+            direction="horizontal"
+            initialSizes={[70, 30]} // 70% for editor, 30% for simulation
+            minSizes={[400, 300]} // Minimum widths in pixels
+          >
+            {/* Editor area */}
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <WPILibEditorWrapper />
+            </Box>
+
+            {/* Simulation view */}
+            <SimulationView />
+          </ResizableSplitter>
+        </Box>
+      </ResizableSplitter>
     </Box>
   );
 }

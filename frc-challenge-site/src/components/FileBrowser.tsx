@@ -7,21 +7,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   CircularProgress,
   Alert,
   Toolbar,
-  Collapse
 } from '@mui/material';
+import { SimpleTreeView } from '@mui/x-tree-view/SimpleTreeView';
+import { TreeItem } from '@mui/x-tree-view/TreeItem';
 import {
   InsertDriveFile,
   Folder,
-  ExpandMore,
-  ChevronRight
 } from '@mui/icons-material';
 import * as vscode from "vscode";
 import { FileService, type FileInfo } from '../fileService';
@@ -46,7 +40,7 @@ interface FileBrowserProps {
 export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
   const { editorWrapper } = useEditor();
   const [fileTree, setFileTree] = useState<TreeNode[]>([]);
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true); // Start with loading true for initial load
   const [error, setError] = useState<string | null>(null);
 
@@ -138,10 +132,10 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
       setFileTree(tree);
 
       // Only set initial expanded state if we don't have any expanded nodes yet
-      setExpandedNodes(prevExpanded => {
-        if (prevExpanded.size === 0) {
+      setExpandedItems(prevExpanded => {
+        if (prevExpanded.length === 0) {
           // Auto-expand common folders for better UX
-          const initialExpanded = new Set<string>();
+          const initialExpanded: string[] = [];
 
           // Expand any directory that contains files directly
           const addExpandedDirectories = (nodes: TreeNode[]) => {
@@ -149,7 +143,7 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
               if (node.type === 'directory' && node.children) {
                 const hasFiles = node.children.some(child => child.type === 'file');
                 if (hasFiles) {
-                  initialExpanded.add(node.path);
+                  initialExpanded.push(node.path);
                 }
                 addExpandedDirectories(node.children);
               }
@@ -190,36 +184,44 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
     return () => clearInterval(interval);
   }, []); // Empty dependency array - set up once and never recreate
 
-  const toggleNodeExpansion = useCallback((nodePath: string) => {
-    setExpandedNodes(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(nodePath)) {
-        newSet.delete(nodePath);
-      } else {
-        newSet.add(nodePath);
-      }
-      return newSet;
-    });
-  }, []);
+  const handleExpandedItemsChange = useCallback(
+    (event: React.SyntheticEvent | null, itemIds: string[]) => {
+      setExpandedItems(itemIds);
+    },
+    []
+  );
 
-  const handleNodeClick = async (node: TreeNode) => {
-    if (node.type === 'directory') {
-      toggleNodeExpansion(node.path);
-      return;
-    }
-
-    // Handle file click - use the stored full path
-    if (node.fullPath) {
-      const file: FileInfo = {
-        name: node.name,
-        path: node.fullPath,
-        type: 'file'
+  const handleItemClick = useCallback(
+    async (event: React.SyntheticEvent | null, itemId: string) => {
+      // Find the node in the tree
+      const findNode = (nodes: TreeNode[], path: string): TreeNode | null => {
+        for (const node of nodes) {
+          if (node.path === path) {
+            return node;
+          }
+          if (node.children) {
+            const found = findNode(node.children, path);
+            if (found) return found;
+          }
+        }
+        return null;
       };
-      await handleFileClick(file);
-    } else {
-      console.error(`No full path stored for file: ${node.name}`);
-    }
-  };
+
+      const node = findNode(fileTree, itemId);
+      if (!node) return;
+
+      // Only handle file clicks, directories are handled by the tree view
+      if (node.type === 'file' && node.fullPath) {
+        const file: FileInfo = {
+          name: node.name,
+          path: node.fullPath,
+          type: 'file'
+        };
+        await handleFileClick(file);
+      }
+    },
+    [fileTree]
+  );
 
   const handleFileClick = async (file: FileInfo) => {
     try {
@@ -261,73 +263,58 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
     }
   };
 
-  // Recursive component to render tree nodes
-  const TreeNodeComponent: React.FC<{
-    node: TreeNode;
-    level: number;
-  }> = ({ node, level }) => {
-    const isExpanded = expandedNodes.has(node.path);
-    const hasChildren = node.children && node.children.length > 0;
+  // Recursive component to render tree items using MUI X Tree View
+  const renderTreeItems = (nodes: TreeNode[]): React.ReactNode => {
+    return nodes.map((node) => {
+      const icon = node.type === 'directory' ? (
+        <Folder sx={{ fontSize: 16 }} />
+      ) : (
+        <InsertDriveFile sx={{ fontSize: 16 }} />
+      );
 
-    return (
-      <>
-        <ListItem
-          disablePadding
-          sx={{ pl: level * 1.5 }} // Reduced indentation
-        >
-          <ListItemButton
-            onClick={() => handleNodeClick(node)}
-            sx={{
-              minHeight: 28, // Reduced from 32
-              py: 0.25, // Reduced vertical padding
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.08)'
-              }
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 24 }}> {/* Reduced from 32 */}
-              {node.type === 'directory' ? (
-                hasChildren ? (
-                  isExpanded ? <ExpandMore sx={{ fontSize: 16 }} /> : <ChevronRight sx={{ fontSize: 16 }} />
-                ) : (
-                  <Folder sx={{ fontSize: 16 }} />
-                )
-              ) : (
-                <InsertDriveFile sx={{ fontSize: 16 }} />
-              )}
-            </ListItemIcon>
-            <ListItemText
-              primary={node.name}
-              slotProps={{
-                primary: {
-                  variant: 'body2',
-                  sx: {
-                    fontFamily: 'monospace',
-                    fontSize: '0.8rem', // Reduced from 0.875rem
-                    fontWeight: node.type === 'directory' ? 500 : 400,
-                    lineHeight: 1.2 // Tighter line height
-                  }
-                }
+      return (
+        <TreeItem
+          key={node.path}
+          itemId={node.path}
+          label={
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                py: 0.25,
+                fontFamily: 'monospace',
+                fontSize: '0.8rem',
+                fontWeight: node.type === 'directory' ? 500 : 400,
               }}
-            />
-          </ListItemButton>
-        </ListItem>
-
-        {node.type === 'directory' && hasChildren && (
-          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ py: 0 }}> {/* Remove vertical padding */}
-              {node.children!.map((child, index) => (
-                <TreeNodeComponent
-                  key={`${child.path}-${index}`}
-                  node={child}
-                  level={level + 1}
-                />
-              ))}
-            </List>
-          </Collapse>
-        )}
-      </>
-    );
+            >
+              {node.name}
+            </Box>
+          }
+          slots={{
+            icon: () => icon,
+          }}
+          sx={{
+            '& .MuiTreeItem-content': {
+              minHeight: 28,
+              py: 0.25,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              },
+            },
+            '& .MuiTreeItem-iconContainer': {
+              minWidth: 24,
+            },
+            '& .MuiTreeItem-label': {
+              paddingLeft: 0.5,
+            },
+          }}
+        >
+          {node.children && node.children.length > 0
+            ? renderTreeItems(node.children)
+            : null}
+        </TreeItem>
+      );
+    });
   };
 
   return (
@@ -352,15 +339,19 @@ export const FileBrowser: React.FC<FileBrowserProps> = ({ onFileOpen }) => {
         )}
 
         {fileTree.length > 0 && (
-          <List dense sx={{ py: 0.5 }}> {/* Reduced vertical padding */}
-            {fileTree.map((node, index) => (
-              <TreeNodeComponent
-                key={`${node.path}-${index}`}
-                node={node}
-                level={0}
-              />
-            ))}
-          </List>
+          <SimpleTreeView
+            expandedItems={expandedItems}
+            onExpandedItemsChange={handleExpandedItemsChange}
+            onItemClick={handleItemClick}
+            sx={{
+              py: 0.5,
+              '& .MuiTreeItem-content': {
+                borderRadius: 0,
+              },
+            }}
+          >
+            {renderTreeItems(fileTree)}
+          </SimpleTreeView>
         )}
       </Box>
     </Box>
