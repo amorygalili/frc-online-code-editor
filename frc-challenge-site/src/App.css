@@ -56,3 +56,8 @@
 #wpilib-code-editor .monaco-editor .inputarea {
   outline: none;
 }
+
+/* Hide the editor action toolbar icons (split editor, more actions, etc.) */
+#wpilib-code-editor .editor-actions {
+  display: none !important;
+}

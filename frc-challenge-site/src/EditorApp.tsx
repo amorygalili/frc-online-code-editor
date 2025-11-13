@@ -39,7 +39,7 @@ export function EditorBody({ onFileOpen }: EditorBodyProps) {
         >
           <ResizableSplitter
             direction="vertical"
-            initialSizes={[60, 40]} // 60% for file browser, 40% for instructions
+            initialSizes={[35, 65]}
             minSizes={[150, 150]} // Minimum heights in pixels
           >
             {/* File browser */}
@@ -73,7 +73,7 @@ export function EditorBody({ onFileOpen }: EditorBodyProps) {
         >
           <ResizableSplitter
             direction="horizontal"
-            initialSizes={[70, 30]} // 70% for editor, 30% for simulation
+            initialSizes={[55, 45]}
             minSizes={[400, 300]} // Minimum widths in pixels
           >
             {/* Editor area */}

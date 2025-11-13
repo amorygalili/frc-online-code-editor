@@ -18,7 +18,7 @@ export const SimulationView = () => {
     >
       <ResizableSplitter
         direction="vertical"
-        initialSizes={[45, 55]} // 45% for visualization, 55% for output tabs
+        initialSizes={[60, 40]} // 45% for visualization, 55% for output tabs
         minSizes={[200, 150]} // Minimum heights in pixels
       >
         {/* Simulation Visualization Area */}

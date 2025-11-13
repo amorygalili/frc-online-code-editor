@@ -269,6 +269,7 @@ async function initEditor(
             "editor.selectionHighlight": true,
             "editor.find.autoFindInSelection": "never",
             "editor.find.seedSearchStringFromSelection": "always",
+            "editor.minimap.enabled": false,
           }),
         },
       },
