@@ -69,7 +69,7 @@ function RobotModel({
 }
 
 export default function Robot({ object }: RobotProps) {
-  const { poses, model, components, visionTargets } = object;
+  const { poses, model, components = [], visionTargets = [] } = object;
   const color = object.type === 'ghost' ? object.color : undefined;
   const opacity = object.type === 'ghost' ? 0.5 : 1.0;
 
@@ -87,8 +87,8 @@ export default function Robot({ object }: RobotProps) {
           >
             <RobotModel modelPath={model} color={color} opacity={opacity} />
 
-            {/* Render articulated components if provided */}
-            {components && components.map((compPose, compIndex) => {
+            {/* Render articulated components */}
+            {components.map((compPose, compIndex) => {
               const [cx, cy, cz] = compPose.translation;
               const cQuaternion = rotation3dToQuaternion(compPose.rotation);
 
@@ -98,7 +98,7 @@ export default function Robot({ object }: RobotProps) {
                   position={[cx, cy, cz]}
                   quaternion={[cQuaternion.x, cQuaternion.y, cQuaternion.z, cQuaternion.w]}
                 >
-                  {/* Simple box for component - could be enhanced with actual component models */}
+                  {/* Simple box for component */}
                   <mesh castShadow receiveShadow>
                     <boxGeometry args={[0.2, 0.2, 0.2]} />
                     <meshStandardMaterial
@@ -113,8 +113,8 @@ export default function Robot({ object }: RobotProps) {
               );
             })}
 
-            {/* Render vision targets if provided */}
-            {visionTargets && visionTargets.map((targetPose, targetIndex) => {
+            {/* Render vision targets */}
+            {visionTargets.map((targetPose, targetIndex) => {
               const [tx, ty, tz] = targetPose.translation;
               const tQuaternion = rotation3dToQuaternion(targetPose.rotation);
 

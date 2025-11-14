@@ -12,8 +12,63 @@ Displays robot models with poses, articulated components, and vision targets.
   type: 'robot',
   model: '/models/robot.glb', // Path to GLB model (optional, uses default box if not provided)
   poses: [{ translation: [x, y, z], rotation: [w, x, y, z] }],
-  components: [], // Articulated component poses
-  visionTargets: [], // Vision target poses
+  components: [], // Articulated component poses (optional, loaded from config.json if not provided)
+  visionTargets: [], // Vision target poses (optional, loaded from cameras in config.json if not provided)
+}
+```
+
+**Loading Robot Configs:**
+
+Use the `loadRobotFromConfig()` function to automatically load a robot's `config.json` file and create a complete RobotObj with components and vision targets:
+
+```typescript
+import { loadRobotFromConfig } from './field/components/robotConfigLoader';
+
+// Load robot with config
+const robot = await loadRobotFromConfig(
+  '/3d-models/Robot_BananaSplitV4/config.json',
+  {
+    translation: [2.0, 0.0, 0.0],
+    rotation: [1, 0, 0, 0],
+  }
+);
+
+// Add to your field objects array
+const objects = [robot, ...otherObjects];
+```
+
+The config.json file can include:
+- `rotations`: Base rotation adjustments for the robot model
+- `position`: Base position offset for the robot model
+- `components`: Articulated components (arms, elevators, etc.) with their zeroed positions and rotations
+  - Component models are loaded from `model_0.glb`, `model_1.glb`, etc. in the same directory
+  - Or from explicit `src` paths if specified in the component config
+- `cameras`: Camera positions that will be rendered as vision targets (red spheres)
+
+Example config.json structure:
+```json
+{
+  "name": "My Robot",
+  "rotations": [{ "axis": "x", "degrees": 90 }],
+  "position": [0, 0, 0.04],
+  "cameras": [
+    {
+      "name": "Front Camera",
+      "position": [0.25, 0.24, 0.17],
+      "rotations": [{ "axis": "y", "degrees": -28.125 }],
+      "resolution": [1600, 1200],
+      "fov": 75
+    }
+  ],
+  "components": [
+    {
+      "zeroedPosition": [-0.61, 0, -0.005],
+      "zeroedRotations": [
+        { "axis": "x", "degrees": 90 },
+        { "axis": "z", "degrees": 90 }
+      ]
+    }
+  ]
 }
 ```
 

@@ -1,22 +1,11 @@
 import { createRoot } from "react-dom/client";
+import { useEffect, useState } from "react";
 import Field3d from "./field/Field3d.tsx";
 import { FieldObject } from "./field/components/types";
+import { loadRobotFromConfig } from "./field/components/robotConfigLoader";
 
-// Example field objects to demonstrate the 3D components
-const exampleObjects: FieldObject[] = [
-  // Robot at center of field
-  {
-    type: 'robot',
-    model: '', // Will use default box model
-    poses: [
-      {
-        translation: [2.0, 0.0, 0.0],
-        rotation: [1, 0, 0, 0], // [w, x, y, z] quaternion
-      },
-    ],
-    components: [],
-    visionTargets: [],
-  },
+// Static field objects
+const staticObjects: FieldObject[] = [
   // Trajectory showing robot path
   {
     type: 'trajectory',
@@ -39,6 +28,21 @@ const exampleObjects: FieldObject[] = [
 ];
 
 function App() {
+  const [objects, setObjects] = useState<FieldObject[]>(staticObjects);
+
+  useEffect(() => {
+    // Load robot with config
+    loadRobotFromConfig(
+      '/3d-models/Robot_BananaSplitV4/config.json',
+      {
+        translation: [2.0, 0.0, 0.0],
+        rotation: [1, 0, 0, 0],
+      }
+    ).then((robot) => {
+      setObjects([robot, ...staticObjects]);
+    });
+  }, []);
+
   return (
     <div id="canvas-container">
       <Field3d
@@ -46,7 +50,7 @@ function App() {
         origin="red"
         backgroundColor="#1a1a1a"
         style={{ width: '100%', height: '100vh' }}
-        objects={exampleObjects}
+        objects={objects}
       />
     </div>
   );

@@ -1,13 +1,26 @@
 /**
  * Example usage of 3D field components
- * 
+ *
  * This file demonstrates how to create and use the various field objects
  * based on the AdvantageScope Field3dRenderer API.
  */
 
 import { FieldObject } from './types';
+import { loadRobotFromConfig } from './robotConfigLoader';
 
-// Example: Robot with a single pose
+// Example: Load robot with config.json (recommended approach)
+// This will automatically load components and cameras from the config file
+export async function createExampleRobotWithConfig(): Promise<FieldObject> {
+  return await loadRobotFromConfig(
+    '/3d-models/Robot_BananaSplitV4/config.json',
+    {
+      translation: [2.0, 0.0, 0.0],
+      rotation: [1, 0, 0, 0],
+    }
+  );
+}
+
+// Example: Robot with manually specified components (alternative approach)
 export const exampleRobot: FieldObject = {
   type: 'robot',
   model: '/models/robot.glb', // Path to robot GLB model
