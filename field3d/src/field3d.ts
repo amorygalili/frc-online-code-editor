@@ -28,7 +28,7 @@ import fieldConfigs, { FieldConfig } from './field-configs';
 import objectConfigs from './object-configs';
 import urdfConfigs from './urdf-configs';
 import { Pose3d, IField3d, FieldObject } from './field-interfaces';
-import { convert } from '../field/units';
+import { convert } from './units';
 import './field3d-object';
 import './field3d-urdf';
 import { joinPaths } from './file-utils';

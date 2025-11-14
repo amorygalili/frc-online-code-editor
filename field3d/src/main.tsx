@@ -1,17 +1,15 @@
 import { createRoot } from "react-dom/client";
-import { Canvas } from "@react-three/fiber";
+import Field3d from "./Field3d.tsx";
 
 function App() {
   return (
     <div id="canvas-container">
-      <Canvas>
-        <mesh>
-          <boxGeometry />
-          <meshStandardMaterial />
-          <ambientLight intensity={0.1} />
-          <directionalLight color="red" position={[0, 0, 5]} />
-        </mesh>
-      </Canvas>
+      <Field3d
+        game="Reefscape"
+        origin="red"
+        backgroundColor="#1a1a1a"
+        style={{ width: '100%', height: '100vh' }}
+      />
     </div>
   );
 }
