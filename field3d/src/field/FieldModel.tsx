@@ -1,20 +1,23 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, useGLTF } from '@react-three/drei';
+import { useEffect, useMemo, useRef } from 'react';
+import { useGLTF } from '@react-three/drei';
 import { Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
-import { getQuaternionFromRotSeq } from './utils';
-import { convert } from './units';
-import fieldConfigs, { FieldConfig } from './field-configs';
+import { getQuaternionFromRotSeq } from '../utils';
+import { convert } from '../units';
+import { FieldConfig } from './field-configs';
+import { FieldObject } from './components/types';
+import FieldObjects from './components/FieldObjects';
 
-interface Field3dProps {
-  game?: string;
-  origin?: 'red' | 'blue';
-  backgroundColor?: string;
-  style?: React.CSSProperties;
-}
 
 // Component to load and display the field model
-function FieldModel({ fieldConfig, origin }: { fieldConfig: FieldConfig; origin: 'red' | 'blue' }) {
+function FieldModel({
+  fieldConfig,
+  origin,
+  objects = []
+}: {
+  fieldConfig: FieldConfig;
+  origin: 'red' | 'blue';
+  objects?: FieldObject[];
+}) {
   const { scene } = useGLTF(fieldConfig.src);
   const wpilibCoordinateGroupRef = useRef<Group>(null);
   const wpilibFieldCoordinateGroupRef = useRef<Group>(null);
@@ -78,71 +81,11 @@ function FieldModel({ fieldConfig, origin }: { fieldConfig: FieldConfig; origin:
 
         {/* Field coordinate group - origin at driver stations, flipped based on alliance */}
         <group ref={wpilibFieldCoordinateGroupRef}>
-          {/* This is where field objects would be added */}
+          <FieldObjects objects={objects} />
         </group>
       </group>
     </>
   );
 }
 
-// Lights component
-function Lights() {
-  return (
-    <>
-      <pointLight position={[0, 10, 0]} intensity={0.2} color={0xffffff} />
-      <hemisphereLight
-        args={[0xffffff, 0x444444, 1]}
-        position={[0, 1, 0]}
-      />
-    </>
-  );
-}
-
-// Main Field3d component
-export default function Field3d({
-  game,
-  origin = 'red',
-  backgroundColor = 'black',
-  style,
-}: Field3dProps) {
-  // Get field config based on game prop
-  const fieldConfig = useMemo(() => {
-    const config = game
-      ? fieldConfigs.find((config) => config.game === game)
-      : fieldConfigs[0];
-    return config ?? fieldConfigs[0];
-  }, [game]);
-
-  // Default camera position and target
-  const ORBIT_FIELD_DEFAULT_POSITION = new Vector3(0, 6, -12);
-  const ORBIT_FIELD_DEFAULT_TARGET = new Vector3(0, 0.5, 0);
-
-  return (
-    <div style={{ width: '700px', height: '400px', ...style }}>
-      <Canvas
-        camera={{
-          position: ORBIT_FIELD_DEFAULT_POSITION,
-          fov: 50,
-          near: 0.1,
-          far: 100,
-        }}
-        gl={{ antialias: true }}
-        style={{ background: backgroundColor }}
-      >
-        <Lights />
-        <FieldModel fieldConfig={fieldConfig} origin={origin} />
-        <OrbitControls
-          target={ORBIT_FIELD_DEFAULT_TARGET}
-          maxDistance={30}
-          enableDamping={true}
-          dampingFactor={0.05}
-        />
-      </Canvas>
-    </div>
-  );
-}
-
-// Preload field models
-fieldConfigs.forEach((config) => {
-  useGLTF.preload(config.src);
-});
+export default FieldModel;

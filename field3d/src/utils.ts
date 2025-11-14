@@ -4,7 +4,7 @@ import {
   Rotation,
   Rotation3d,
   Translation3d,
-} from './field-interfaces';
+} from './field/field-interfaces';
 
 // https://github.com/Mechanical-Advantage/AdvantageScope/blob/main/src/shared/visualizers/ThreeDimensionVisualizer.ts#L909
 export function getQuaternionFromRotSeq(rotations: Rotation[]): Quaternion {
