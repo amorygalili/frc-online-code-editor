@@ -1,0 +1,22 @@
+services:
+  wpilib-challenge:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: wpilib-challenge
+    ports:
+      - "30003:30003" # Main server
+      - "30004:30004" # NT4 Proxy
+      - "30005:30005" # Hal Sim proxy
+      - "30006:30006" # Language Server
+    volumes:
+      - ../robot-code/src/main/java/frc/robot:/home/frcuser/workspace/RobotProject/src/main/java/frc/robot
+    environment:
+      - JAVA_OPTS=-Xmx2g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:30003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

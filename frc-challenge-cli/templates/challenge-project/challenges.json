@@ -1,19 +1,6 @@
 {
-  "version": "1.0",
-  "repository": {
-    "name": "{{challengeTitle}} Repository",
-    "description": "Challenge repository for {{challengeTitle}}",
-    "author": "FRC Team",
-    "license": "MIT",
-    "website": "",
-    "contact": ""
-  },
-  "challenges": [
-    {
-      "id": "{{challengeName}}",
-      "path": "example-challenge",
-      "enabled": true,
-      "version": "1.0"
-    }
-  ]
+  "name": "{{challengeTitle}} Repository",
+  "description": "Challenge repository for {{challengeTitle}}",
+  "author": "FRC Team",
+  "challenges": ["example-challenge"]
 }
