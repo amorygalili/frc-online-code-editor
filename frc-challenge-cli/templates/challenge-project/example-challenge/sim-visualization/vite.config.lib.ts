@@ -16,7 +16,6 @@ export default defineConfig({
       formats: ["es"],
       fileName: () => "index.js",
     },
-    outDir: "challenge-visualization",
     rollupOptions: {
       external: [
         "react",

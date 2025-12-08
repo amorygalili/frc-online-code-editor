@@ -1,6 +1,6 @@
 {
   "title": "{{challengeTitle}}",
-  "description": "{{challengeDescription}}",
+  "description": "",
   "files": {
     "instructions": "instructions.md",
     "simVisualization": "sim-visualization/dist",

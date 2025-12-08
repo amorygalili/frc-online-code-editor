@@ -8,22 +8,19 @@
 $ npm install --global frc-challenge-cli
 ```
 
-## Architecture
-
-
-
 ## CLI
 
 ```
-$ frc-challenge-cli --help
+Usage
+  $ frc-challenge-cli <command>
 
-  Usage
-    $ frc-challenge-cli
+Commands
+  generate <name>    Generate a new challenge project
 
-  Options
-    --name  Your name
-
-  Examples
-    $ frc-challenge-cli --name=Jane
-    Hello, Jane
+Options
+  --title <title>    Challenge title (for generate command)
+  --help             Show help
+  
+Examples
+  $ frc-challenge-cli generate my-challenge --title "My Awesome Challenge"
 ```
