@@ -17,7 +17,7 @@
     "@mui/system": "^7.1.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "frc-challenge-site": "^1.0.0"
+    "frc-challenge-site": "^0.0.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

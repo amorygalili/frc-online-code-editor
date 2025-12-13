@@ -27,7 +27,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test:docker": "echo 'Starting test page for local Docker testing...' && npm run dev:test",
-    "prepublishOnly": "npm run build:lib && npm run build:plugin"
+    "prepublishOnly": "npm run build:lib"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.11.2",
