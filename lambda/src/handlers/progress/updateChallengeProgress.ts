@@ -78,16 +78,6 @@ function validateUpdateProgressRequest(request: UpdateProgressRequest): string |
     return 'Invalid status. Must be one of: not_started, in_progress, completed';
   }
 
-  // Validate progress
-  if (request.progress !== undefined && (request.progress < 0 || request.progress > 100)) {
-    return 'Progress must be between 0 and 100';
-  }
-
-  // Validate timeSpent
-  if (request.timeSpent !== undefined && request.timeSpent < 0) {
-    return 'Time spent cannot be negative';
-  }
-
   return null;
 }
 
@@ -105,21 +95,6 @@ async function updateExistingProgress(
     updates.push('#status = :status');
     attributeNames['#status'] = 'status';
     attributeValues[':status'] = request.status;
-  }
-
-  if (request.progress !== undefined) {
-    updates.push('progress = :progress');
-    attributeValues[':progress'] = request.progress;
-  }
-
-  if (request.lastCode !== undefined) {
-    updates.push('lastCode = :lastCode');
-    attributeValues[':lastCode'] = request.lastCode;
-  }
-
-  if (request.timeSpent !== undefined) {
-    updates.push('timeSpent = timeSpent + :additionalTime');
-    attributeValues[':additionalTime'] = request.timeSpent;
   }
 
   // Always update the timestamp and increment attempts
@@ -157,9 +132,6 @@ async function createNewProgress(
     userId,
     challengeId,
     status: request.status || 'not_started',
-    progress: request.progress || 0,
-    lastCode: request.lastCode,
-    timeSpent: request.timeSpent || 0,
     attempts: 1,
     createdAt: timestamp,
     updatedAt: timestamp,

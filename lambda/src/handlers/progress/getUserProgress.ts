@@ -52,43 +52,23 @@ interface ProgressSummary {
   totalChallenges: number;
   completedChallenges: number;
   inProgressChallenges: number;
-  totalTimeSpent: number; // in minutes
-  averageProgress: number; // 0-100
   completionRate: number; // 0-100
   totalAttempts: number;
-  bestScores: {
-    challengeId: string;
-    score: number;
-  }[];
 }
 
 function calculateProgressSummary(progressRecords: UserProgress[]): ProgressSummary {
   const totalChallenges = progressRecords.length;
   const completedChallenges = progressRecords.filter(p => p.status === 'completed').length;
   const inProgressChallenges = progressRecords.filter(p => p.status === 'in_progress').length;
-  
-  const totalTimeSpent = progressRecords.reduce((sum, p) => sum + p.timeSpent, 0);
-  const totalProgress = progressRecords.reduce((sum, p) => sum + p.progress, 0);
-  const averageProgress = totalChallenges > 0 ? totalProgress / totalChallenges : 0;
+
   const completionRate = totalChallenges > 0 ? (completedChallenges / totalChallenges) * 100 : 0;
   const totalAttempts = progressRecords.reduce((sum, p) => sum + p.attempts, 0);
-  
-  const bestScores = progressRecords
-    .filter(p => p.bestScore !== undefined)
-    .map(p => ({
-      challengeId: p.challengeId,
-      score: p.bestScore!,
-    }))
-    .sort((a, b) => b.score - a.score);
 
   return {
     totalChallenges,
     completedChallenges,
     inProgressChallenges,
-    totalTimeSpent,
-    averageProgress,
     completionRate,
     totalAttempts,
-    bestScores,
   };
 }

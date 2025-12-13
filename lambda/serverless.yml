@@ -192,41 +192,6 @@ functions:
           path: /challenges/{id}/progress
           method: options
 
-  # Challenge Sessions
-  createChallengeSession:
-    handler: src/handlers/sessions/createChallengeSession.handler
-    events:
-      - http:
-          path: /challenges/{id}/sessions
-          method: post
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId: !Ref ApiGatewayAuthorizer
-
-  createChallengeSessionOptions:
-    handler: src/handlers/cors/options.handler
-    events:
-      - http:
-          path: /challenges/{id}/sessions
-          method: options
-
-  saveChallengeCode:
-    handler: src/handlers/sessions/saveChallengeCode.handler
-    events:
-      - http:
-          path: /sessions/{sessionId}/code
-          method: put
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId: !Ref ApiGatewayAuthorizer
-
-  saveChallengeCodeOptions:
-    handler: src/handlers/cors/options.handler
-    events:
-      - http:
-          path: /sessions/{sessionId}/code
-          method: options
-
   # Session Management
   createSession:
     handler: src/handlers/sessions/createSession.handler

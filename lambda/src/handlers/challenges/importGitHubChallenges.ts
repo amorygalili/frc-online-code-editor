@@ -126,28 +126,19 @@ async function importChallenges(
   for (const challenge of challenges) {
     try {
       const now = new Date().toISOString();
+      const challengeId = uuidv4();
       const challengeEntity: Challenge = {
-        id: uuidv4(),
-        title: challenge.metadata.title || 'Untitled Challenge',
-        description: challenge.metadata.description || '',
-        difficulty: challenge.metadata.difficulty || 'Beginner',
-        category: challenge.metadata.category || 'General',
-        estimatedTime: challenge.metadata.estimatedTime || '30 min',
-        version: challenge.metadata.version || '1.0',
-        prerequisites: challenge.metadata.prerequisites || [],
-        tags: challenge.metadata.tags || [],
+        id: challengeId,
         // Git repository fields
-        githubUrl,
-        githubBranch: branch,
-        repositoryId,
-        challengePath: `challenges/${challenge.metadata.id}`, // Assuming standard path structure
-        // Metadata from the challenge
+        github: {
+          url: githubUrl,
+          branch,
+          repositoryId,
+          challengePath: challenge.challengePath, // Use the actual challenge path
+        },
+        // Metadata from the challenge (contains title, description, files)
         metadata: challenge.metadata,
-        // Sync information
-        lastSynced: now,
-        syncStatus: 'synced',
         // Standard fields
-        isPublished: true,
         createdAt: now,
         updatedAt: now
       };
@@ -162,14 +153,14 @@ async function importChallenges(
       await dynamoClient.send(command);
 
       successful.push({
-        id: challenge.metadata.id,
+        id: challengeId,
         title: challenge.metadata.title
       });
 
     } catch (error) {
-      console.error(`Failed to import challenge ${challenge.metadata?.id}:`, error);
+      console.error(`Failed to import challenge ${challenge.challengePath}:`, error);
       failed.push({
-        id: challenge.metadata?.id || 'unknown',
+        id: challenge.challengePath || 'unknown',
         title: challenge.metadata?.title,
         error: error instanceof Error ? error.message : 'Unknown error'
       });

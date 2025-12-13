@@ -24,6 +24,7 @@ export interface ParsedRepository {
 
 export interface ParsedChallenge {
   metadata: GitHubChallengeMetadata;
+  challengePath: string; // Path to the challenge folder (e.g., "example-challenge")
   files: {
     robotCode: GitHubFile[];
     instructions?: GitHubFile;
@@ -40,6 +41,7 @@ export class GitHubChallengeService {
 
   /**
    * Parse a GitHub repository and extract all challenges
+   * New simplified format: challenges array is just folder names
    */
   async parseRepository(githubUrl: string, branch: string = 'main'): Promise<ParsedRepository> {
     const urlInfo = parseGitHubUrl(githubUrl);
@@ -53,21 +55,17 @@ export class GitHubChallengeService {
     try {
       // Fetch root challenges.json
       const rootMetadata = await this.fetchRepositoryMetadata(owner, repo, actualBranch);
-      
-      // Parse individual challenges
+
+      // Parse individual challenges - challenges is now just an array of folder names
       const challenges: ParsedChallenge[] = [];
       const errors: string[] = [];
 
-      for (const challengeRef of rootMetadata.challenges) {
-        if (!challengeRef.enabled) {
-          continue;
-        }
-
+      for (const challengeFolder of rootMetadata.challenges) {
         try {
-          const challenge = await this.parseChallenge(owner, repo, actualBranch, challengeRef.path);
+          const challenge = await this.parseChallenge(owner, repo, actualBranch, challengeFolder);
           challenges.push(challenge);
         } catch (error) {
-          const errorMsg = `Failed to parse challenge ${challengeRef.id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          const errorMsg = `Failed to parse challenge ${challengeFolder}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           errors.push(errorMsg);
           console.error(errorMsg);
         }
@@ -128,6 +126,7 @@ export class GitHubChallengeService {
 
     return {
       metadata,
+      challengePath,
       files,
       errors: []
     };
@@ -135,6 +134,7 @@ export class GitHubChallengeService {
 
   /**
    * Fetch all files for a challenge based on its metadata
+   * Uses the files paths from metadata.json (instructions, simVisualization, robotCode)
    */
   private async fetchChallengeFiles(
     owner: string,
@@ -147,33 +147,32 @@ export class GitHubChallengeService {
       robotCode: []
     };
 
-    // Fetch robot code files from starter-code/robot/
-    const robotCodePath = `${challengePath}/starter-code/robot`;
+    // Fetch robot code files using path from metadata.files.robotCode
+    const robotCodePath = `${challengePath}/${metadata.files.robotCode}`;
     try {
       files.robotCode = await this.fetchDirectoryFiles(
         owner, repo, branch, robotCodePath
       );
     } catch (error) {
-      console.error(`Robot code files not found for challenge ${metadata.id} at ${robotCodePath}`);
+      console.error(`Robot code files not found for challenge at ${robotCodePath}`);
       throw new Error(`Required robot code files not found at ${robotCodePath}`);
     }
 
-    // Fetch instructions (optional)
+    // Fetch instructions using path from metadata.files.instructions
     try {
-      const instructionsUrl = buildRawGitHubUrl(
-        owner, repo, `${challengePath}/instructions.md`, branch
-      );
+      const instructionsPath = `${challengePath}/${metadata.files.instructions}`;
+      const instructionsUrl = buildRawGitHubUrl(owner, repo, instructionsPath, branch);
       const response = await this.fetchWithAuth(instructionsUrl);
       if (response.ok) {
         files.instructions = {
-          name: 'instructions.md',
-          path: `${challengePath}/instructions.md`,
+          name: metadata.files.instructions,
+          path: instructionsPath,
           content: await response.text(),
           sha: '' // We don't need SHA for raw content
         };
       }
     } catch (error) {
-      console.warn(`Instructions not found for challenge ${metadata.id}`);
+      console.warn(`Instructions not found for challenge at ${challengePath}`);
     }
 
     return files;

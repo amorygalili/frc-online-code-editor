@@ -1,37 +1,27 @@
 // JSON Schema definitions for GitHub-hosted challenges
 
+/**
+ * Root challenges.json file structure
+ * Simplified to just name, description, author, and array of challenge folder names
+ */
 export interface GitHubChallengeRepository {
-  version: string;
-  repository: {
-    name: string;
-    description: string;
-    author: string;
-    license?: string;
-    website?: string;
-    contact?: string;
-  };
-  challenges: GitHubChallengeReference[];
+  name: string;
+  description: string;
+  author: string;
+  challenges: string[]; // Array of challenge folder names (e.g., ["example-challenge"])
 }
 
-export interface GitHubChallengeReference {
-  id: string;
-  path: string;
-  enabled: boolean;
-  version?: string;
-}
-
+/**
+ * Per-challenge metadata.json file structure
+ * Simplified to just title, description, and files configuration
+ */
 export interface GitHubChallengeMetadata {
-  id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: string;
-  estimatedTime: string;
-  version: string;
-  prerequisites?: string[];
-  tags: string[];
   files: {
-    instructions: string; // Path to instructions.md file
+    instructions: string;     // Path to instructions file (e.g., "instructions.md")
+    simVisualization: string; // Path to simulation visualization dist folder
+    robotCode: string;        // Path to robot code source folder
   };
 }
 
@@ -56,53 +46,26 @@ export interface SyncRepositoryResponse {
 
 // Validation schemas using Joi or similar
 export const GitHubChallengeRepositorySchema = {
-  version: { type: 'string', required: true },
-  repository: {
-    type: 'object',
-    required: true,
-    properties: {
-      name: { type: 'string', required: true },
-      description: { type: 'string', required: true },
-      author: { type: 'string', required: true },
-      license: { type: 'string' },
-      website: { type: 'string' },
-      contact: { type: 'string' }
-    }
-  },
+  name: { type: 'string', required: true },
+  description: { type: 'string', required: true },
+  author: { type: 'string', required: true },
   challenges: {
     type: 'array',
     required: true,
-    items: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', required: true },
-        path: { type: 'string', required: true },
-        enabled: { type: 'boolean', required: true },
-        version: { type: 'string' }
-      }
-    }
+    items: { type: 'string' }
   }
 };
 
 export const GitHubChallengeMetadataSchema = {
-  id: { type: 'string', required: true },
   title: { type: 'string', required: true },
   description: { type: 'string', required: true },
-  difficulty: { 
-    type: 'string', 
-    required: true, 
-    enum: ['Beginner', 'Intermediate', 'Advanced'] 
-  },
-  category: { type: 'string', required: true },
-  estimatedTime: { type: 'string', required: true },
-  version: { type: 'string', required: true },
-  prerequisites: { type: 'array', items: { type: 'string' } },
-  tags: { type: 'array', required: true, items: { type: 'string' } },
   files: {
     type: 'object',
     required: true,
     properties: {
-      instructions: { type: 'string', required: true }
+      instructions: { type: 'string', required: true },
+      simVisualization: { type: 'string', required: true },
+      robotCode: { type: 'string', required: true }
     }
   }
 };

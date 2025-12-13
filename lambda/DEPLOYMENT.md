@@ -85,7 +85,6 @@ functions:
   getUserProgress: frc-challenge-api-dev-getUserProgress
   updateChallengeProgress: frc-challenge-api-dev-updateChallengeProgress
   createChallengeSession: frc-challenge-api-dev-createChallengeSession
-  saveChallengeCode: frc-challenge-api-dev-saveChallengeCode
 ```
 
 ### Step 5: Seed Database with Sample Data

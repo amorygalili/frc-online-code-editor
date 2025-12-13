@@ -8,18 +8,11 @@ import {
   CardContent,
   CardActions,
   Button,
-  Chip,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  LinearProgress,
   Tabs,
   Tab,
   CircularProgress,
   Alert,
-  Grid,
   Fab,
   Tooltip,
 } from '@mui/material';
@@ -30,14 +23,10 @@ import ImportChallengeDialog from '../components/challenges/ImportChallengeDialo
 const PlayIcon = () => <span>▶️</span>;
 const CompletedIcon = () => <span>✅</span>;
 const InProgressIcon = () => <span>🔄</span>;
-const LockedIcon = () => <span>🔒</span>;
-const SearchIcon = () => <span>🔍</span>;
 const GitHubIcon = () => <span>📁</span>;
 
 const ChallengesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [activeTab, setActiveTab] = useState(0);
   const [challenges, setChallenges] = useState<ChallengeWithProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,9 +39,8 @@ const ChallengesPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      // Simplified filters - removed category, difficulty
       const filters: ChallengeFilters = {};
-      if (selectedCategory !== 'all') filters.category = selectedCategory;
-      if (selectedDifficulty !== 'all') filters.difficulty = selectedDifficulty;
       if (searchTerm.trim()) filters.search = searchTerm.trim();
 
       // Apply tab-based status filter
@@ -72,24 +60,7 @@ const ChallengesPage: React.FC = () => {
   // Load challenges on component mount and when filters change
   useEffect(() => {
     loadChallenges();
-  }, [activeTab, selectedCategory, selectedDifficulty, searchTerm]);
-
-  // Get categories and difficulties from service
-  const categories = challengeService.getCategories().map(c => c.toLowerCase());
-  const difficulties = challengeService.getDifficulties().map(d => d.toLowerCase());
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty.toLowerCase()) {
-      case 'beginner':
-        return 'success';
-      case 'intermediate':
-        return 'warning';
-      case 'advanced':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
+  }, [activeTab, searchTerm]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -97,8 +68,6 @@ const ChallengesPage: React.FC = () => {
         return <CompletedIcon />;
       case 'in_progress':
         return <InProgressIcon />;
-      case 'locked':
-        return <LockedIcon />;
       default:
         return <PlayIcon />;
     }
@@ -139,49 +108,16 @@ const ChallengesPage: React.FC = () => {
         <Tab label="Completed" />
       </Tabs>
 
-      {/* Filters */}
-      <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <Box sx={{ flex: 1, minWidth: 200 }}>
-          <TextField
-            fullWidth
-            label="Search challenges"
-            variant="outlined"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 200 }}>
-          <FormControl fullWidth>
-            <InputLabel>Category</InputLabel>
-            <Select
-              value={selectedCategory}
-              label="Category"
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              {categories.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : category}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 200 }}>
-          <FormControl fullWidth>
-            <InputLabel>Difficulty</InputLabel>
-            <Select
-              value={selectedDifficulty}
-              label="Difficulty"
-              onChange={(e) => setSelectedDifficulty(e.target.value)}
-            >
-              {difficulties.map((difficulty) => (
-                <MenuItem key={difficulty} value={difficulty}>
-                  {difficulty === 'all' ? 'All Difficulties' : difficulty}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
+      {/* Filters - simplified (removed category/difficulty) */}
+      <Box sx={{ mb: 4 }}>
+        <TextField
+          fullWidth
+          label="Search challenges"
+          variant="outlined"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ maxWidth: 400 }}
+        />
       </Box>
 
       {/* Loading State */}
@@ -206,65 +142,35 @@ const ChallengesPage: React.FC = () => {
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 3 }}>
           {challenges.map((challenge) => (
           <Box key={challenge.id}>
-            <Card 
-              sx={{ 
-                height: '100%', 
-                display: 'flex', 
+            <Card
+              sx={{
+                height: '100%',
+                display: 'flex',
                 flexDirection: 'column',
-                opacity: challenge.status === 'locked' ? 0.6 : 1,
               }}
             >
               <CardContent sx={{ flexGrow: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  {getStatusIcon(challenge.status)}
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <Chip
-                      label={challenge.difficulty}
-                      color={getDifficultyColor(challenge.difficulty) as any}
-                      size="small"
-                    />
-                    <Chip label={challenge.category} variant="outlined" size="small" />
-                  </Box>
+                  {getStatusIcon(challenge.userProgress?.status || 'not_started')}
                 </Box>
-                
+
                 <Typography variant="h6" component="h3" gutterBottom>
-                  {challenge.title}
+                  {challenge.metadata?.title || 'Untitled Challenge'}
                 </Typography>
-                
+
                 <Typography color="text.secondary" sx={{ mb: 2 }}>
-                  {challenge.description}
+                  {challenge.metadata?.description || ''}
                 </Typography>
-                
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  ⏱️ {challenge.estimatedTime}
-                </Typography>
-
-                {challenge.status === 'in_progress' && (
-                  <Box sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">Progress</Typography>
-                      <Typography variant="body2">{challenge.progress}%</Typography>
-                    </Box>
-                    <LinearProgress variant="determinate" value={challenge.progress} />
-                  </Box>
-                )}
-
-                {challenge.prerequisites && challenge.prerequisites.length > 0 && (
-                  <Typography variant="body2" color="text.secondary">
-                    Prerequisites: Complete challenges {challenge.prerequisites.join(', ')}
-                  </Typography>
-                )}
               </CardContent>
-              
+
               <CardActions>
                 <Button
                   component={Link}
-                  to={challenge.status === 'locked' ? '#' : `/challenge/${challenge.id}`}
-                  disabled={challenge.status === 'locked'}
-                  startIcon={getStatusIcon(challenge.status)}
-                  variant={challenge.status === 'completed' ? 'outlined' : 'contained'}
+                  to={`/challenge/${challenge.id}`}
+                  startIcon={getStatusIcon(challenge.userProgress?.status || 'not_started')}
+                  variant={(challenge.userProgress?.status || 'not_started') === 'completed' ? 'outlined' : 'contained'}
                 >
-                  {getStatusText(challenge.status)}
+                  {getStatusText(challenge.userProgress?.status || 'not_started')}
                 </Button>
               </CardActions>
             </Card>

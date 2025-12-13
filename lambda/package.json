@@ -15,9 +15,7 @@
     "remove": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js remove",
     "remove:dev": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js remove --stage dev",
     "remove:prod": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js remove --stage prod",
-    "seed": "node -r dotenv/config dist/scripts/seedData.js",
     "test": "node -r dotenv/config node_modules/.bin/jest",
-    "test:api": "node scripts/testApi.js",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
     "info": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js info --stage dev"

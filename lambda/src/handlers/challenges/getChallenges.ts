@@ -1,8 +1,16 @@
 // Get Challenges Lambda Function
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { Challenge, UserProgress, ChallengeWithProgress, GetChallengesRequest, GetChallengesResponse } from '../../types';
+import { Challenge, ChallengeWithProgress, ChallengeFilters } from '../../types/challenge';
+import { UserProgress, GetChallengesResponse } from '../../types';
 import { successResponse, errorResponse, internalErrorResponse, getUserIdFromEvent } from '../../utils/response';
 import { scanItems, queryItems, TABLES } from '../../utils/dynamodb';
+
+// Simplified request interface matching new schema
+interface GetChallengesRequest extends ChallengeFilters {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
 
 export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
@@ -18,11 +26,9 @@ export async function handler(event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }, event);
     }
 
-    // Parse query parameters
+    // Parse query parameters - simplified (removed category, difficulty)
     const queryParams = event.queryStringParameters || {};
     const request: GetChallengesRequest = {
-      category: queryParams.category,
-      difficulty: queryParams.difficulty,
       status: queryParams.status,
       search: queryParams.search,
       limit: queryParams.limit ? parseInt(queryParams.limit) : 50,
@@ -66,48 +72,35 @@ async function getChallenges(request: GetChallengesRequest): Promise<Challenge[]
   let challenges: Challenge[] = [];
 
   // Build filter expression for scan
-  let filterExpression = 'isPublished = :published';
-  let expressionAttributeValues: Record<string, any> = {
-    ':published': true,
-  };
-  let expressionAttributeNames: Record<string, string> = {};
+  let filterExpression: string | undefined;
+  let expressionAttributeValues: Record<string, any> | undefined;
+  let expressionAttributeNames: Record<string, string> | undefined;
 
-  // Add category filter
-  if (request.category && request.category !== 'all') {
-    filterExpression += ' AND category = :category';
-    expressionAttributeValues[':category'] = request.category;
-  }
-
-  // Add difficulty filter
-  if (request.difficulty && request.difficulty !== 'all') {
-    filterExpression += ' AND difficulty = :difficulty';
-    expressionAttributeValues[':difficulty'] = request.difficulty;
-  }
-
-  // Add search filter
+  // Add search filter (searches metadata.title and metadata.description)
   if (request.search) {
-    filterExpression += ' AND (contains(#title, :search) OR contains(description, :search) OR contains(tags, :search))';
-    expressionAttributeNames['#title'] = 'title';
-    expressionAttributeValues[':search'] = request.search;
+    filterExpression = 'contains(#metadata.#title, :search) OR contains(#metadata.#description, :search)';
+    expressionAttributeNames = {
+      '#metadata': 'metadata',
+      '#title': 'title',
+      '#description': 'description',
+    };
+    expressionAttributeValues = {
+      ':search': request.search,
+    };
   }
 
   // Scan the challenges table
   const result = await scanItems<Challenge>(
     TABLES.CHALLENGES,
     filterExpression,
-    Object.keys(expressionAttributeNames).length > 0 ? expressionAttributeNames : undefined,
+    expressionAttributeNames,
     expressionAttributeValues
   );
 
   challenges = result.items;
 
-  // Sort by sortOrder, then by title
-  challenges.sort((a, b) => {
-    if (a.sortOrder !== b.sortOrder) {
-      return a.sortOrder - b.sortOrder;
-    }
-    return a.title.localeCompare(b.title);
-  });
+  // Sort by title only (sortOrder removed from schema)
+  challenges.sort((a, b) => a.metadata.title.localeCompare(b.metadata.title));
 
   return challenges;
 }

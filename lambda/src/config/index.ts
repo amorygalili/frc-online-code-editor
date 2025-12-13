@@ -52,27 +52,3 @@ export const config = {
   isLocal: process.env.IS_OFFLINE === 'true',
 };
 
-// Validation function to ensure required config is present
-export function validateConfig(): void {
-  const requiredVars = [
-    'COGNITO_USER_POOL_ID',
-  ];
-  
-  const missing = requiredVars.filter(varName => !process.env[varName]);
-  
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-}
-
-// Log configuration (excluding sensitive data)
-export function logConfig(): void {
-  console.log('Configuration loaded:', {
-    region: config.region,
-    stage: config.stage,
-    tables: config.tables,
-    isDevelopment: config.isDevelopment,
-    isLocal: config.isLocal,
-    cognitoUserPoolId: config.cognitoUserPoolId ? '***configured***' : 'NOT SET',
-  });
-}

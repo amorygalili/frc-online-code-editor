@@ -6,7 +6,6 @@ import {
   Typography,
   Button,
   Paper,
-  Chip,
   Breadcrumbs,
   Alert,
   CircularProgress,
@@ -99,19 +98,6 @@ const ChallengePage: React.FC = () => {
 
   // Use the loaded challenge data
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty.toLowerCase()) {
-      case 'beginner':
-        return 'success';
-      case 'intermediate':
-        return 'warning';
-      case 'advanced':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
   const handleStartChallenge = async () => {
     if (!challenge || !isAuthenticated) {
       // Redirect to login if not authenticated
@@ -151,7 +137,7 @@ const ChallengePage: React.FC = () => {
         <Link to="/challenges" style={{ textDecoration: 'none', color: 'inherit' }}>
           Challenges
         </Link>
-        <Typography color="text.primary">{challenge.title}</Typography>
+        <Typography color="text.primary">{challenge.metadata?.title || 'Challenge'}</Typography>
       </Breadcrumbs>
 
       {/* Back Button */}
@@ -163,23 +149,14 @@ const ChallengePage: React.FC = () => {
         <BackIcon /> Back to Challenges
       </Button>
 
-      {/* Challenge Header */}
+      {/* Challenge Header - simplified (removed difficulty/category/estimatedTime) */}
       <Paper sx={{ p: 4, mb: 4 }}>
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-          <Chip
-            label={challenge.difficulty}
-            color={getDifficultyColor(challenge.difficulty) as any}
-          />
-          <Chip label={challenge.category} variant="outlined" />
-          <Chip label={`⏱️ ${challenge.estimatedTime}`} variant="outlined" />
-        </Box>
-
         <Typography variant="h3" component="h1" gutterBottom>
-          {challenge.title}
+          {challenge.metadata?.title || 'Untitled Challenge'}
         </Typography>
 
         <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
-          {challenge.description}
+          {challenge.metadata?.description || ''}
         </Typography>
 
         <Button
@@ -279,26 +256,22 @@ const ChallengePage: React.FC = () => {
           </Paper>
         </Box>
 
-        {/* Sidebar */}
+        {/* Sidebar - simplified (removed difficulty/category/estimatedTime) */}
         <Box sx={{ flex: 1 }}>
-          {/* Challenge Stats */}
+          {/* Challenge Info */}
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Challenge Stats
+              Challenge Info
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Typography variant="body2">
-                <strong>Difficulty:</strong> {challenge.difficulty}
+                <strong>Status:</strong> {challenge.progress?.status ? challenge.progress.status.replace('_', ' ').toUpperCase() : 'NOT STARTED'}
               </Typography>
-              <Typography variant="body2">
-                <strong>Category:</strong> {challenge.category}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Estimated Time:</strong> {challenge.estimatedTime}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Status:</strong> {challenge.status ? challenge.status.replace('_', ' ').toUpperCase() : 'NOT STARTED'}
-              </Typography>
+              {challenge.progress?.timeSpent && (
+                <Typography variant="body2">
+                  <strong>Time Spent:</strong> {challenge.progress.timeSpent} min
+                </Typography>
+              )}
             </Box>
           </Paper>
         </Box>

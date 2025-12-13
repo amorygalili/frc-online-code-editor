@@ -5,65 +5,48 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 
 // GitHub challenge metadata type (simplified for frontend)
 interface GitHubChallengeMetadata {
-  id: string;
   title: string;
   description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: string;
-  estimatedTime: string;
-  version: string;
-  prerequisites?: string[];
-  tags: string[];
   files: {
     instructions: string;
+    simVisualization: string;
+    robotCode: string;
   };
 }
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://6gn6mwav0j.execute-api.us-east-2.amazonaws.com/dev';
 
+/**
+ * Simplified Challenge interface matching the new schema
+ * Removed: difficulty, category, estimatedTime, version, prerequisites, tags
+ * Core fields (title, description, files) are now only in metadata
+ */
 export interface Challenge {
   id: string;
-  title: string;
-  description: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: string;
-  estimatedTime: string;
-  version: string;
-  prerequisites: string[];
-  tags: string[];
   // Git repository fields (all challenges are now git-based)
-  githubUrl: string;
-  githubBranch: string;
-  repositoryId: string;
-  challengePath: string; // Path within the repository (e.g., "challenges/hello-world")
-  // Metadata from the challenge
+  github: {
+    url: string;
+    branch: string;
+    repositoryId: string;
+    challengePath: string; // Path within the repository (e.g., "example-challenge")
+  };
+  // Metadata from the challenge (contains title, description, files)
   metadata: GitHubChallengeMetadata;
-  // Sync information
-  lastSynced: string;
-  syncStatus: 'pending' | 'synced' | 'error';
   // Standard fields
-  isPublished: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ChallengeWithProgress extends Challenge {
   userProgress?: UserProgress;
-  // Computed properties for UI compatibility
-  status: 'not_started' | 'in_progress' | 'completed' | 'locked';
-  progress: number;
 }
 
 export interface UserProgress {
   challengeId: string;
   userId: string;
   status: 'not_started' | 'in_progress' | 'completed';
-  progress: number;
-  lastCode?: string;
   completedAt?: string;
-  timeSpent: number; // in minutes
-  bestScore?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -136,9 +119,8 @@ export interface SessionCreateRequest {
 
 
 
+// Simplified filters - removed category, difficulty since they're not in the new schema
 export interface ChallengeFilters {
-  category?: string;
-  difficulty?: string;
   status?: string;
   search?: string;
 }
@@ -197,9 +179,7 @@ const mockProgress: Record<string, UserProgress> = {
     challengeId: '1',
     userId: 'user123',
     status: 'completed',
-    progress: 100,
     completedAt: '2024-01-15T10:30:00Z',
-    timeSpent: 20,
     createdAt: '2024-01-15T09:00:00Z',
     updatedAt: '2024-01-15T10:30:00Z',
   },
@@ -207,9 +187,6 @@ const mockProgress: Record<string, UserProgress> = {
     challengeId: '2',
     userId: 'user123',
     status: 'in_progress',
-    progress: 60,
-    lastCode: 'partial implementation...',
-    timeSpent: 15,
     createdAt: '2024-01-15T09:30:00Z',
     updatedAt: '2024-01-15T10:00:00Z',
   },
@@ -223,65 +200,26 @@ class ChallengeService {
       const response = await apiRequest('/challenges');
       const apiChallenges = response.challenges || [];
 
-      // Transform API response to match expected ChallengeWithProgress format
-      const challengesWithProgress = apiChallenges.map((challenge: any) => {
-        // Extract status and progress from userProgress, or use defaults
-        const userProgress = challenge.userProgress;
-        const status = userProgress?.status || 'not_started';
-        const progress = userProgress?.progress || 0;
+      // Cast API response to ChallengeWithProgress array
+      let challenges: ChallengeWithProgress[] = apiChallenges;
 
-        // Check if challenge should be locked based on prerequisites
-        let finalStatus = status;
-        if (challenge.prerequisites && challenge.prerequisites.length > 0 && !userProgress) {
-          // For challenges with prerequisites and no user progress, check if prerequisites are met
-          const prerequisitesMet = challenge.prerequisites.every((prereqId: string) => {
-            const prereqProgress = mockProgress[prereqId];
-            return prereqProgress && prereqProgress.status === 'completed';
-          });
-
-          finalStatus = prerequisitesMet ? 'not_started' : 'locked';
-        }
-
-        return {
-          ...challenge,
-          status: finalStatus,
-          progress: progress,
-        } as ChallengeWithProgress;
-      });
-      
-      // Apply filters
-      let filteredChallenges = challengesWithProgress;
-      
+      // Apply filters (simplified - removed category/difficulty filters)
       if (filters) {
-        if (filters.category && filters.category !== 'all') {
-          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) =>
-            c.category.toLowerCase() === filters.category!.toLowerCase()
-          );
-        }
-
-        if (filters.difficulty && filters.difficulty !== 'all') {
-          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) =>
-            c.difficulty.toLowerCase() === filters.difficulty!.toLowerCase()
-          );
-        }
-
         if (filters.status && filters.status !== 'all') {
-          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) => c.status === filters.status);
+          challenges = challenges.filter((c) => (c.userProgress?.status || 'not_started') === filters.status);
         }
 
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();
-          filteredChallenges = filteredChallenges.filter((c: ChallengeWithProgress) =>
-            c.title.toLowerCase().includes(searchLower) ||
-            c.description.toLowerCase().includes(searchLower) ||
-            c.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))
+          challenges = challenges.filter((c) =>
+            (c.metadata?.title || '').toLowerCase().includes(searchLower) ||
+            (c.metadata?.description || '').toLowerCase().includes(searchLower)
           );
         }
       }
-      
-      // Sort by sortOrder
-      return filteredChallenges.sort((a: any, b: any) => a.sortOrder - b.sortOrder);
-      
+
+      return challenges;
+
     } catch (error) {
       console.error('Failed to fetch challenges:', error);
       throw error;
@@ -292,17 +230,7 @@ class ChallengeService {
   async getChallenge(id: string): Promise<ChallengeWithProgress | null> {
     try {
       const apiResponse = await apiRequest(`/challenges/${id}`);
-
-      // Transform the API response to match the expected ChallengeWithProgress format
-      const challenge: ChallengeWithProgress = {
-        ...apiResponse,
-        // Extract status and progress from userProgress, or use defaults
-        status: apiResponse.userProgress?.status || 'not_started',
-        progress: apiResponse.userProgress?.progress || 0,
-      };
-
-      return challenge;
-
+      return apiResponse as ChallengeWithProgress;
     } catch (error) {
       console.error(`Failed to fetch challenge ${id}:`, error);
       return null;
@@ -338,8 +266,6 @@ class ChallengeService {
           challengeId,
           userId: 'user123', // This would come from auth context
           status: 'not_started',
-          progress: 0,
-          timeSpent: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           ...progress,
@@ -408,25 +334,6 @@ class ChallengeService {
     }
   }
 
-  // Legacy method for backward compatibility
-  async createChallengeSession(challengeId: string): Promise<{ sessionId: string }> {
-    const session = await this.createSession({ challengeId });
-    return { sessionId: session.sessionId };
-  }
-
-  // Save challenge code
-  async saveChallengeCode(sessionId: string, code: string): Promise<void> {
-    try {
-      await apiRequest(`/sessions/${sessionId}/code`, {
-        method: 'PUT',
-        body: JSON.stringify({ code }),
-      });
-    } catch (error) {
-      console.error(`Failed to save code for session ${sessionId}:`, error);
-      throw error;
-    }
-  }
-
   // Import challenges from GitHub repository
   async importGitHubChallenges(githubUrl: string, branch?: string, accessToken?: string): Promise<ImportResult> {
     try {
@@ -483,15 +390,7 @@ class ChallengeService {
     }
   }
 
-  // Get available categories
-  getCategories(): string[] {
-    return ['All', 'Basics', 'Sensors', 'Autonomous', 'Advanced'];
-  }
-
-  // Get available difficulty levels
-  getDifficulties(): string[] {
-    return ['All', 'Beginner', 'Intermediate', 'Advanced'];
-  }
+  // Removed getCategories() and getDifficulties() - no longer part of simplified schema
 }
 
 // Export singleton instance
