@@ -98,14 +98,14 @@ export class ContainerChallengeLoader {
    * Prepare setup for git-based challenge
    */
   private async prepareGitChallenge(challenge: Challenge): Promise<ContainerChallengeSetup> {
-    const { githubUrl, githubBranch } = challenge;
+    const { url: githubUrl, branch: githubBranch } = challenge.github;
 
     // Parse the repository to get challenge files
     const parsedRepo = await this.githubService.parseRepository(githubUrl, githubBranch);
-    const parsedChallenge = parsedRepo.challenges.find(c => c.metadata.id === challenge.metadata.id);
+    const parsedChallenge = parsedRepo.challenges.find(c => c.challengePath === challenge.github.challengePath);
 
     if (!parsedChallenge) {
-      throw new Error(`Challenge ${challenge.metadata.id} not found in repository`);
+      throw new Error(`Challenge ${challenge.id} not found in repository`);
     }
 
     const workspaceFiles: ContainerFile[] = [];

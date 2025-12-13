@@ -1,0 +1,9 @@
+{
+  "title": "Example Challenges",
+  "description": "",
+  "files": {
+    "instructions": "instructions.md",
+    "simVisualization": "sim-visualization/dist",
+    "robotCode": "robot-code/src/main/java/frc/robot"
+  }
+}

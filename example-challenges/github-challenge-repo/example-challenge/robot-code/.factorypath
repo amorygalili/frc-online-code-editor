@@ -1,0 +1,4 @@
+<factorypath>
+    <factorypathentry kind="EXTJAR" id="/home/frcuser/wpilib/2025/maven/edu/wpi/first/epilogue/epilogue-runtime-java/2025.3.2/epilogue-runtime-java-2025.3.2.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="EXTJAR" id="/home/frcuser/wpilib/2025/maven/edu/wpi/first/epilogue/epilogue-processor-java/2025.3.2/epilogue-processor-java-2025.3.2.jar" enabled="true" runInBatchMode="false"/>
+</factorypath>
