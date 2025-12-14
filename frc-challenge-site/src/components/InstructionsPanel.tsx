@@ -5,38 +5,13 @@ import { ScrollableBox } from './ScrollableBox';
 
 interface InstructionsPanelProps {
   className?: string;
+  instructions?: string;
 }
 
 // Dummy markdown content - will be replaced with actual challenge instructions later
-const DUMMY_INSTRUCTIONS = `# Challenge Instructions
+const DUMMY_INSTRUCTIONS = `No instructions available.`;
 
-## Overview
-This is a placeholder for challenge instructions. The actual instructions will be loaded dynamically based on the selected challenge.
-
-## Objectives
-- [ ] Complete the first task
-- [ ] Complete the second task
-- [ ] Complete the third task
-
-## Getting Started
-1. Read through the requirements carefully
-2. Implement the necessary code changes
-3. Test your solution using the simulation
-4. Verify all objectives are met
-
-## Tips
-- Use the file browser on the left to navigate your code
-- The simulation view on the right shows real-time feedback
-- NetworkTables can be used to debug your robot's state
-
-## Resources
-- [WPILib Documentation](https://docs.wpilib.org)
-- [FRC Programming Guide](https://docs.wpilib.org/en/stable/docs/zero-to-robot/introduction.html)
-
-Good luck! 🚀
-`;
-
-export const InstructionsPanel: React.FC<InstructionsPanelProps> = ({ className }) => {
+export const InstructionsPanel = ({ className, instructions = DUMMY_INSTRUCTIONS }: InstructionsPanelProps) => {
   return (
     <Box 
       className={className}
@@ -159,7 +134,7 @@ export const InstructionsPanel: React.FC<InstructionsPanelProps> = ({ className 
           }}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {DUMMY_INSTRUCTIONS}
+            {instructions}
           </ReactMarkdown>
         </ScrollableBox>
       </Paper>

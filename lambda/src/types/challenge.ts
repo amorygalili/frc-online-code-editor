@@ -15,6 +15,10 @@ export interface Challenge {
     branch: string;
     repositoryId: string;
     challengePath: string; // Path within the repository (e.g., "example-challenge")
+    // Repository metadata from challenges.json
+    name: string;
+    description: string;
+    author: string;
   };
   // Metadata from the challenge's metadata.json file
   // Contains: title, description, files { instructions, simVisualization, robotCode }

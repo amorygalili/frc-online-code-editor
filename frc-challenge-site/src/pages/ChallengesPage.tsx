@@ -25,6 +25,40 @@ const CompletedIcon = () => <span>✅</span>;
 const InProgressIcon = () => <span>🔄</span>;
 const GitHubIcon = () => <span>📁</span>;
 
+// Type for grouped challenges by repository
+interface RepositoryGroup {
+  repositoryId: string;
+  name: string;
+  description: string;
+  author: string;
+  githubUrl: string;
+  challenges: ChallengeWithProgress[];
+}
+
+// Helper function to group challenges by repository
+function groupChallengesByRepository(challenges: ChallengeWithProgress[]): RepositoryGroup[] {
+  const groupMap = new Map<string, RepositoryGroup>();
+
+  for (const challenge of challenges) {
+    const repoId = challenge.github?.repositoryId || 'unknown';
+
+    if (!groupMap.has(repoId)) {
+      groupMap.set(repoId, {
+        repositoryId: repoId,
+        name: challenge.github?.name || 'Unknown Repository',
+        description: challenge.github?.description || '',
+        author: challenge.github?.author || '',
+        githubUrl: challenge.github?.url || '',
+        challenges: [],
+      });
+    }
+
+    groupMap.get(repoId)!.challenges.push(challenge);
+  }
+
+  return Array.from(groupMap.values());
+}
+
 const ChallengesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(0);
@@ -93,7 +127,7 @@ const ChallengesPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4, bgcolor: 'background.default' }}>
       <Typography variant="h3" component="h1" gutterBottom>
         Programming Challenges
       </Typography>
@@ -137,44 +171,81 @@ const ChallengesPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Challenge Grid */}
+      {/* Challenge Grid - Grouped by Repository */}
       {!loading && !error && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 3 }}>
-          {challenges.map((challenge) => (
-          <Box key={challenge.id}>
-            <Card
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <CardContent sx={{ flexGrow: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  {getStatusIcon(challenge.userProgress?.status || 'not_started')}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {groupChallengesByRepository(challenges).map((repoGroup) => (
+            <Box key={repoGroup.repositoryId}>
+              {/* Repository Header */}
+              <Box sx={{ mb: 2, p: 2, borderRadius: 1 }}>
+                <Typography variant="h5" component="h2" gutterBottom>
+                  {repoGroup.name}
+                </Typography>
+                <Typography color="text.secondary" sx={{ mb: 1 }}>
+                  {repoGroup.description}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {repoGroup.author && (
+                    <Typography variant="body2" color="text.secondary">
+                      By {repoGroup.author}
+                    </Typography>
+                  )}
+                  {repoGroup.githubUrl && (
+                    <Button
+                      component="a"
+                      href={repoGroup.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="small"
+                      startIcon={<GitHubIcon />}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      View on GitHub
+                    </Button>
+                  )}
                 </Box>
+              </Box>
 
-                <Typography variant="h6" component="h3" gutterBottom>
-                  {challenge.metadata?.title || 'Untitled Challenge'}
-                </Typography>
+              {/* Challenges in this repository */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 3 }}>
+                {repoGroup.challenges.map((challenge) => (
+                  <Box key={challenge.id}>
+                    <Card
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                          {getStatusIcon(challenge.userProgress?.status || 'not_started')}
+                        </Box>
 
-                <Typography color="text.secondary" sx={{ mb: 2 }}>
-                  {challenge.metadata?.description || ''}
-                </Typography>
-              </CardContent>
+                        <Typography variant="h6" component="h3" gutterBottom>
+                          {challenge.metadata?.title || 'Untitled Challenge'}
+                        </Typography>
 
-              <CardActions>
-                <Button
-                  component={Link}
-                  to={`/challenge/${challenge.id}`}
-                  startIcon={getStatusIcon(challenge.userProgress?.status || 'not_started')}
-                  variant={(challenge.userProgress?.status || 'not_started') === 'completed' ? 'outlined' : 'contained'}
-                >
-                  {getStatusText(challenge.userProgress?.status || 'not_started')}
-                </Button>
-              </CardActions>
-            </Card>
-          </Box>
+                        <Typography color="text.secondary" sx={{ mb: 2 }}>
+                          {challenge.metadata?.description || ''}
+                        </Typography>
+                      </CardContent>
+
+                      <CardActions>
+                        <Button
+                          component={Link}
+                          to={`/challenge/${challenge.id}`}
+                          startIcon={getStatusIcon(challenge.userProgress?.status || 'not_started')}
+                          variant={(challenge.userProgress?.status || 'not_started') === 'completed' ? 'outlined' : 'contained'}
+                        >
+                          {getStatusText(challenge.userProgress?.status || 'not_started')}
+                        </Button>
+                      </CardActions>
+                    </Card>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
           ))}
         </Box>
       )}

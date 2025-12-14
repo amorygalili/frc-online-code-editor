@@ -11,6 +11,7 @@ import {
   ImportChallengeRepositoryResponse,
   Challenge
 } from '../../types/challenge';
+import { GitHubChallengeRepository } from '../../schemas/github-challenge-schemas';
 import { createResponse, errorResponse } from '../../utils/response';
 import { getUserId } from '../../utils/auth';
 import { config } from '../../config';
@@ -71,6 +72,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       repositoryId,
       githubUrl,
       branch,
+      parsedRepo.metadata,
       parsedRepo.challenges,
     );
 
@@ -115,6 +117,7 @@ async function importChallenges(
   repositoryId: string,
   githubUrl: string,
   branch: string,
+  repoMetadata: GitHubChallengeRepository,
   challenges: any[],
 ): Promise<{
   successful: { id: string; title: string }[];
@@ -127,6 +130,16 @@ async function importChallenges(
     try {
       const now = new Date().toISOString();
       const challengeId = uuidv4();
+
+      // Include instructions content in metadata.files if available
+      const metadataWithContent = {
+        ...challenge.metadata,
+        files: {
+          ...challenge.metadata.files,
+          instructionsContent: challenge.files?.instructions?.content || '',
+        },
+      };
+
       const challengeEntity: Challenge = {
         id: challengeId,
         // Git repository fields
@@ -135,9 +148,13 @@ async function importChallenges(
           branch,
           repositoryId,
           challengePath: challenge.challengePath, // Use the actual challenge path
+          // Repository metadata from challenges.json
+          name: repoMetadata.name,
+          description: repoMetadata.description,
+          author: repoMetadata.author,
         },
-        // Metadata from the challenge (contains title, description, files)
-        metadata: challenge.metadata,
+        // Metadata from the challenge (contains title, description, files, and instructionsContent)
+        metadata: metadataWithContent,
         // Standard fields
         createdAt: now,
         updatedAt: now

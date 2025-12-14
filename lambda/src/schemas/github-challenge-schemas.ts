@@ -22,6 +22,8 @@ export interface GitHubChallengeMetadata {
     instructions: string;     // Path to instructions file (e.g., "instructions.md")
     simVisualization: string; // Path to simulation visualization dist folder
     robotCode: string;        // Path to robot code source folder
+    // Actual content fetched during import
+    instructionsContent?: string;
   };
 }
 

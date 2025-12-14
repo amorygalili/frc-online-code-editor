@@ -11,6 +11,8 @@ interface GitHubChallengeMetadata {
     instructions: string;
     simVisualization: string;
     robotCode: string;
+    // Actual content fetched during import
+    instructionsContent?: string;
   };
 }
 
@@ -30,6 +32,10 @@ export interface Challenge {
     branch: string;
     repositoryId: string;
     challengePath: string; // Path within the repository (e.g., "example-challenge")
+    // Repository metadata from challenges.json
+    name: string;
+    description: string;
+    author: string;
   };
   // Metadata from the challenge (contains title, description, files)
   metadata: GitHubChallengeMetadata;
