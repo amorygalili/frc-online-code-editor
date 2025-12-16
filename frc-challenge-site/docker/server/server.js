@@ -205,11 +205,17 @@ app.put('/session/:sessionId/main/files/*', express.json(), async (req, res) => 
     }
 });
 
+// Path to store cloned challenge repos
+const challengeReposPath = '/home/frcuser/challenge-repos';
+
+// Current sim-visualization path (set when challenge is loaded)
+let currentSimVisualizationPath = null;
+
 // Session-aware challenge setup endpoint
 app.post('/session/:sessionId/main/setup-challenge', express.json(), async (req, res) => {
     try {
         const sessionId = req.params.sessionId;
-        const { challengeId, files, metadata } = req.body;
+        const { challengeId, files, metadata, github } = req.body;
 
         console.log(`Setting up git challenge ${challengeId} for session ${sessionId}`);
         console.log(`Loading ${files.length} robot source files into workspace`);
@@ -247,12 +253,44 @@ app.post('/session/:sessionId/main/setup-challenge', express.json(), async (req,
             console.log(`Wrote robot source file: ${file.path}`);
         }
 
-        // Note: We only modify robot Java source files, not build configuration
+        // Clone the challenge repo for sim-visualization if github info is provided
+        currentSimVisualizationPath = null;
+        if (github && github.url && github.simVisualizationPath) {
+            console.log(`Cloning challenge repo for sim-visualization: ${github.url}`);
+
+            // Create challenge repos directory
+            await fs.mkdir(challengeReposPath, { recursive: true });
+
+            // Clean up any existing repo
+            const repoName = github.url.split('/').pop().replace('.git', '');
+            const repoPath = path.join(challengeReposPath, repoName);
+            try {
+                await fs.rm(repoPath, { recursive: true, force: true });
+            } catch (e) {
+                // Ignore if doesn't exist
+            }
+
+            // Clone the repo (shallow clone for speed)
+            const { execSync } = await import('child_process');
+            const cloneCmd = `git clone --depth 1 --branch ${github.branch || 'main'} ${github.url} ${repoPath}`;
+            console.log(`Executing: ${cloneCmd}`);
+            execSync(cloneCmd, { stdio: 'inherit' });
+
+            // Set the path to the sim-visualization directory
+            currentSimVisualizationPath = path.join(
+                repoPath,
+                github.challengePath,
+                github.simVisualizationPath
+            );
+
+            console.log(`Sim-visualization available at: ${currentSimVisualizationPath}`);
+        }
 
         res.json({
             status: 'success',
             message: `Challenge ${challengeId} loaded successfully`,
             filesLoaded: files.length,
+            simVisualizationAvailable: !!currentSimVisualizationPath,
             metadata: {
                 title: metadata.title,
                 difficulty: metadata.difficulty,
@@ -266,6 +304,46 @@ app.post('/session/:sessionId/main/setup-challenge', express.json(), async (req,
             error: 'Failed to setup challenge',
             details: error.message
         });
+    }
+});
+
+// Serve sim-visualization files
+app.get('/session/:sessionId/main/sim-visualization/*', async (req, res) => {
+    try {
+        const filePath = req.params[0] || 'index.js'; // Default to index.js
+
+        if (!currentSimVisualizationPath) {
+            return res.status(404).json({ error: 'No sim-visualization loaded' });
+        }
+
+        // Build the full path to the visualization file
+        const fullPath = path.join(currentSimVisualizationPath, filePath);
+
+        // Security check
+        const resolvedPath = path.resolve(fullPath);
+        const resolvedSimVis = path.resolve(currentSimVisualizationPath);
+        if (!resolvedPath.startsWith(resolvedSimVis)) {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
+        // Check if file exists
+        try {
+            await fs.access(fullPath);
+        } catch {
+            return res.status(404).json({ error: 'File not found' });
+        }
+
+        // Set appropriate content type for JS files
+        if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+
+        const content = await fs.readFile(fullPath, 'utf8');
+        res.send(content);
+
+    } catch (error) {
+        console.error('Error serving sim-visualization file:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

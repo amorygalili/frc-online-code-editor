@@ -1,49 +1,102 @@
-import React from "react";
-import { Box, Paper } from "@mui/material";
-import RobotModeSelector from "./RobotModeSelector";
-import { Field, FieldRobot } from "@frc-web-components/react";
-import { useNTValue } from "../nt4/useNetworktables";
+import { Box, CircularProgress, Typography } from "@mui/material";
+import {
+  getDefaultSimVisualization,
+  getSimVisualization,
+  setSimVisualization,
+} from "../window-api";
+import { useSession } from "../contexts/SessionContext";
+import { useEffect, useState } from "react";
 
-export const SimulationVisualization: React.FC = () => {
-  // Get robot pose from NetworkTables
-  const [robotPose] = useNTValue<[number, number, number]>("/SmartDashboard/Field/Robot", [0, 0, 0]);
-  return (
-    <Paper
-      elevation={1}
-      sx={{
-        p: 2,
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        backgroundColor: "background.paper",
-      }}
-    >
-      {/* Robot Mode Selector */}
-      <Box sx={{ mb: 1 }}>
-        <RobotModeSelector />
-      </Box>
+export const SimulationView = () => {
+  const { session } = useSession();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [visualizationKey, setVisualizationKey] = useState(0);
 
-      {/* Visualization Area - Placeholder */}
+  const containerEndpoint = session?.containerInfo?.albEndpoints?.main;
+
+  useEffect(() => {
+    // Reset to default visualization when session changes
+    setSimVisualization(null);
+    setVisualizationKey((prev) => prev + 1);
+    setError(null);
+
+    if (!containerEndpoint) {
+      return;
+    }
+
+    const loadSimVisualization = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const simVisUrl = `${containerEndpoint}/sim-visualization/index.js`;
+        console.log(`Loading sim-visualization from: ${simVisUrl}`);
+
+        // Dynamically import the sim-visualization module
+        const module = await import(/* @vite-ignore */ simVisUrl);
+
+        // The module default export is the visualization component
+        if (module.default) {
+          const VisualizationComponent = module.default;
+          setSimVisualization(<VisualizationComponent />);
+          setVisualizationKey((prev) => prev + 1);
+          console.log("Sim-visualization loaded successfully");
+        } else {
+          console.warn("Sim-visualization module has no default export");
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        console.warn(`Failed to load sim-visualization: ${errorMessage}`);
+        // Keep the default visualization - don't show error to user as it's optional
+        setError(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSimVisualization();
+  }, [containerEndpoint, session?.sessionId]);
+
+  if (loading) {
+    return (
       <Box
         sx={{
-          flex: 1,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "action.hover",
-          borderRadius: 1,
-          border: 2,
-          borderStyle: "dashed",
-          borderColor: "divider",
-          minHeight: 200,
+          height: "100%",
         }}
       >
-        <Field game="Reefscape" rotationUnit="deg">
-          <FieldRobot pose={robotPose} />
-        </Field>
+        <CircularProgress size={24} sx={{ mr: 1 }} />
+        <Typography variant="body2">Loading visualization...</Typography>
       </Box>
-    </Paper>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+        }}
+      >
+        <Typography variant="body2" color="error">
+          {error}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <div key={visualizationKey}>
+      {getSimVisualization() || getDefaultSimVisualization()}
+    </div>
   );
 };
 
-export default SimulationVisualization;
+export default SimulationView;

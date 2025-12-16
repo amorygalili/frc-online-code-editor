@@ -11,6 +11,7 @@ import { FileBrowser } from "./components/FileBrowser.tsx";
 import { SimulationView } from "./components/SimulationView.tsx";
 import { ResizableSplitter } from "./components/ResizableSplitter.tsx";
 import { InstructionsPanel } from "./components/InstructionsPanel.tsx";
+import { useSession } from "./contexts/SessionContext.tsx";
 
 // Editor content without header (for use in ChallengeEditorPage)
 interface EditorBodyProps {
@@ -18,6 +19,9 @@ interface EditorBodyProps {
 }
 
 export function EditorBody({ onFileOpen }: EditorBodyProps) {
+  const { challenge } = useSession();
+  const instructionsContent = challenge?.metadata?.files?.instructionsContent;
+
   return (
     <Box sx={{ display: "flex", height: "100%", overflow: "hidden" }}>
       {/* Left side: File browser and instructions with vertical splitter */}
@@ -59,7 +63,7 @@ export function EditorBody({ onFileOpen }: EditorBodyProps) {
                 overflow: "hidden",
               }}
             >
-              <InstructionsPanel />
+              <InstructionsPanel instructions={instructionsContent} />
             </Box>
           </ResizableSplitter>
         </Box>

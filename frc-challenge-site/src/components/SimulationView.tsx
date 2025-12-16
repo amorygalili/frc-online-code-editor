@@ -1,14 +1,15 @@
 import { Box, Paper } from "@mui/material";
 import { OutputTabs } from "./BottomPanel";
 import { ResizableSplitter } from "./ResizableSplitter";
-import { getSimVisualization } from "../window-api";
 import ScrollableBox from "./ScrollableBox";
+import SimulationVisualization from "./DefaultSimulationVisualization";
 
 export const SimulationView = () => {
+
   return (
     <Box
       sx={{
-        width: "100%", // Take full width from splitter
+        width: "100%",
         height: "100%",
         borderLeft: 1,
         borderColor: "divider",
@@ -18,8 +19,8 @@ export const SimulationView = () => {
     >
       <ResizableSplitter
         direction="vertical"
-        initialSizes={[60, 40]} // 45% for visualization, 55% for output tabs
-        minSizes={[200, 150]} // Minimum heights in pixels
+        initialSizes={[60, 40]}
+        minSizes={[200, 150]}
       >
         {/* Simulation Visualization Area */}
         <ScrollableBox
@@ -30,7 +31,7 @@ export const SimulationView = () => {
             flexDirection: "column",
           }}
         >
-          {getSimVisualization()}
+          <SimulationVisualization />
         </ScrollableBox>
 
         {/* Output Tabs Area */}

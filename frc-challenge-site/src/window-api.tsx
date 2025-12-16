@@ -4,12 +4,11 @@ import { initLocaleLoader } from "monaco-editor-wrapper/vscode/locale";
 import TestApp from "./TestApp";
 import "./index.css";
 import "./App.css";
-import "./test.css";
-import SimulationVisualization from "./components/SimulationVisualization";
+import DefaultSimulationVisualization from "./components/DefaultSimulationVisualization";
 import { useNTConnection, useNTKeyExists, useNTKeys, useNTValue } from "./nt4/useNetworktables";
 import { useDriverStation, useHalSimData } from "./contexts/HalSimContext";
 
-let simVisualization = <SimulationVisualization />;
+let simVisualization: JSX.Element | null = null;
 
 async function mountEditor(element: HTMLElement) {
   await initLocaleLoader();
@@ -26,7 +25,7 @@ async function mountEditor(element: HTMLElement) {
  * HalSimContext and NT4Context providers.
  * @param element
  */
-export function setSimVisualization(element: JSX.Element) {
+export function setSimVisualization(element: JSX.Element | null) {
   simVisualization = element;
 }
 
@@ -34,10 +33,15 @@ export function getSimVisualization() {
   return simVisualization;
 }
 
+export function getDefaultSimVisualization() {
+  return <DefaultSimulationVisualization />;
+}
+
 (window as any).frcChallengeApi = {
   mountEditor,
   setSimVisualization,
   getSimVisualization,
+  getDefaultSimVisualization,
   // NT4
   useNTValue,
   useNTConnection,

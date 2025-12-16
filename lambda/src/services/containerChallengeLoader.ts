@@ -98,11 +98,11 @@ export class ContainerChallengeLoader {
    * Prepare setup for git-based challenge
    */
   private async prepareGitChallenge(challenge: Challenge): Promise<ContainerChallengeSetup> {
-    const { url: githubUrl, branch: githubBranch } = challenge.github;
+    const { url: githubUrl, branch: githubBranch, challengePath } = challenge.github;
 
     // Parse the repository to get challenge files
     const parsedRepo = await this.githubService.parseRepository(githubUrl, githubBranch);
-    const parsedChallenge = parsedRepo.challenges.find(c => c.challengePath === challenge.github.challengePath);
+    const parsedChallenge = parsedRepo.challenges.find(c => c.challengePath === challengePath);
 
     if (!parsedChallenge) {
       throw new Error(`Challenge ${challenge.id} not found in repository`);
@@ -133,10 +133,19 @@ export class ContainerChallengeLoader {
    * Generate container API payload for challenge setup
    */
   generateContainerSetupPayload(setup: ContainerChallengeSetup): any {
+    const { github, metadata } = setup.challengeData;
+
     return {
       challengeId: setup.challengeData.id,
       files: setup.workspaceFiles,
-      metadata: setup.challengeData.metadata
+      metadata: metadata,
+      // GitHub info for container to clone and serve sim-visualization
+      github: {
+        url: github.url,
+        branch: github.branch,
+        challengePath: github.challengePath,
+        simVisualizationPath: metadata.files.simVisualization,
+      }
     };
   }
 }
