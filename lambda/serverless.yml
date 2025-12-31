@@ -243,12 +243,7 @@ functions:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
 
-  terminateSessionOptions:
-    handler: src/handlers/cors/options.handler
-    events:
-      - http:
-          path: /sessions/{sessionId}
-          method: options
+  # Note: terminateSessionOptions removed - getSessionOptions handles OPTIONS for /sessions/{sessionId}
 
   listSessions:
     handler: src/handlers/sessions/listSessions.handler
@@ -260,12 +255,7 @@ functions:
             type: COGNITO_USER_POOLS
             authorizerId: !Ref ApiGatewayAuthorizer
 
-  listSessionsOptions:
-    handler: src/handlers/cors/options.handler
-    events:
-      - http:
-          path: /sessions
-          method: options
+  # Note: listSessionsOptions removed - createSessionOptions handles OPTIONS for /sessions
 
   keepAlive:
     handler: src/handlers/sessions/keepAlive.handler
@@ -409,3 +399,11 @@ custom:
     webpackConfig: webpack.config.js
     includeModules: false
     packager: npm
+
+  serverless-offline:
+    httpPort: 3001
+    lambdaPort: 3002
+    websocketPort: 3003
+    noPrependStageInUrl: true
+    # Skip authorization for local testing (optional - set to false if you want to test auth)
+    noAuth: true

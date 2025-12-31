@@ -5,7 +5,11 @@ import { config } from '../../config';
 import { createResponse } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
 
-const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
+  config.localStack.enabled
+    ? { region: config.region, endpoint: config.localStack.endpoint }
+    : { region: config.region }
+));
 
 const SESSION_TIMEOUT_MINUTES = 120; // 2 hours
 // const IDLE_TIMEOUT_MINUTES = 30; // 30 minutes (unused)

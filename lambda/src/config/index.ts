@@ -2,23 +2,36 @@
 import * as dotenv from 'dotenv';
 
 // Load environment variables from .env file (for local development)
-dotenv.config();
+// Try .env.local first, then fall back to .env
+dotenv.config({ path: '.env.local' });
+dotenv.config(); // This won't override existing values
+
+// Determine if we're running locally with LocalStack
+const isOffline = process.env.IS_OFFLINE === 'true';
+const useLocalStack = process.env.USE_LOCALSTACK === 'true';
+const localStackEndpoint = process.env.LOCALSTACK_ENDPOINT || 'http://localhost:4566';
 
 export const config = {
   // AWS Configuration
   region: process.env.AWS_REGION || process.env.REGION || 'us-east-1',
   stage: process.env.STAGE || 'dev',
-  
+
+  // LocalStack Configuration
+  localStack: {
+    enabled: isOffline && useLocalStack,
+    endpoint: localStackEndpoint,
+  },
+
   // Cognito Configuration
   cognitoUserPoolId: process.env.COGNITO_USER_POOL_ID || '',
-  
+
   // DynamoDB Table Names
   tables: {
     challenges: process.env.CHALLENGES_TABLE || 'frc-challenge-api-challenges-dev',
     userProgress: process.env.USER_PROGRESS_TABLE || 'frc-challenge-api-user-progress-dev',
     challengeSessions: process.env.CHALLENGE_SESSIONS_TABLE || 'frc-challenge-api-challenge-sessions-dev',
   },
-  
+
   // API Configuration
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['*'],
 
@@ -49,6 +62,25 @@ export const config = {
 
   // Development flags
   isDevelopment: process.env.NODE_ENV !== 'production',
-  isLocal: process.env.IS_OFFLINE === 'true',
+  isLocal: isOffline,
+  isLocalStack: isOffline && useLocalStack,
 };
+
+// Helper to get AWS client config (with LocalStack endpoint if enabled)
+export function getAwsClientConfig() {
+  const baseConfig = { region: config.region };
+
+  if (config.localStack.enabled) {
+    return {
+      ...baseConfig,
+      endpoint: config.localStack.endpoint,
+      credentials: {
+        accessKeyId: 'test',
+        secretAccessKey: 'test',
+      },
+    };
+  }
+
+  return baseConfig;
+}
 

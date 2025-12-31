@@ -5,20 +5,12 @@
   "main": "index.js",
   "scripts": {
     "build": "webpack --mode production",
-    "build:dev": "webpack --mode development",
-    "deploy": "npm run deploy:serverless",
-    "deploy:dev": "npm run build && npm run deploy:serverless:dev",
-    "deploy:prod": "npm run build && npm run deploy:serverless:prod",
-    "deploy:serverless": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js deploy",
-    "deploy:serverless:dev": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js deploy --stage dev",
-    "deploy:serverless:prod": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js deploy --stage prod",
+    "deploy": "npm run build && node -r dotenv/config ./node_modules/serverless/bin/serverless.js deploy",
     "remove": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js remove",
-    "remove:dev": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js remove --stage dev",
-    "remove:prod": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js remove --stage prod",
-    "test": "node -r dotenv/config node_modules/.bin/jest",
+    "local": "docker-compose -f docker-compose.local-dev.yml up -d && node -r dotenv/config ./node_modules/serverless/bin/serverless.js offline start --stage dev",
+    "local:stop": "docker-compose -f docker-compose.local-dev.yml down",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts",
-    "info": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js info --stage dev"
+    "format": "prettier --write src/**/*.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.840.0",

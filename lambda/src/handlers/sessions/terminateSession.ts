@@ -7,7 +7,14 @@ import { createResponse } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
 
 const ecsClient = new ECSClient({ region: config.region });
-const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
+  config.localStack.enabled
+    ? { region: config.region, endpoint: config.localStack.endpoint }
+    : { region: config.region }
+));
+
+// Check if running in local development mode
+const isLocalDev = config.isLocal;
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
@@ -44,9 +51,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       });
     }
 
-    // Stop the ECS task
+    // Stop the ECS task (skip in local dev mode - container runs independently)
     let taskStopped = false;
-    if (session.taskArn) {
+    if (session.taskArn && session.taskArn !== 'local-docker-container') {
       try {
         await stopECSTask(session.taskArn);
         taskStopped = true;
@@ -56,6 +63,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         // Continue with updating the session status even if task stop fails
         // The task might already be stopped or the ARN might be invalid
       }
+    } else if (isLocalDev || session.taskArn === 'local-docker-container') {
+      console.log('[LOCAL DEV] Skipping ECS task stop - local container runs independently');
+      taskStopped = true; // Mark as stopped for response
     }
 
     // Update session status in DynamoDB

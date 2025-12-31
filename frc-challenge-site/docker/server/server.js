@@ -211,85 +211,116 @@ const challengeReposPath = '/home/frcuser/challenge-repos';
 // Current sim-visualization path (set when challenge is loaded)
 let currentSimVisualizationPath = null;
 
+// Helper function to recursively copy directory contents
+async function copyDirectory(src, dest) {
+    await fs.mkdir(dest, { recursive: true });
+    const entries = await fs.readdir(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+
+        if (entry.isDirectory()) {
+            await copyDirectory(srcPath, destPath);
+        } else {
+            await fs.copyFile(srcPath, destPath);
+            console.log(`Copied: ${entry.name}`);
+        }
+    }
+}
+
 // Session-aware challenge setup endpoint
 app.post('/session/:sessionId/main/setup-challenge', express.json(), async (req, res) => {
     try {
         const sessionId = req.params.sessionId;
-        const { challengeId, files, metadata, github } = req.body;
+        const { challengeId, metadata, github } = req.body;
 
         console.log(`Setting up git challenge ${challengeId} for session ${sessionId}`);
-        console.log(`Loading ${files.length} robot source files into workspace`);
+
+        if (!github || !github.url) {
+            return res.status(400).json({
+                error: 'GitHub info required',
+                details: 'github.url is required for challenge setup'
+            });
+        }
 
         const projectPath = path.join(workspacePath, 'RobotProject');
         const robotCodePath = path.join(projectPath, 'src/main/java/frc/robot');
 
-        // All challenges are git-based, so always replace the robot code folder
-        console.log('Clearing existing robot code folder for git challenge');
+        // Clone the challenge repo
+        console.log(`Cloning challenge repo: ${github.url}`);
+        await fs.mkdir(challengeReposPath, { recursive: true });
+
+        // Clean up any existing repo
+        const repoName = github.url.split('/').pop().replace('.git', '');
+        const repoPath = path.join(challengeReposPath, repoName);
         try {
-            await fs.rm(robotCodePath, { recursive: true, force: true });
-            console.log('Existing robot code cleared');
-        } catch (error) {
-            console.warn('Could not clear existing robot code:', error.message);
+            await fs.rm(repoPath, { recursive: true, force: true });
+        } catch (e) {
+            // Ignore if doesn't exist
         }
 
-        // Write each file to the workspace
-        for (const file of files) {
-            const fullPath = path.join(projectPath, file.path);
+        // Clone the repo (shallow clone for speed)
+        const { execSync } = await import('child_process');
+        const cloneCmd = `git clone --depth 1 --branch ${github.branch || 'main'} ${github.url} ${repoPath}`;
+        console.log(`Executing: ${cloneCmd}`);
+        execSync(cloneCmd, { stdio: 'inherit' });
 
-            // Security check: ensure the path is within project workspace
-            const resolvedPath = path.resolve(fullPath);
-            const resolvedProject = path.resolve(projectPath);
-            if (!resolvedPath.startsWith(resolvedProject)) {
-                console.warn(`Skipping file outside project: ${file.path}`);
-                continue;
-            }
+        // Copy robot code from cloned repo to workspace
+        const challengeRobotCodePath = path.join(repoPath, github.challengePath, github.robotCodePath);
 
-            // Ensure directory exists
-            const dirPath = path.dirname(fullPath);
-            await fs.mkdir(dirPath, { recursive: true });
+        // Check if robot code exists in the cloned repo
+        let robotFilesCount = 0;
+        try {
+            await fs.access(challengeRobotCodePath);
 
-            // Write file content
-            await fs.writeFile(fullPath, file.content, 'utf8');
-            console.log(`Wrote robot source file: ${file.path}`);
-        }
-
-        // Clone the challenge repo for sim-visualization if github info is provided
-        currentSimVisualizationPath = null;
-        if (github && github.url && github.simVisualizationPath) {
-            console.log(`Cloning challenge repo for sim-visualization: ${github.url}`);
-
-            // Create challenge repos directory
-            await fs.mkdir(challengeReposPath, { recursive: true });
-
-            // Clean up any existing repo
-            const repoName = github.url.split('/').pop().replace('.git', '');
-            const repoPath = path.join(challengeReposPath, repoName);
+            // Clear existing robot code folder
+            console.log('Clearing existing robot code folder');
             try {
-                await fs.rm(repoPath, { recursive: true, force: true });
-            } catch (e) {
-                // Ignore if doesn't exist
+                await fs.rm(robotCodePath, { recursive: true, force: true });
+                console.log('Existing robot code cleared');
+            } catch (error) {
+                console.warn('Could not clear existing robot code:', error.message);
             }
 
-            // Clone the repo (shallow clone for speed)
-            const { execSync } = await import('child_process');
-            const cloneCmd = `git clone --depth 1 --branch ${github.branch || 'main'} ${github.url} ${repoPath}`;
-            console.log(`Executing: ${cloneCmd}`);
-            execSync(cloneCmd, { stdio: 'inherit' });
+            // Copy robot code from cloned repo
+            console.log(`Copying robot code from: ${challengeRobotCodePath}`);
+            await copyDirectory(challengeRobotCodePath, robotCodePath);
 
-            // Set the path to the sim-visualization directory
+            // Count files copied
+            const countFiles = async (dir) => {
+                let count = 0;
+                const entries = await fs.readdir(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    if (entry.isDirectory()) {
+                        count += await countFiles(path.join(dir, entry.name));
+                    } else {
+                        count++;
+                    }
+                }
+                return count;
+            };
+            robotFilesCount = await countFiles(robotCodePath);
+            console.log(`Copied ${robotFilesCount} robot source files`);
+        } catch (error) {
+            console.warn(`No robot code found at ${challengeRobotCodePath}:`, error.message);
+        }
+
+        // Set sim-visualization path if specified
+        currentSimVisualizationPath = null;
+        if (github.simVisualizationPath) {
             currentSimVisualizationPath = path.join(
                 repoPath,
                 github.challengePath,
                 github.simVisualizationPath
             );
-
             console.log(`Sim-visualization available at: ${currentSimVisualizationPath}`);
         }
 
         res.json({
             status: 'success',
             message: `Challenge ${challengeId} loaded successfully`,
-            filesLoaded: files.length,
+            filesLoaded: robotFilesCount,
             simVisualizationAvailable: !!currentSimVisualizationPath,
             metadata: {
                 title: metadata.title,

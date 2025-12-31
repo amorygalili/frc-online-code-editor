@@ -16,9 +16,25 @@ import { getUserFromEvent } from '../../utils/auth';
 import { ContainerChallengeLoader } from '../../services/containerChallengeLoader';
 
 const ecsClient = new ECSClient({ region: config.region });
-const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
+  config.localStack.enabled
+    ? { region: config.region, endpoint: config.localStack.endpoint }
+    : { region: config.region }
+));
 const elbClient = new ElasticLoadBalancingV2Client({ region: config.region });
 const lambdaClient = new LambdaClient({ region: config.region });
+
+// Check if running in local development mode
+const isLocalDev = config.isLocal;
+
+// Local development container endpoints (when running container locally via docker-compose)
+const LOCAL_CONTAINER_HOST = process.env.LOCAL_CONTAINER_HOST || 'localhost';
+const LOCAL_CONTAINER_PORTS = {
+  main: 30003,
+  nt4: 30004,
+  halsim: 30005,
+  jdtls: 30006
+};
 
 interface CreateSessionRequest {
   challengeId: string;
@@ -213,6 +229,52 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const sessionId = uuidv4();
     const expiresAt = new Date(Date.now() + SESSION_LIMITS.sessionTimeoutMinutes * 60 * 1000);
 
+    // LOCAL DEVELOPMENT MODE: Skip ECS/ALB and use locally-running Docker container
+    if (isLocalDev) {
+      console.log(`[LOCAL DEV] Running in local development mode - skipping ECS/ALB`);
+
+      const localEndpoints = {
+        main: `http://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.main}/`,
+        nt4: `ws://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.nt4}/`,
+        halsim: `ws://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.halsim}/`,
+        jdtls: `ws://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.jdtls}/`,
+        health: `http://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.main}/health`
+      };
+
+      // Store session in DynamoDB (LocalStack)
+      await storeSession({
+        sessionId,
+        userId,
+        challengeId,
+        currentChallengeId: challengeId,
+        taskArn: 'local-docker-container',
+        resourceProfile,
+        status: 'running', // Local container is assumed to be already running
+        expiresAt: expiresAt.toISOString(),
+        createdAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString(),
+        containerEndpoint: localEndpoints.main,
+        nt4Endpoint: localEndpoints.nt4,
+        halsimEndpoint: localEndpoints.halsim,
+        jdtlsEndpoint: localEndpoints.jdtls,
+        healthEndpoint: localEndpoints.health,
+        isLocalDev: true
+      });
+
+      return createResponse(201, {
+        sessionId,
+        challengeId,
+        status: 'running',
+        taskArn: 'local-docker-container',
+        expiresAt: expiresAt.toISOString(),
+        resourceProfile,
+        endpoints: localEndpoints,
+        isLocalDev: true,
+        message: 'Local development mode - ensure Docker container is running via: cd frc-challenge-site/docker && docker-compose up'
+      }, event);
+    }
+
+    // PRODUCTION MODE: Use ECS/Fargate and ALB
     // Create ECS task
     const taskArn = await createECSTask(userId, challengeId, sessionId, resourceProfile);
     console.log(`Created ECS task: ${taskArn}`);

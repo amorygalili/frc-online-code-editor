@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "dev": "vite",
+    "dev:local": "cross-env VITE_API_BASE_URL=http://localhost:3001 vite",
     "dev:test": "vite --open /test.html",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build",
     "build:lib": "vite build --config vite.config.lib.ts",

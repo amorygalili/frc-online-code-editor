@@ -10,13 +10,6 @@ const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: co
 
 export interface ContainerChallengeSetup {
   challengeData: Challenge;
-  workspaceFiles: ContainerFile[];
-}
-
-export interface ContainerFile {
-  path: string;
-  content: string;
-  executable?: boolean;
 }
 
 export class ContainerChallengeLoader {
@@ -96,11 +89,12 @@ export class ContainerChallengeLoader {
 
   /**
    * Prepare setup for git-based challenge
+   * Container will clone the repo and copy files, so we just return the challenge data
    */
   private async prepareGitChallenge(challenge: Challenge): Promise<ContainerChallengeSetup> {
+    // Verify the challenge exists in the repository
     const { url: githubUrl, branch: githubBranch, challengePath } = challenge.github;
 
-    // Parse the repository to get challenge files
     const parsedRepo = await this.githubService.parseRepository(githubUrl, githubBranch);
     const parsedChallenge = parsedRepo.challenges.find(c => c.challengePath === challengePath);
 
@@ -108,43 +102,28 @@ export class ContainerChallengeLoader {
       throw new Error(`Challenge ${challenge.id} not found in repository`);
     }
 
-    const workspaceFiles: ContainerFile[] = [];
-
-    // Add robot code files - these will replace the entire src/main/java/frc/robot/ folder
-    for (const file of parsedChallenge.files.robotCode) {
-      // Map the robot code files to the correct paths in the container
-      // Files from starter-code/robot/ go to src/main/java/frc/robot/
-      const relativePath = file.path.replace(/.*\/starter-code\/robot\//, '');
-      workspaceFiles.push({
-        path: `src/main/java/frc/robot/${relativePath}`,
-        content: file.content
-      });
-    }
-
     return {
-      challengeData: challenge,
-      workspaceFiles
+      challengeData: challenge
     };
   }
 
-  // Removed build configuration methods - we only modify robot Java source files
-
   /**
    * Generate container API payload for challenge setup
+   * Container will clone the repo and get files directly
    */
   generateContainerSetupPayload(setup: ContainerChallengeSetup): any {
     const { github, metadata } = setup.challengeData;
 
     return {
       challengeId: setup.challengeData.id,
-      files: setup.workspaceFiles,
       metadata: metadata,
-      // GitHub info for container to clone and serve sim-visualization
+      // GitHub info for container to clone repo, copy robot code, and serve sim-visualization
       github: {
         url: github.url,
         branch: github.branch,
         challengePath: github.challengePath,
         simVisualizationPath: metadata.files.simVisualization,
+        robotCodePath: metadata.files.robotCode
       }
     };
   }

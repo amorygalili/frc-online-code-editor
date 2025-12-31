@@ -1,12 +1,17 @@
 // DynamoDB utilities
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, DeleteCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { config } from '../config';
+import { config, getAwsClientConfig } from '../config';
 
-// Initialize DynamoDB client
-const client = new DynamoDBClient({
-  region: config.region,
-});
+// Initialize DynamoDB client with LocalStack support
+const clientConfig = getAwsClientConfig();
+
+// Log if using LocalStack
+if (config.localStack.enabled) {
+  console.log(`🔧 DynamoDB: Using LocalStack endpoint: ${config.localStack.endpoint}`);
+}
+
+const client = new DynamoDBClient(clientConfig);
 
 export const dynamoDb = DynamoDBDocumentClient.from(client);
 

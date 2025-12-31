@@ -7,7 +7,14 @@ import { createResponse } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
 
 const ecsClient = new ECSClient({ region: config.region });
-const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
+  config.localStack.enabled
+    ? { region: config.region, endpoint: config.localStack.endpoint }
+    : { region: config.region }
+));
+
+// Check if running in local development mode
+const isLocalDev = config.isLocal;
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
@@ -107,6 +114,12 @@ async function getSessionFromDB(sessionId: string) {
 }
 
 async function getTaskStatus(taskArn: string): Promise<string | null> {
+  // In local dev mode, skip ECS check and assume container is running
+  if (isLocalDev || taskArn === 'local-docker-container') {
+    console.log('[LOCAL DEV] Skipping ECS task status check - assuming running');
+    return 'running';
+  }
+
   try {
     const command = new DescribeTasksCommand({
       cluster: process.env.ECS_CLUSTER_NAME || 'frc-challenge-cluster',
@@ -114,7 +127,7 @@ async function getTaskStatus(taskArn: string): Promise<string | null> {
     });
 
     const result = await ecsClient.send(command);
-    
+
     if (!result.tasks || result.tasks.length === 0) {
       return 'stopped';
     }

@@ -109,12 +109,33 @@ export function parseJsonBody<T>(body: string | null): T | null {
   }
 }
 
+// Default test user for local development (when noAuth: true in serverless-offline)
+const LOCAL_DEV_USER = {
+  sub: 'local-dev-user-123',
+  email: 'localdev@example.com',
+  username: 'localdev'
+};
+
+// Check if running in serverless-offline local mode
+const isLocalDev = process.env.IS_OFFLINE === 'true';
+
 // Helper to extract user ID from Cognito claims
 export function getUserIdFromEvent(event: any): string | null {
   try {
     const claims = event.requestContext?.authorizer?.claims;
-    return claims?.sub || claims?.['cognito:username'] || null;
+    const userId = claims?.sub || claims?.['cognito:username'] || null;
+
+    // In local dev mode without auth, use test user
+    if (!userId && isLocalDev) {
+      return LOCAL_DEV_USER.sub;
+    }
+
+    return userId;
   } catch (error) {
+    // In local dev mode, return test user on error
+    if (isLocalDev) {
+      return LOCAL_DEV_USER.sub;
+    }
     return null;
   }
 }
@@ -123,8 +144,19 @@ export function getUserIdFromEvent(event: any): string | null {
 export function getUserEmailFromEvent(event: any): string | null {
   try {
     const claims = event.requestContext?.authorizer?.claims;
-    return claims?.email || null;
+    const email = claims?.email || null;
+
+    // In local dev mode without auth, use test user
+    if (!email && isLocalDev) {
+      return LOCAL_DEV_USER.email;
+    }
+
+    return email;
   } catch (error) {
+    // In local dev mode, return test user on error
+    if (isLocalDev) {
+      return LOCAL_DEV_USER.email;
+    }
     return null;
   }
 }
