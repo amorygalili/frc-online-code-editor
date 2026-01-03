@@ -9,6 +9,7 @@
     "remove": "node -r dotenv/config ./node_modules/serverless/bin/serverless.js remove",
     "local": "docker-compose -f docker-compose.local-dev.yml up -d && node -r dotenv/config ./node_modules/serverless/bin/serverless.js offline start --stage dev",
     "local:stop": "docker-compose -f docker-compose.local-dev.yml down",
+    "local:db": "start http://localhost:8001",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },

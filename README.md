@@ -26,6 +26,13 @@ npm run dev:local
 
 The frontend will be available at `http://localhost:5173`.
 
+To view/edit DynamoDB data, open the admin GUI:
+```bash
+cd lambda
+npm run local:db
+```
+Or visit `http://localhost:8001` directly.
+
 To stop the backend containers:
 ```bash
 cd lambda

@@ -1,5 +1,5 @@
 services:
-  eclipse-jdt-ls:
+  wpilib-editor:
     build:
       context: .
       dockerfile: ./DockerfileProd

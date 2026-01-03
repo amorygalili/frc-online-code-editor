@@ -1,8 +1,7 @@
 // Lambda handler for importing challenges from GitHub repositories
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { PutCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuidv4 } from 'uuid';
 
 import { GitHubChallengeService } from '../../services/githubChallengeService';
@@ -15,8 +14,7 @@ import { GitHubChallengeRepository } from '../../schemas/github-challenge-schema
 import { createResponse, errorResponse } from '../../utils/response';
 import { getUserId } from '../../utils/auth';
 import { config } from '../../config';
-
-const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
+import { dynamoDb } from '../../utils/dynamodb';
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
@@ -167,7 +165,7 @@ async function importChallenges(
         Item: challengeEntity
       });
 
-      await dynamoClient.send(command);
+      await dynamoDb.send(command);
 
       successful.push({
         id: challengeId,

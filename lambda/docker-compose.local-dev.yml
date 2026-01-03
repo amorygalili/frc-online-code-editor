@@ -74,7 +74,7 @@ services:
   # Challenge Runtime Container (same as production but running locally)
   challenge-runtime:
     build:
-      context: ../frc-challenge-site/docker
+      context: ../docker/editor
       dockerfile: ./Dockerfile
     container_name: frc-challenge-runtime-local
     ports:
@@ -82,9 +82,6 @@ services:
       - "30004:30004"  # NT4 WebSocket proxy
       - "30005:30005"  # HALSim WebSocket proxy
       - "30006:30006"  # JDTLS Language Server WebSocket
-      - "5901:5901"    # VNC (optional, for debugging)
-      - "6901:6901"    # noVNC web client (optional)
-      - "3300:3300"    # HAL Simulation WebSocket port
     environment:
       - JAVA_OPTS=-Xmx2g
       - NODE_ENV=development
@@ -101,6 +98,21 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  # DynamoDB Admin GUI - web interface for viewing/editing DynamoDB data
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    container_name: frc-challenge-dynamodb-admin
+    ports:
+      - "8001:8001"
+    environment:
+      - DYNAMO_ENDPOINT=http://localstack:4566
+      - AWS_REGION=us-east-2
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    depends_on:
+      localstack:
+        condition: service_healthy
 
 volumes:
   localstack-data:

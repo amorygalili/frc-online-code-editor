@@ -2,7 +2,7 @@ import { Box, Paper } from "@mui/material";
 import { OutputTabs } from "./BottomPanel";
 import { ResizableSplitter } from "./ResizableSplitter";
 import ScrollableBox from "./ScrollableBox";
-import SimulationVisualization from "./DefaultSimulationVisualization";
+import SimulationVisualization from "./SimulationVisualization";
 
 export const SimulationView = () => {
 

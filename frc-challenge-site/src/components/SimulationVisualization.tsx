@@ -4,16 +4,20 @@ import {
   getSimVisualization,
   setSimVisualization,
 } from "../window-api";
-import { useSession } from "../contexts/SessionContext";
 import { useEffect, useState } from "react";
+import { getServiceUrl } from "../urls";
+import { useConfig } from "../contexts/ConfigContext";
 
-export const SimulationView = () => {
-  const { session } = useSession();
+const SimulationVisualization = () => {
+  const {
+    config: { serverUrl, sessionId },
+  } = useConfig();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [visualizationKey, setVisualizationKey] = useState(0);
 
-  const containerEndpoint = session?.containerInfo?.albEndpoints?.main;
+  const containerEndpoint = getServiceUrl(serverUrl, sessionId, "main");
+  console.log("Container endpoint:", { containerEndpoint });
 
   useEffect(() => {
     // Reset to default visualization when session changes
@@ -21,7 +25,7 @@ export const SimulationView = () => {
     setVisualizationKey((prev) => prev + 1);
     setError(null);
 
-    if (!containerEndpoint) {
+    if (!sessionId) {
       return;
     }
 
@@ -57,7 +61,7 @@ export const SimulationView = () => {
     };
 
     loadSimVisualization();
-  }, [containerEndpoint, session?.sessionId]);
+  }, [containerEndpoint, sessionId]);
 
   if (loading) {
     return (
@@ -99,4 +103,4 @@ export const SimulationView = () => {
   );
 };
 
-export default SimulationView;
+export default SimulationVisualization;

@@ -99,14 +99,11 @@ RUN cd ${HOME_DIR}/wpilib \
     && rm WPILib_Linux-${WPILIB_VERSION}.tar.gz \
     && chmod +x WPILib_Linux-${WPILIB_VERSION}/WPILibInstaller
 
-# Copy server files and utilities
-COPY server ${HOME_DIR}/server/
+# Copy and fix start.sh script
 COPY --chmod=755 start.sh ${HOME_DIR}/
-
-# Fix ownership of copied files for frcuser and convert line endings
 USER root
 RUN dos2unix ${HOME_DIR}/start.sh && \
-    chown -R frcuser:frcuser ${HOME_DIR}/server ${HOME_DIR}/start.sh
+    chown -R frcuser:frcuser ${HOME_DIR}/start.sh
 USER frcuser
 
 # Create VNC directory (password will be set directly in x11vnc command)
@@ -116,26 +113,13 @@ RUN mkdir -p ${HOME_DIR}/.vnc
 ENV DISPLAY=:1
 ENV DONT_PROMPT_WSL_INSTALL=1
 
-# Install Node.js dependencies
-WORKDIR ${HOME_DIR}/server
-RUN npm install
-WORKDIR ${HOME_DIR}
-
-# Copy robot project and server
+# Copy robot project
 USER root
-COPY server ${HOME_DIR}/server/
 COPY workspace/RobotProject ${HOME_DIR}/workspace/RobotProject
 
-RUN chown -R frcuser:frcuser ${HOME_DIR}/server
 RUN chown -R frcuser:frcuser ${HOME_DIR}/workspace
-RUN chmod -R 755 /home/frcuser/server
 RUN chmod -R 755 /home/frcuser/workspace
 USER frcuser
-
-# Install server dependencies
-WORKDIR ${HOME_DIR}/server
-RUN npm install
-WORKDIR ${HOME_DIR}
 
 # Start the container with the custom start script
 CMD ["/home/frcuser/start.sh"]

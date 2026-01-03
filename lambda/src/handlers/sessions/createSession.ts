@@ -261,6 +261,28 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         isLocalDev: true
       });
 
+      // Load challenge in local container
+      try {
+        console.log(`[LOCAL DEV] Loading challenge ${challengeId} into local container...`);
+        await loadChallengeInContainer(sessionId, challengeId);
+        console.log(`[LOCAL DEV] Challenge loaded successfully`);
+      } catch (error) {
+        console.error(`[LOCAL DEV] Failed to load challenge into container:`, error);
+        // Don't fail the session creation, but warn the user
+        return createResponse(201, {
+          sessionId,
+          challengeId,
+          status: 'running',
+          taskArn: 'local-docker-container',
+          expiresAt: expiresAt.toISOString(),
+          resourceProfile,
+          endpoints: localEndpoints,
+          isLocalDev: true,
+          warning: 'Failed to load challenge into container. Is the Docker container running?',
+          message: 'Local development mode - ensure Docker container is running via: cd lambda && docker-compose -f docker-compose.local-dev.yml up'
+        }, event);
+      }
+
       return createResponse(201, {
         sessionId,
         challengeId,
@@ -270,7 +292,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         resourceProfile,
         endpoints: localEndpoints,
         isLocalDev: true,
-        message: 'Local development mode - ensure Docker container is running via: cd frc-challenge-site/docker && docker-compose up'
+        message: 'Local development mode - challenge loaded successfully'
       }, event);
     }
 
@@ -454,12 +476,20 @@ async function loadChallengeInContainer(sessionId: string, challengeId: string) 
 
 async function sendChallengeSetupToContainer(sessionId: string, setupPayload: any): Promise<void> {
   try {
-    // Get the container endpoint from ALB configuration
-    const containerEndpoint = `${process.env.ALB_DNS_NAME}/session/${sessionId}/main/setup-challenge`;
+    // Determine container endpoint based on environment
+    let containerEndpoint: string;
+
+    if (isLocalDev) {
+      // Local dev: use direct localhost endpoint
+      containerEndpoint = `http://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.main}/session/${sessionId}/main/setup-challenge`;
+    } else {
+      // Production: use ALB endpoint
+      containerEndpoint = `http://${process.env.ALB_DNS_NAME}/session/${sessionId}/main/setup-challenge`;
+    }
 
     console.log(`Sending challenge setup to container: ${containerEndpoint}`);
 
-    const response = await fetch(`http://${containerEndpoint}`, {
+    const response = await fetch(containerEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,20 +1,20 @@
 services:
-  eclipse-jdt-ls:
+  wpilib-base:
     build:
       context: .
       dockerfile: ./Dockerfile
-    container_name: eclipse-jdt-ls
+    container_name: wpilib-base
     ports:
-      - "30003:30003"
       - "5901:5901"
       - "6901:6901"
-      - "3300:3300"   # HAL Simulation WebSocket port
     environment:
       - JAVA_OPTS=-Xmx2g
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:30003/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    tty: true
+    stdin_open: true
+    # restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:30003/health"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
