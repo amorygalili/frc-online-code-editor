@@ -9,6 +9,10 @@ import { initLocaleLoader } from "monaco-editor-wrapper/vscode/locale";
 import App from './App.tsx'
 import './index.css'
 
+// Expose React on window for sim visualization code
+(window as any).React = React;
+(window as any).ReactDOM = ReactDOM;
+
 const runWPILibReactApp = async () => {
   await initLocaleLoader();
 

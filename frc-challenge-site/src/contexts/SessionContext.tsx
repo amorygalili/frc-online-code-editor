@@ -7,7 +7,10 @@ import React, {
   ReactNode,
 } from 'react';
 import { sessionService } from '../services/sessionService';
-import { ChallengeSession, Challenge } from '../services/challengeService';
+import { challengeService, ChallengeSession, Challenge } from '../services/challengeService';
+
+// Session status for UI
+export type SessionStatus = 'idle' | 'loading' | 'creating' | 'connecting' | 'ready' | 'failed';
 
 // Types
 export interface SessionContextType {
@@ -15,14 +18,23 @@ export interface SessionContextType {
   session: ChallengeSession | null;
   challenge: Challenge | null;
   isSessionActive: boolean;
-  
+
+  // Loading/status state
+  status: SessionStatus;
+  error: string | null;
+
   // Session lifecycle
+  initializeSession: (challengeId: string, resourceProfile?: string) => Promise<void>;
   createSession: (challengeId: string, resourceProfile?: string) => Promise<ChallengeSession>;
   terminateSession: () => Promise<void>;
-  
+
   // Session management
   keepAlive: () => Promise<void>;
   getSessionStatus: () => Promise<ChallengeSession | null>;
+
+  // Helpers
+  getServerUrl: () => string | null;
+  clearError: () => void;
 }
 
 // Create context
@@ -40,30 +52,54 @@ export const useSession = (): SessionContextType => {
 // Provider component
 interface SessionProviderProps {
   children: ReactNode;
+  challengeId?: string;  // If provided, auto-initialize session
   initialSession?: ChallengeSession;
   initialChallenge?: Challenge;
 }
 
-export const SessionProvider: React.FC<SessionProviderProps> = ({ 
-  children, 
+export const SessionProvider: React.FC<SessionProviderProps> = ({
+  children,
+  challengeId: initialChallengeId,
   initialSession = null,
-  initialChallenge = null 
+  initialChallenge = null
 }) => {
   const [session, setSession] = useState<ChallengeSession | null>(initialSession);
   const [challenge, setChallenge] = useState<Challenge | null>(initialChallenge);
-  const [keepAliveInterval, setKeepAliveInterval] = useState<number | null>(null);
+  const [status, setStatus] = useState<SessionStatus>(initialSession ? 'ready' : 'idle');
+  const [error, setError] = useState<string | null>(null);
+  const [keepAliveInterval, setKeepAliveInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
   const isSessionActive = session?.status === 'running';
+
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  // Get server URL from session endpoints
+  const getServerUrl = useCallback((): string | null => {
+    if (!session) return null;
+
+    const mainUrl = session.containerInfo?.albEndpoints?.main;
+    if (!mainUrl) return null;
+
+    try {
+      const url = new URL(mainUrl);
+      return url.hostname;
+    } catch {
+      return null;
+    }
+  }, [session]);
 
   // Keep-alive mechanism
   const keepAlive = useCallback(async () => {
     if (!session) return;
-    
+
     try {
       await sessionService.keepSessionAlive(session.sessionId);
       console.log(`Keep-alive sent for session ${session.sessionId}`);
-    } catch (error) {
-      console.error('Failed to send keep-alive:', error);
+    } catch (err) {
+      console.error('Failed to send keep-alive:', err);
     }
   }, [session]);
 
@@ -86,16 +122,76 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     };
   }, [isSessionActive, keepAlive, keepAliveInterval, session?.sessionId]);
 
-  // Create a new session
+  // Initialize session - loads challenge and creates/reuses session
+  const initializeSession = useCallback(async (challengeId: string, resourceProfile = 'basic') => {
+    try {
+      setStatus('loading');
+      setError(null);
+
+      // Load challenge details
+      console.log(`Loading challenge ${challengeId}`);
+      const challengeData = await challengeService.getChallenge(challengeId);
+      if (!challengeData) {
+        throw new Error('Challenge not found');
+      }
+      setChallenge(challengeData);
+
+      // Check for existing active session
+      console.log('Checking for existing active session...');
+      const activeSession = await sessionService.getCurrentActiveSession();
+
+      if (activeSession && activeSession.status === 'running') {
+        console.log('Found existing active session:', activeSession.sessionId);
+        setSession({ ...activeSession, challengeId });
+        setStatus('ready');
+        return;
+      }
+
+      // Create new session
+      setStatus('creating');
+      console.log(`Creating session for challenge ${challengeId}`);
+      const sessionData = await sessionService.createSession(challengeId, resourceProfile as 'basic' | 'development' | 'advanced' | 'competition');
+      console.log('Session data received:', sessionData);
+      setSession(sessionData);
+
+      if (sessionData.status === 'running') {
+        setStatus('ready');
+      } else {
+        setStatus('connecting');
+        // sessionService.createSession already waits for readiness
+        setStatus('ready');
+      }
+    } catch (err) {
+      console.error('Failed to initialize session:', err);
+      let errorMessage = 'Failed to start challenge session';
+
+      if (err instanceof Error) {
+        if (err.message.includes('timeout')) {
+          errorMessage = 'Session startup timed out. The container may be taking longer than expected to start.';
+        } else {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(errorMessage);
+      setStatus('failed');
+    }
+  }, []);
+
+  // Create a new session (without loading challenge)
   const createSession = useCallback(async (challengeId: string, resourceProfile = 'basic') => {
     try {
+      setStatus('creating');
       console.log(`Creating session for challenge ${challengeId}`);
-      const newSession = await sessionService.createSession(challengeId, resourceProfile as any);
+      const newSession = await sessionService.createSession(challengeId, resourceProfile as 'basic' | 'development' | 'advanced' | 'competition');
       setSession(newSession);
+      setStatus(newSession.status === 'running' ? 'ready' : 'connecting');
       return newSession;
-    } catch (error) {
-      console.error('Failed to create session:', error);
-      throw error;
+    } catch (err) {
+      console.error('Failed to create session:', err);
+      setStatus('failed');
+      setError(err instanceof Error ? err.message : 'Failed to create session');
+      throw err;
     }
   }, []);
 
@@ -108,15 +204,15 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
       await sessionService.terminateSession(session.sessionId);
       setSession(null);
       setChallenge(null);
-      
-      // Clear keep-alive interval
+      setStatus('idle');
+
       if (keepAliveInterval) {
         clearInterval(keepAliveInterval);
         setKeepAliveInterval(null);
       }
-    } catch (error) {
-      console.error('Failed to terminate session:', error);
-      throw error;
+    } catch (err) {
+      console.error('Failed to terminate session:', err);
+      throw err;
     }
   }, [session, keepAliveInterval]);
 
@@ -130,13 +226,20 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
         setSession(updatedSession);
       }
       return updatedSession;
-    } catch (error) {
-      console.error('Failed to get session status:', error);
+    } catch (err) {
+      console.error('Failed to get session status:', err);
       return null;
     }
   }, [session]);
 
-  // Update challenge when session changes
+  // Auto-initialize if challengeId is provided
+  useEffect(() => {
+    if (initialChallengeId && status === 'idle') {
+      initializeSession(initialChallengeId);
+    }
+  }, [initialChallengeId, status, initializeSession]);
+
+  // Update challenge when initialChallenge changes
   useEffect(() => {
     if (initialChallenge && !challenge) {
       setChallenge(initialChallenge);
@@ -147,10 +250,15 @@ export const SessionProvider: React.FC<SessionProviderProps> = ({
     session,
     challenge,
     isSessionActive,
+    status,
+    error,
+    initializeSession,
     createSession,
     terminateSession,
     keepAlive,
     getSessionStatus,
+    getServerUrl,
+    clearError,
   };
 
   return (

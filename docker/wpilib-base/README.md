@@ -15,12 +15,12 @@ docker compose -f docker-compose.yml up --build
 5. Stop the container and commit the changes to a new image:
 
 ```bash
-docker commit wpilib-base wpilib-base:2025.0
+docker commit wpilib-base wpilib-base:2025.1
 ```
 
 6. Tag and push the image to a registry:
 
 ```bash
-docker tag wpilib-base:2025.0 agalili/wpilib-base:2025.0
-docker push agalili/wpilib-base:2025.0
+docker tag wpilib-base:2025.1 agalili/wpilib-base:2025.1
+docker push agalili/wpilib-base:2025.1
 ```

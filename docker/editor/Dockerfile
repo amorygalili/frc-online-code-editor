@@ -1,4 +1,4 @@
-FROM agalili/wpilib-base:2025.0
+FROM agalili/wpilib-base:2025.1
 
 ARG HOME_DIR=/home/frcuser
 

@@ -14,6 +14,7 @@ import { config } from '../../config';
 import { createResponse, parseJSONBody } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
 import { ContainerChallengeLoader } from '../../services/containerChallengeLoader';
+import { SessionResponse, ContainerEndpoints } from '../../types';
 
 const ecsClient = new ECSClient({ region: config.region });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
@@ -233,7 +234,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     if (isLocalDev) {
       console.log(`[LOCAL DEV] Running in local development mode - skipping ECS/ALB`);
 
-      const localEndpoints = {
+      const localEndpoints: ContainerEndpoints = {
         main: `http://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.main}/`,
         nt4: `ws://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.nt4}/`,
         halsim: `ws://${LOCAL_CONTAINER_HOST}:${LOCAL_CONTAINER_PORTS.halsim}/`,
@@ -269,29 +270,41 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       } catch (error) {
         console.error(`[LOCAL DEV] Failed to load challenge into container:`, error);
         // Don't fail the session creation, but warn the user
-        return createResponse(201, {
+        const response: SessionResponse = {
           sessionId,
+          userId,
           challengeId,
           status: 'running',
-          taskArn: 'local-docker-container',
-          expiresAt: expiresAt.toISOString(),
+          containerInfo: {
+            taskArn: 'local-docker-container',
+            albEndpoints: localEndpoints,
+          },
           resourceProfile,
-          endpoints: localEndpoints,
-          isLocalDev: true,
+          expiresAt: expiresAt.toISOString(),
+          createdAt: new Date().toISOString(),
+        };
+        return createResponse(201, {
+          ...response,
           warning: 'Failed to load challenge into container. Is the Docker container running?',
           message: 'Local development mode - ensure Docker container is running via: cd lambda && docker-compose -f docker-compose.local-dev.yml up'
         }, event);
       }
 
-      return createResponse(201, {
+      const response: SessionResponse = {
         sessionId,
+        userId,
         challengeId,
         status: 'running',
-        taskArn: 'local-docker-container',
-        expiresAt: expiresAt.toISOString(),
+        containerInfo: {
+          taskArn: 'local-docker-container',
+          albEndpoints: localEndpoints,
+        },
         resourceProfile,
-        endpoints: localEndpoints,
-        isLocalDev: true,
+        expiresAt: expiresAt.toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+      return createResponse(201, {
+        ...response,
         message: 'Local development mode - challenge loaded successfully'
       }, event);
     }
@@ -335,14 +348,21 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     // Start background processes for container setup asynchronously
     await invokeBackgroundProcess(sessionId, challengeId, userId, taskArn, albIntegration)
 
-    return createResponse(201, {
+    const response: SessionResponse = {
       sessionId,
+      userId,
       challengeId,
       status: 'starting',
-      taskArn,
-      expiresAt: expiresAt.toISOString(),
+      containerInfo: {
+        taskArn,
+        albEndpoints: albIntegration.endpoints,
+      },
       resourceProfile,
-      endpoints: albIntegration.endpoints,
+      expiresAt: expiresAt.toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    return createResponse(201, {
+      ...response,
       estimatedStartupTime: '3-5 minutes (includes container startup, ALB registration, and session initialization)'
     }, event);
 

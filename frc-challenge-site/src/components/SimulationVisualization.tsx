@@ -17,11 +17,9 @@ const SimulationVisualization = () => {
   const [visualizationKey, setVisualizationKey] = useState(0);
 
   const containerEndpoint = getServiceUrl(serverUrl, sessionId, "main");
-  console.log("Container endpoint:", { containerEndpoint });
 
   useEffect(() => {
     // Reset to default visualization when session changes
-    setSimVisualization(null);
     setVisualizationKey((prev) => prev + 1);
     setError(null);
 
@@ -38,17 +36,11 @@ const SimulationVisualization = () => {
         console.log(`Loading sim-visualization from: ${simVisUrl}`);
 
         // Dynamically import the sim-visualization module
-        const module = await import(/* @vite-ignore */ simVisUrl);
-
-        // The module default export is the visualization component
-        if (module.default) {
-          const VisualizationComponent = module.default;
-          setSimVisualization(<VisualizationComponent />);
-          setVisualizationKey((prev) => prev + 1);
+        await import(/* @vite-ignore */ simVisUrl).then(() => {
           console.log("Sim-visualization loaded successfully");
-        } else {
-          console.warn("Sim-visualization module has no default export");
-        }
+          setVisualizationKey((prev) => prev + 1);
+        });
+
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown error";

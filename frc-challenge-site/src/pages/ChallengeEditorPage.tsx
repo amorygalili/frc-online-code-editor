@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -7,151 +7,66 @@ import {
   CircularProgress,
   Typography,
 } from "@mui/material";
-import { SessionProvider } from "../contexts/SessionContext";
+import { SessionProvider, useSession } from "../contexts/SessionContext";
 import { BreadcrumbItem } from "../components/EditorHeader";
-import { AppConfig } from "../contexts/ConfigContext";
 import { setFileServiceConfig } from "../fileService";
-import { sessionService } from "../services/sessionService";
-import {
-  challengeService,
-  Challenge,
-  ChallengeSession,
-} from "../services/challengeService";
 import { useAuth } from "../contexts/AuthContext";
 import ChallengeEditor from "../ChallengeEditor";
 
 // Icons
 const BackIcon = () => <span>←</span>;
 
+// Main page component - wraps content with SessionProvider
 export const ChallengeEditorPage = () => {
   const { id: challengeId } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [session, setSession] = useState<ChallengeSession | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sessionStatus, setSessionStatus] = useState<
-    "creating" | "connecting" | "ready" | "failed"
-  >("creating");
+  const navigate = useNavigate();
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
-      return;
     }
   }, [isAuthenticated, navigate]);
 
-  // Load challenge data and create/connect to session
-  useEffect(() => {
-    if (!challengeId || !isAuthenticated) return;
+  if (!isAuthenticated || !challengeId) {
+    return null;
+  }
 
-    const initializeSession = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  return (
+    <SessionProvider challengeId={challengeId}>
+      <ChallengeEditorContent />
+    </SessionProvider>
+  );
+};
 
-        // Load challenge details
-        console.log(`Loading challenge ${challengeId}`);
-        const challengeData = await challengeService.getChallenge(challengeId);
-        if (!challengeData) {
-          throw new Error("Challenge not found");
-        }
-        setChallenge(challengeData);
-
-        // Check if session creation is already in progress
-        if (sessionService.isCreating()) {
-          console.log("Session creation already in progress, waiting...");
-          setSessionStatus("creating");
-        }
-
-        // Check for existing active session first (using improved method)
-        console.log("Checking for existing active session...");
-        const activeSession = await sessionService.getCurrentActiveSession();
-
-        if (activeSession) {
-          console.log(
-            "Found existing active session:",
-            activeSession.sessionId
-          );
-          console.log("Reusing session for challenge:", challengeId);
-          console.log("Existing session data:", activeSession);
-          console.log("Existing container info:", activeSession.containerInfo);
-          console.log(
-            "Existing ALB endpoints:",
-            activeSession.containerInfo?.albEndpoints
-          );
-
-          // Update session to track current challenge (locally)
-          const updatedSession = { ...activeSession, challengeId };
-          setSession(updatedSession);
-
-          if (activeSession.status === "running") {
-            setSessionStatus("ready");
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Create new session (with built-in deduplication and promise reuse)
-        if (!sessionService.isCreating()) {
-          setSessionStatus("creating");
-        }
-        console.log(`Creating session for challenge ${challengeId}`);
-        const sessionData = await sessionService.createSession(challengeId);
-        console.log("Session data received:", sessionData);
-        console.log("Container info:", sessionData.containerInfo);
-        console.log("ALB endpoints:", sessionData.containerInfo?.albEndpoints);
-        setSession(sessionData);
-
-        // Check if session is already ready
-        if (sessionData.status === "running") {
-          setSessionStatus("ready");
-          console.log(`Session ${sessionData.sessionId} is ready`);
-        } else {
-          // Wait for session to be ready
-          setSessionStatus("connecting");
-          console.log(
-            `Waiting for session ${sessionData.sessionId} to be ready`
-          );
-
-          // The sessionService.createSession already waits for readiness
-          setSessionStatus("ready");
-          console.log(`Session ${sessionData.sessionId} is ready`);
-        }
-      } catch (err) {
-        console.error("Failed to initialize session:", err);
-        let errorMessage = "Failed to start challenge session";
-
-        if (err instanceof Error) {
-          if (err.message.includes("timeout")) {
-            errorMessage =
-              "Session startup timed out. The container may be taking longer than expected to start. Please try again.";
-          } else if (err.message.includes("Cannot create new session")) {
-            errorMessage = err.message;
-          } else {
-            errorMessage = err.message;
-          }
-        }
-
-        setError(errorMessage);
-        setSessionStatus("failed");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeSession();
-  }, [challengeId, isAuthenticated]);
+// Inner component that uses SessionContext
+const ChallengeEditorContent = () => {
+  const { id: challengeId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const {
+    session,
+    challenge,
+    status,
+    error,
+    clearError,
+    initializeSession,
+    getServerUrl
+  } = useSession();
 
   const handleBackToChallenge = () => {
     navigate(`/challenge/${challengeId}`);
   };
 
-  // Loading state
-  if (loading) {
+  const handleRetry = () => {
+    clearError();
+    if (challengeId) {
+      initializeSession(challengeId);
+    }
+  };
+
+  // Loading states
+  if (status === 'idle' || status === 'loading' || status === 'creating' || status === 'connecting') {
     return (
       <Box
         sx={{
@@ -165,12 +80,11 @@ export const ChallengeEditorPage = () => {
       >
         <CircularProgress size={60} />
         <Typography variant="h6" color="text.secondary">
-          {sessionStatus === "creating" && "Setting up challenge session..."}
-          {sessionStatus === "connecting" &&
-            "Starting container (this may take a few minutes)..."}
-          {sessionStatus === "ready" && "Loading editor..."}
+          {(status === 'idle' || status === 'loading') && "Loading challenge..."}
+          {status === 'creating' && "Setting up challenge session..."}
+          {status === 'connecting' && "Starting container (this may take a few minutes)..."}
         </Typography>
-        {sessionStatus === "connecting" && (
+        {status === 'connecting' && (
           <Typography
             variant="body2"
             color="text.secondary"
@@ -182,7 +96,7 @@ export const ChallengeEditorPage = () => {
         )}
         {challenge && (
           <Typography variant="body2" color="text.secondary">
-            {challenge.title}
+            {challenge.metadata?.title}
           </Typography>
         )}
       </Box>
@@ -190,48 +104,14 @@ export const ChallengeEditorPage = () => {
   }
 
   // Error state
-  if (error || sessionStatus === "failed") {
+  if (status === 'failed' || error) {
     return (
       <Box sx={{ p: 4 }}>
         <Alert severity="error" sx={{ mb: 2 }}>
           {error || "Failed to start challenge session"}
         </Alert>
         <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={() => {
-              setError(null);
-              setSessionStatus("creating");
-              // Retry initialization
-              if (challengeId && isAuthenticated) {
-                const initializeSession = async () => {
-                  try {
-                    setLoading(true);
-
-                    // Check if session creation is already in progress
-                    if (!sessionService.isCreating()) {
-                      setSessionStatus("creating");
-                    }
-
-                    const sessionData = await sessionService.createSession(
-                      challengeId
-                    );
-                    setSession(sessionData);
-                    setSessionStatus("ready");
-                  } catch (err) {
-                    console.error("Retry failed:", err);
-                    setError(
-                      err instanceof Error ? err.message : "Retry failed"
-                    );
-                    setSessionStatus("failed");
-                  } finally {
-                    setLoading(false);
-                  }
-                };
-                initializeSession();
-              }
-            }}
-          >
+          <Button variant="contained" onClick={handleRetry}>
             🔄 Retry
           </Button>
           <Button variant="outlined" onClick={handleBackToChallenge}>
@@ -243,7 +123,7 @@ export const ChallengeEditorPage = () => {
   }
 
   // Session not ready
-  if (!session || !challenge || sessionStatus !== "ready") {
+  if (!session || !challenge || status !== 'ready') {
     return (
       <Box
         sx={{
@@ -258,80 +138,70 @@ export const ChallengeEditorPage = () => {
     );
   }
 
-  // Create breadcrumbs for challenge editor
+  // Get server URL
+  const serverUrl = getServerUrl();
+  if (!serverUrl) {
+    console.error("No server URL available from session");
+    return (
+      <Box sx={{ p: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Failed to get container endpoint from session
+        </Alert>
+        <Button variant="outlined" onClick={handleBackToChallenge}>
+          <BackIcon /> Back to Challenge
+        </Button>
+      </Box>
+    );
+  }
+
+  // Create breadcrumbs
   const breadcrumbs: BreadcrumbItem[] = [
     { label: "Challenges" },
-    { label: challenge.title, onClick: handleBackToChallenge },
+    { label: challenge.metadata?.title || "Challenge", onClick: handleBackToChallenge },
     { label: "Editor" },
   ];
 
   return (
-    <SessionAwareEditorApp
-      session={session}
-      challenge={challenge}
+    <EditorWrapper
+      serverUrl={serverUrl}
+      sessionId={session.sessionId}
       breadcrumbs={breadcrumbs}
     />
   );
 };
 
-// Wrapper component that configures EditorApp with session data
-interface SessionAwareEditorAppProps {
-  session: ChallengeSession;
-  challenge: Challenge;
+// Wrapper component that sets up FileService config and renders editor
+interface EditorWrapperProps {
+  serverUrl: string;
+  sessionId: string;
   breadcrumbs: BreadcrumbItem[];
 }
 
-const SessionAwareEditorApp: React.FC<SessionAwareEditorAppProps> = ({
-  session,
-  challenge,
+const EditorWrapper: React.FC<EditorWrapperProps> = ({
+  serverUrl,
+  sessionId,
   breadcrumbs,
 }) => {
-  // Create config from session data
-  // Extract server URL from ALB endpoints or fall back to localhost for development
-  const albMainUrl = session.containerInfo?.albEndpoints?.main;
-  let serverUrl: string;
-
-  if (!albMainUrl) {
-    return null;
-  }
-
-  try {
-    const url = new URL(albMainUrl);
-    serverUrl = url.hostname;
-    console.log("✅ Using ALB endpoint for session configuration:", serverUrl);
-    console.log("Full ALB main URL:", albMainUrl);
-  } catch (error) {
-    console.warn("Invalid ALB URL:", albMainUrl, error);
-    return null;
-  }
-
-  const editorConfig: AppConfig = {
-    serverUrl,
-    sessionId: session.sessionId,
-  };
-
   const [initialized, setInitialized] = React.useState(false);
 
-  console.log("Editor configuration:", editorConfig);
+  console.log("✅ Using server URL for session:", serverUrl);
 
   // Set global config for FileService
   React.useEffect(() => {
-    setFileServiceConfig(editorConfig);
+    setFileServiceConfig({ serverUrl, sessionId });
     setInitialized(true);
-  }, [editorConfig]);
+  }, [serverUrl, sessionId]);
 
   if (!initialized) {
     return null;
   }
 
   return (
-    <SessionProvider initialSession={session} initialChallenge={challenge}>
-      <ChallengeEditor
-        serverUrl={serverUrl}
-        sessionId={session.sessionId}
-        breadcrumbs={breadcrumbs}
-      />
-    </SessionProvider>
+    <ChallengeEditor
+      serverUrl={serverUrl}
+      sessionId={sessionId}
+      breadcrumbs={breadcrumbs}
+    />
   );
 };
 

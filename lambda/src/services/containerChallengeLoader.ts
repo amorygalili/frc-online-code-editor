@@ -6,7 +6,11 @@ import { GitHubChallengeService } from './githubChallengeService';
 import { Challenge } from '../types/challenge';
 import { config } from '../config';
 
-const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }));
+const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
+  config.localStack.enabled
+    ? { region: config.region, endpoint: config.localStack.endpoint }
+    : { region: config.region }
+));
 
 export interface ContainerChallengeSetup {
   challengeData: Challenge;

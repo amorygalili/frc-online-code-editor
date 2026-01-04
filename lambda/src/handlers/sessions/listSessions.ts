@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { config } from '../../config';
 import { createResponse } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
+import { SessionRecord, formatSessionResponse } from '../../types';
 
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
   config.localStack.enabled
@@ -57,41 +58,21 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const result = await dynamoClient.send(queryCommand);
     const sessions = result.Items || [];
 
-    // Calculate additional info for each session
+    // Format sessions using shared helper
     const now = new Date();
     const enrichedSessions = sessions.map(session => {
-      const expiresAt = new Date(session.expiresAt);
-      const createdAt = new Date(session.createdAt);
-      const remainingMinutes = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60)));
-      const durationMinutes = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60));
-      const isExpired = now > expiresAt;
+      const formatted = formatSessionResponse(session as SessionRecord, {
+        includeTaskArn: false, // Don't expose taskArn in list view
+        computeRemainingTime: true,
+      });
 
-      // Build containerInfo with ALB endpoints structure for running sessions
-      const containerInfo = session.status === 'running' ? {
-        albEndpoints: {
-          main: session.containerEndpoint,
-          nt4: session.nt4Endpoint,
-          halsim: session.halsimEndpoint,
-          jdtls: session.jdtlsEndpoint,
-          health: session.healthEndpoint
-        }
-      } : undefined;
+      // Add duration minutes (list-specific)
+      const createdAt = new Date(session.createdAt);
+      const durationMinutes = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60));
 
       return {
-        sessionId: session.sessionId,
-        userId: session.userId,
-        challengeId: session.challengeId,
-        status: session.status,
-        containerInfo,
-        resourceProfile: session.resourceProfile,
-        createdAt: session.createdAt,
-        expiresAt: session.expiresAt,
-        lastActivity: session.lastActivity,
-        terminatedAt: session.terminatedAt,
-        remainingMinutes,
+        ...formatted,
         durationMinutes,
-        isExpired,
-        // Don't expose sensitive info like taskArn in list view
       };
     });
 

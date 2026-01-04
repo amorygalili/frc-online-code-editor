@@ -39,6 +39,7 @@ RUN apt-get install -y --no-install-recommends xdg-utils
 RUN apt-get install -y --no-install-recommends dbus-x11
 RUN apt-get install -y --no-install-recommends at-spi2-core
 RUN apt-get install -y --no-install-recommends dos2unix
+RUN apt-get install -y --no-install-recommends git
 
 # 8. Install graphics libraries needed for VS Code
 RUN apt-get install -y --no-install-recommends libgbm1

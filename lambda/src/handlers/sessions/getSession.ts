@@ -5,6 +5,7 @@ import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-
 import { config } from '../../config';
 import { createResponse } from '../../utils/response';
 import { getUserFromEvent } from '../../utils/auth';
+import { SessionRecord, formatSessionResponse } from '../../types';
 
 const ecsClient = new ECSClient({ region: config.region });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient(
@@ -51,46 +52,22 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       session.status = taskStatus;
     }
 
-    // Check if session has expired
-    const now = new Date();
-    const expiresAt = new Date(session.expiresAt);
-    const isExpired = now > expiresAt;
-
-    // Calculate remaining time
-    const remainingMinutes = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60)));
-
-    // Get container endpoint if task is running
-    let containerEndpoint = null;
-    if (session.status === 'running' && session.taskArn) {
-      containerEndpoint = await getContainerEndpoint(session.taskArn);
+    // Get container endpoint if task is running and no endpoint stored
+    if (session.status === 'running' && session.taskArn && !session.containerEndpoint) {
+      const containerEndpoint = await getContainerEndpoint(session.taskArn);
+      if (containerEndpoint) {
+        session.containerEndpoint = containerEndpoint;
+      }
     }
 
-    // Build containerInfo with ALB endpoints structure expected by frontend
-    const containerInfo = session.status === 'running' ? {
-      taskArn: session.taskArn,
-      albEndpoints: {
-        main: session.containerEndpoint || containerEndpoint,
-        nt4: session.nt4Endpoint,
-        halsim: session.halsimEndpoint,
-        jdtls: session.jdtlsEndpoint,
-        health: session.healthEndpoint
-      }
-    } : undefined;
+    // Format the session using shared helper
+    const response = formatSessionResponse(session as SessionRecord, {
+      includeTaskArn: true,
+      computeRemainingTime: true,
+    });
 
-    const response = {
-      sessionId: session.sessionId,
-      userId: session.userId,
-      challengeId: session.challengeId,
-      status: session.status,
-      containerInfo,
-      resourceProfile: session.resourceProfile,
-      createdAt: session.createdAt,
-      expiresAt: session.expiresAt,
-      lastActivity: session.lastActivity,
-      remainingMinutes,
-      isExpired,
-      healthStatus: taskStatus === 'running' ? 'healthy' : 'unknown'
-    };
+    // Add health status
+    response.healthStatus = taskStatus === 'running' ? 'healthy' : 'unknown';
 
     return createResponse(200, response, event);
 

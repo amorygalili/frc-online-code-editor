@@ -77,11 +77,11 @@ export interface ChallengeSession {
       halWebSocket?: string; // ws://alb-dns/session/sessionId/hal
     };
   };
-  resourceProfile: 'development' | 'basic' | 'advanced' | 'competition';
-  createdAt: string;
-  updatedAt: string;
-  lastActivity: string;
-  expiresAt: string;
+  resourceProfile?: 'development' | 'basic' | 'advanced' | 'competition';
+  createdAt?: string;
+  updatedAt?: string;
+  lastActivity?: string;
+  expiresAt?: string;
 }
 
 // GitHub Challenge Import Types

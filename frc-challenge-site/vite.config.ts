@@ -4,7 +4,6 @@ import { resolve } from "path";
 import vsixPlugin from "@codingame/monaco-vscode-rollup-vsix-plugin";
 import importMetaUrlPlugin from "@codingame/esbuild-import-meta-url-plugin";
 
-
 // https://vitejs.dev/config/
 // Unified configuration that builds both library and app
 export default defineConfig({
@@ -12,7 +11,6 @@ export default defineConfig({
   plugins: [
     vsixPlugin(),
     react(),
-// DTS plugin removed - only needed for library builds
   ],
   build: {
     rollupOptions: {
