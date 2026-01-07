@@ -1,6 +1,6 @@
 {
   "name": "frc-challenge-site",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "main": "dist-lib/index.cjs",
   "module": "dist-lib/index.js",
@@ -14,7 +14,6 @@
   },
   "files": [
     "dist-lib",
-    "dist-vite-plugin",
     "dist"
   ],
   "scripts": {

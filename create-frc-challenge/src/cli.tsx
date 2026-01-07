@@ -7,7 +7,7 @@ import App from './app.js';
 const cli = meow(
 	`
 	Usage
-	  $ frc-challenge-cli <command>
+	  $ create-frc-challenge <command>
 
 	Commands
 	  generate <name>    Generate a new challenge project
@@ -17,7 +17,7 @@ const cli = meow(
 	  --help             Show help
 
 	Examples
-	  $ frc-challenge-cli generate my-challenge --title "My Awesome Challenge"
+	  $ create-frc-challenge generate my-challenge --title "My Awesome Challenge"
 `,
 	{
 		importMeta: import.meta,

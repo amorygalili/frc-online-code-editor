@@ -2,8 +2,8 @@ services:
   wpilib-editor:
     build:
       context: .
-      dockerfile: ./DockerfileProd
-    container_name: wpilib-sim-prod
+      dockerfile: ./Dockerfile
+    container_name: wpilib-editor
     ports:
       - "30003:30003" # Main server
       - "30004:30004" # NT4 Proxy

@@ -14,7 +14,7 @@ export default function App({command, challengeName, title}: Props) {
 			return (
 				<Box flexDirection="column">
 					<Text color="red">Error: Challenge name is required</Text>
-					<Text>Usage: frc-challenge-cli generate &lt;name&gt; --title "Challenge Title"</Text>
+					<Text>Usage: create-frc-challenge generate &lt;name&gt; --title "Challenge Title"</Text>
 				</Box>
 			);
 		}
@@ -29,10 +29,10 @@ export default function App({command, challengeName, title}: Props) {
 			<Text>Generate challenge projects for FRC robot programming education.</Text>
 			<Text></Text>
 			<Text>Usage:</Text>
-			<Text>  frc-challenge-cli generate &lt;name&gt; --title "Challenge Title"</Text>
+			<Text>  create-frc-challenge generate &lt;name&gt; --title "Challenge Title"</Text>
 			<Text></Text>
 			<Text>Example:</Text>
-			<Text>  frc-challenge-cli generate my-challenge --title "My Awesome Challenge"</Text>
+			<Text>  create-frc-challenge generate my-challenge --title "My Awesome Challenge"</Text>
 		</Box>
 	);
 }

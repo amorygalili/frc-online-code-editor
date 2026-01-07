@@ -1,5 +1,5 @@
 {
-	"name": "frc-challenge-cli",
+	"name": "create-frc-challenge",
 	"version": "0.0.1",
 	"license": "MIT",
 	"bin": "dist/cli.js",

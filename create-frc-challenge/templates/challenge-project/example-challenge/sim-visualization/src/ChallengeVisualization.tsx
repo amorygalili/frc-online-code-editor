@@ -1,4 +1,4 @@
-import { useNTKeys } from 'frc-challenge-site';
+import { useNTKeys, setSimVisualization } from 'frc-challenge-site';
 
 /**
  * Challenge-specific visualization componsent.
@@ -7,7 +7,7 @@ import { useNTKeys } from 'frc-challenge-site';
  * 
  * Customize this component to create your challenge's unique visualization.
  */
-export default function ChallengeVisualization() {
+function ChallengeVisualization() {
   const ntKeys = useNTKeys();
   return (
     <div style={{ 
@@ -33,3 +33,5 @@ export default function ChallengeVisualization() {
     </div>
   )
 }
+
+setSimVisualization(<ChallengeVisualization />);

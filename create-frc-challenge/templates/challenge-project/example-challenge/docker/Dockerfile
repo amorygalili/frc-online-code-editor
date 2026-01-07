@@ -1,4 +1,4 @@
-FROM agalili/wpilib-2025-base:v6
+FROM agalili/wpilib-editor:2025.0
 
 ENV NODE_ENV=production
 ENV JAVA_OPTS="-Xmx1536m"

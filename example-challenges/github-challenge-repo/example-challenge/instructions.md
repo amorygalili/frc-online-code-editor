@@ -1,6 +1,6 @@
 # Example Challenges
 
-Welcome to Example Challenges! This challenge was generated using frc-challenge-cli.
+Welcome to Example Challenges! This challenge was generated using create-frc-challenge.
 
 ## Learning Objectives
 

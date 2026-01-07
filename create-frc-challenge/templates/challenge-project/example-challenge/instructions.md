@@ -1,6 +1,6 @@
 # {{challengeTitle}}
 
-Welcome to {{challengeTitle}}! This challenge was generated using frc-challenge-cli.
+Welcome to {{challengeTitle}}! This challenge was generated using create-frc-challenge.
 
 ## Learning Objectives
 
