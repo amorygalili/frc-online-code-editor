@@ -15,7 +15,7 @@ export async function createExampleRobotWithConfig(): Promise<FieldObject> {
     '/3d-models/Robot_BananaSplitV4/config.json',
     {
       translation: [2.0, 0.0, 0.0],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     }
   );
 }
@@ -27,7 +27,7 @@ export const exampleRobot: FieldObject = {
   poses: [
     {
       translation: [2.0, 0.0, 0.5], // x, y, z in meters
-      rotation: [1, 0, 0, 0], // [w, x, y, z] quaternion
+      rotation: [], // No rotation (identity)
     },
   ],
   components: [], // Articulated components (e.g., arm, elevator)
@@ -42,7 +42,7 @@ export const exampleGhost: FieldObject = {
   poses: [
     {
       translation: [3.0, 0.0, 0.5],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
   ],
   components: [],
@@ -56,11 +56,11 @@ export const exampleGamePieces: FieldObject = {
   poses: [
     {
       translation: [1.0, 1.0, 0.1],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
     {
       translation: [1.0, -1.0, 0.1],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
   ],
 };
@@ -73,19 +73,19 @@ export const exampleTrajectory: FieldObject = {
   poses: [
     {
       translation: [0.0, 0.0, 0.0],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
     {
       translation: [1.0, 0.5, 0.0],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
     {
       translation: [2.0, 1.0, 0.0],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
     {
       translation: [3.0, 1.0, 0.0],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
   ],
 };
@@ -97,7 +97,7 @@ export const exampleAprilTags: FieldObject = {
   poses: [
     {
       translation: [0.0, 2.0, 1.0], // On a wall
-      rotation: [0.707, 0, 0.707, 0], // [w, x, y, z] - Rotated 90 degrees
+      rotation: [{ axis: 'y', degrees: 90 }], // Rotated 90 degrees around Y axis
     },
   ],
 };
@@ -108,7 +108,7 @@ export const exampleAxes: FieldObject = {
   poses: [
     {
       translation: [0.0, 0.0, 0.0], // Origin
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
   ],
 };
@@ -121,7 +121,7 @@ export const exampleVisionCone: FieldObject = {
   poses: [
     {
       translation: [2.0, 0.0, 0.5],
-      rotation: [1, 0, 0, 0],
+      rotation: [],
     },
   ],
 };

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
-import { getQuaternionFromRotSeq } from '../utils';
+import { rotation3dToQuaternion } from '../utils';
 import { convert } from '../units';
 import { FieldConfig } from './field-configs';
 import { FieldObject } from './components/types';
@@ -25,7 +25,7 @@ function FieldModel({
   // WPILib rotation quaternion
   const WPILIB_ROTATION = useMemo(
     () =>
-      getQuaternionFromRotSeq([
+      rotation3dToQuaternion([
         { axis: 'x', degrees: -90 },
         { axis: 'y', degrees: 180 },
       ]),
@@ -34,7 +34,7 @@ function FieldModel({
 
   // Field rotation based on config
   const fieldRotation = useMemo(
-    () => getQuaternionFromRotSeq(fieldConfig.rotations),
+    () => rotation3dToQuaternion(fieldConfig.rotations),
     [fieldConfig]
   );
 

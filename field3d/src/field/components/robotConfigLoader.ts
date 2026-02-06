@@ -1,5 +1,4 @@
-import { Rotation, Pose3d } from '../field-interfaces';
-import { getRotation3dFromRotSeq } from '../../utils';
+import { Pose3d, Rotation } from '../field-interfaces';
 import { RobotObj } from './types';
 
 export interface RobotConfigComponent {
@@ -52,7 +51,7 @@ export async function loadRobotConfig(configPath: string): Promise<RobotConfig |
 export function componentToPose3d(component: RobotConfigComponent): Pose3d {
   return {
     translation: component.zeroedPosition,
-    rotation: getRotation3dFromRotSeq(component.zeroedRotations),
+    rotation: component.zeroedRotations,
   };
 }
 
@@ -64,7 +63,7 @@ export function componentToPose3d(component: RobotConfigComponent): Pose3d {
 export function cameraToPose3d(camera: RobotConfigCamera): Pose3d {
   return {
     translation: camera.position,
-    rotation: getRotation3dFromRotSeq(camera.rotations),
+    rotation: camera.rotations,
   };
 }
 
@@ -76,7 +75,7 @@ export function cameraToPose3d(camera: RobotConfigCamera): Pose3d {
 export function getBasePose(config: RobotConfig): Pose3d {
   return {
     translation: config.position,
-    rotation: getRotation3dFromRotSeq(config.rotations),
+    rotation: config.rotations,
   };
 }
 

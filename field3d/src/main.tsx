@@ -12,17 +12,17 @@ const staticObjects: FieldObject[] = [
     color: '#00ff00',
     size: 'medium',
     poses: [
-      { translation: [0.0, 0.0, 0.0], rotation: [1, 0, 0, 0] },
-      { translation: [1.0, 0.5, 0.0], rotation: [1, 0, 0, 0] },
-      { translation: [2.0, 1.0, 0.0], rotation: [1, 0, 0, 0] },
-      { translation: [3.0, 1.0, 0.0], rotation: [1, 0, 0, 0] },
+      { translation: [0.0, 0.0, 0.0], rotation: [] },
+      { translation: [1.0, 0.5, 0.0], rotation: [] },
+      { translation: [2.0, 1.0, 0.0], rotation: [] },
+      { translation: [3.0, 1.0, 0.0], rotation: [] },
     ],
   },
   // Coordinate axes at origin
   {
     type: 'axes',
     poses: [
-      { translation: [0.0, 0.0, 0.0], rotation: [1, 0, 0, 0] },
+      { translation: [0.0, 0.0, 0.0], rotation: [] },
     ],
   },
 ];
@@ -36,7 +36,7 @@ function App() {
       '/3d-models/Robot_BananaSplitV4/config.json',
       {
         translation: [2.0, 0.0, 0.0],
-        rotation: [1, 0, 0, 0],
+        rotation: [],
       }
     ).then((robot) => {
       setObjects([robot, ...staticObjects]);

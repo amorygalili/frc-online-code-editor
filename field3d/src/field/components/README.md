@@ -11,7 +11,7 @@ Displays robot models with poses, articulated components, and vision targets.
 {
   type: 'robot',
   model: '/models/robot.glb', // Path to GLB model (optional, uses default box if not provided)
-  poses: [{ translation: [x, y, z], rotation: [w, x, y, z] }],
+  poses: [{ translation: [x, y, z], rotation: [{ axis: 'z', degrees: 90 }] }],
   components: [], // Articulated component poses (optional, loaded from config.json if not provided)
   visionTargets: [], // Vision target poses (optional, loaded from cameras in config.json if not provided)
 }
@@ -29,7 +29,7 @@ const robot = await loadRobotFromConfig(
   '/3d-models/Robot_BananaSplitV4/config.json',
   {
     translation: [2.0, 0.0, 0.0],
-    rotation: [1, 0, 0, 0],
+    rotation: [],
   }
 );
 
@@ -80,7 +80,7 @@ Semi-transparent robot poses for showing planned or historical positions.
   type: 'ghost',
   model: '/models/robot.glb',
   color: '#00ff00', // Required color
-  poses: [{ translation: [x, y, z], rotation: [w, x, y, z] }],
+  poses: [{ translation: [x, y, z], rotation: [{ axis: 'z', degrees: 90 }] }],
   components: [],
   visionTargets: [],
 }
@@ -93,7 +93,7 @@ Game pieces at various field positions.
 {
   type: 'gamePiece',
   variant: 'note', // 'note', 'cone', 'cube', 'cargo', 'power cell'
-  poses: [{ translation: [x, y, z], rotation: [w, x, y, z] }],
+  poses: [{ translation: [x, y, z], rotation: [] }],
 }
 ```
 
@@ -106,8 +106,8 @@ Robot path visualization.
   color: '#ff0000',
   size: 'medium', // 'small', 'medium', 'large'
   poses: [
-    { translation: [x1, y1, z1], rotation: [w, x, y, z] },
-    { translation: [x2, y2, z2], rotation: [w, x, y, z] },
+    { translation: [x1, y1, z1], rotation: [] },
+    { translation: [x2, y2, z2], rotation: [] },
     // ... more points
   ],
 }
@@ -120,7 +120,7 @@ AprilTag markers at custom positions.
 {
   type: 'aprilTag',
   variant: 'frc-36h11', // 'frc-36h11', 'frc-16h5', 'ftc-2in', 'ftc-3in', 'ftc-4in', 'ftc-5in'
-  poses: [{ translation: [x, y, z], rotation: [w, x, y, z] }],
+  poses: [{ translation: [x, y, z], rotation: [{ axis: 'y', degrees: 90 }] }],
 }
 ```
 
@@ -130,7 +130,7 @@ Coordinate system axes at poses.
 ```typescript
 {
   type: 'axes',
-  poses: [{ translation: [x, y, z], rotation: [w, x, y, z] }],
+  poses: [{ translation: [x, y, z], rotation: [] }],
 }
 ```
 
@@ -142,7 +142,7 @@ Vision cones for camera field of view visualization.
   type: 'cone',
   color: '#ffff00',
   position: 'front', // 'center', 'back', 'front'
-  poses: [{ translation: [x, y, z], rotation: [w, x, y, z] }],
+  poses: [{ translation: [x, y, z], rotation: [] }],
 }
 ```
 
@@ -156,7 +156,7 @@ const objects: FieldObject[] = [
   {
     type: 'robot',
     model: '',
-    poses: [{ translation: [2.0, 0.0, 0.0], rotation: [1, 0, 0, 0] }],
+    poses: [{ translation: [2.0, 0.0, 0.0], rotation: [] }],
     components: [],
     visionTargets: [],
   },
@@ -165,9 +165,9 @@ const objects: FieldObject[] = [
     color: '#00ff00',
     size: 'medium',
     poses: [
-      { translation: [0.0, 0.0, 0.0], rotation: [1, 0, 0, 0] },
-      { translation: [1.0, 0.5, 0.0], rotation: [1, 0, 0, 0] },
-      { translation: [2.0, 1.0, 0.0], rotation: [1, 0, 0, 0] },
+      { translation: [0.0, 0.0, 0.0], rotation: [] },
+      { translation: [1.0, 0.5, 0.0], rotation: [] },
+      { translation: [2.0, 1.0, 0.0], rotation: [] },
     ],
   },
 ];
@@ -189,13 +189,14 @@ All poses use the WPILib coordinate system:
 - **X**: Forward (towards opposing alliance wall)
 - **Y**: Left (when looking from driver station)
 - **Z**: Up
-- **Rotation**: Quaternion `[w, x, y, z]`
+- **Rotation**: Array of axis-angle rotations `[{ axis: 'x' | 'y' | 'z', degrees: number }]`
 
 The origin is at the driver station, and the field is automatically flipped based on the `origin` prop ('red' or 'blue').
 
 ## Notes
 
-- Rotation is specified as a quaternion array: `[w, x, y, z]`
+- Rotation is specified as an array of axis-angle rotations: `[{ axis: 'x', degrees: 90 }, { axis: 'z', degrees: 45 }]`
+- Empty rotation array `[]` represents no rotation (identity)
 - Translation is in meters: `[x, y, z]`
 - All components support multiple poses (array of Pose3d)
 - Robot models should be in GLB format
