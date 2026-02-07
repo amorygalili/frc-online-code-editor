@@ -35,7 +35,7 @@ function App() {
     loadRobotFromConfig(
       '/3d-models/Robot_BananaSplitV4/config.json',
       {
-        translation: [2.0, 0.0, 0.0],
+        translation: [2.0, 2.0, 2],
         rotation: [],
       }
     ).then((robot) => {
@@ -46,7 +46,7 @@ function App() {
   return (
     <div id="canvas-container">
       <Field3d
-        game="Reefscape"
+        game="Evergreen"
         origin="red"
         backgroundColor="#1a1a1a"
         style={{ width: '100%', height: '100vh' }}

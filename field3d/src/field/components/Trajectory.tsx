@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Line } from '@react-three/drei';
 import { TrajectoryObj } from './types';
-import { Vector3 } from 'three';
+import { Color, Vector3 } from 'three';
 
 interface TrajectoryProps {
   object: TrajectoryObj;
@@ -37,9 +37,11 @@ export default function Trajectory({ object }: TrajectoryProps) {
     <>
       <Line
         points={points}
-        color={color}
+        color={new Color(color).getHex()}
         lineWidth={lineWidth}
         dashed={false}
+        alphaWrite={true}
+        derivatives={false}
       />
       
       {/* Add small spheres at each pose for better visibility */}

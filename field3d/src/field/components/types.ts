@@ -1,4 +1,5 @@
-import { Pose3d } from '../field-interfaces';
+import { Pose3d, Rotation } from '../field-interfaces';
+import type { RobotConfigCamera, RobotConfigComponent, RobotConfigJoint } from './robotConfigLoader';
 
 // Base types for 3D components based on AdvantageScope Field3dRenderer types
 
@@ -13,9 +14,18 @@ export type AprilTagVariant =
 // Generic robot object (shared by robot and ghost)
 export interface GenericRobotObj {
   model: string;
+  /** Base model visual origin rotations (from config.json rotations field) */
+  modelRotations: Rotation[];
+  /** Base model visual origin position (from config.json position field) */
+  modelPosition: [number, number, number];
   poses: Pose3d[];
-  components: Pose3d[]; // Articulated component poses
-  visionTargets?: Pose3d[]; // Vision target poses
+  components: RobotConfigComponent[]; // Articulated component definitions (zeroedRotations, zeroedPosition)
+  /** Camera definitions from config.json — used for selectable fixed camera views in the UI */
+  cameras?: RobotConfigCamera[];
+  /** Optional URDF joints from config.json — when present, the robot is rendered using urdf-loader with a kinematic chain */
+  joints?: RobotConfigJoint[];
+  /** Joint values as a dictionary of joint name to radian/meter values */
+  jointValues?: { [jointName: string]: number };
 }
 
 export interface RobotObj extends GenericRobotObj {

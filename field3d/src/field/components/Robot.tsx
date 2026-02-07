@@ -1,77 +1,200 @@
-import React, { useMemo } from 'react';
-import { useGLTF } from '@react-three/drei';
-import { Group, Mesh, MeshStandardMaterial } from 'three';
+import { useEffect, useMemo, useState } from 'react';
+import { Euler, LoadingManager, Mesh, MeshStandardMaterial, Object3D } from 'three';
+import { GLTFLoader } from 'three-stdlib';
+import URDFLoader from 'urdf-loader';
+import { URDFRobot as URDFRobotModel } from 'urdf-loader';
 import { RobotObj, GhostObj } from './types';
+import { RobotConfigComponent, RobotConfigJoint } from './robotConfigLoader';
 import { rotation3dToQuaternion } from '../../utils';
+import { Rotation } from '../field-interfaces';
 
 interface RobotProps {
   object: RobotObj | GhostObj;
 }
 
-// Default robot model - simple box if no model specified
-function DefaultRobotModel({ color, opacity }: { color?: string; opacity?: number }) {
-  return (
-    <mesh castShadow receiveShadow>
-      <boxGeometry args={[0.7, 0.5, 0.7]} />
-      <meshStandardMaterial
-        color={color || '#2196f3'}
-        metalness={0}
-        roughness={1}
-        transparent={opacity !== undefined && opacity < 1}
-        opacity={opacity ?? 1}
-      />
-    </mesh>
-  );
+/**
+ * Convert an array of axis-angle Rotation[] to URDF roll-pitch-yaw (RPY) string.
+ * Composes all rotations into a quaternion, then extracts Euler angles in XYZ order.
+ */
+function rotationsToRPY(rotations: Rotation[]): string {
+  const q = rotation3dToQuaternion(rotations);
+  const euler = new Euler().setFromQuaternion(q, 'XYZ');
+  return `${euler.x} ${euler.y} ${euler.z}`;
 }
 
-// Adjust materials to match AdvantageScope rendering
-function adjustMaterials(group: Group, color?: string, opacity?: number): void {
-  group.traverse((node) => {
+/**
+ * Build a URDF XML string from robot config.
+ *
+ * Naming convention:
+ * - "model" — the base link, visual mesh is model.glb, visual origin from config rotations/position
+ * - "model_0", "model_1", … — one link per component, visual mesh is model_N.glb,
+ *   visual origin from the component's zeroedRotations/zeroedPosition
+ *
+ * Joint parent/child are indices into the components array.
+ * If parent is undefined, the parent is the base "model" link.
+ */
+function buildURDFXml(
+  components: RobotConfigComponent[],
+  joints: RobotConfigJoint[],
+  modelDir: string,
+  modelRotations: Rotation[],
+  modelPosition: [number, number, number],
+): string {
+  // Base link: "model" with model.glb
+  const baseRpy = rotationsToRPY(modelRotations);
+  const [bx, by, bz] = modelPosition;
+  let linksXml = `
+  <link name="model">
+    <visual>
+      <origin xyz="${bx} ${by} ${bz}" rpy="${baseRpy}"/>
+      <geometry>
+        <mesh filename="${modelDir}/model.glb"/>
+      </geometry>
+    </visual>
+  </link>`;
+
+  // Component links: "model_N" with model_N.glb
+  components.forEach((comp, i) => {
+    const rpy = rotationsToRPY(comp.zeroedRotations);
+    const [x, y, z] = comp.zeroedPosition;
+    linksXml += `
+  <link name="model_${i}">
+    <visual>
+      <origin xyz="${x} ${y} ${z}" rpy="${rpy}"/>
+      <geometry>
+        <mesh filename="${modelDir}/model_${i}.glb"/>
+      </geometry>
+    </visual>
+  </link>`;
+  });
+
+  // Build <joint> elements
+  let jointsXml = '';
+  joints.forEach((j, i) => {
+    const jointName = `joint_${i}`;
+    const parentLink = j.parent !== undefined ? `model_${j.parent}` : 'model';
+    const childLink = `model_${j.child}`;
+    const rpy = rotationsToRPY(j.origin.rotations);
+    const [x, y, z] = j.origin.position;
+    let extras = '';
+    if (j.axis) {
+      extras += `\n    <axis xyz="${j.axis[0]} ${j.axis[1]} ${j.axis[2]}"/>`;
+    }
+    if (j.limit) {
+      extras += `\n    <limit lower="${j.limit.lower}" upper="${j.limit.upper}" effort="0" velocity="0"/>`;
+    }
+    jointsXml += `
+  <joint name="${jointName}" type="${j.type}">
+    <origin xyz="${x} ${y} ${z}" rpy="${rpy}"/>
+    <parent link="${parentLink}"/>
+    <child link="${childLink}"/>${extras}
+  </joint>`;
+  });
+
+  return `<?xml version="1.0"?>
+<robot name="robot">${linksXml}${jointsXml}
+</robot>`;
+}
+
+/**
+ * Adjust materials on a Three.js object tree for ghost rendering.
+ */
+function adjustMaterials(obj: Object3D, color?: string, opacity?: number): void {
+  obj.traverse((node) => {
     const mesh = node as Mesh;
     if (mesh.isMesh && mesh.material instanceof MeshStandardMaterial) {
-      const material = mesh.material as MeshStandardMaterial;
-      material.metalness = 0;
-      material.roughness = 1;
-      if (color) {
-        material.color.set(color);
-      }
+      const mat = mesh.material as MeshStandardMaterial;
+      mat.metalness = 0;
+      mat.roughness = 1;
+      if (color) mat.color.set(color);
       if (opacity !== undefined && opacity < 1) {
-        material.transparent = true;
-        material.opacity = opacity;
+        mat.transparent = true;
+        mat.opacity = opacity;
       }
     }
   });
 }
 
-// Robot model loader
-function RobotModel({
-  modelPath,
-  color,
-  opacity
-}: {
-  modelPath?: string;
-  color?: string;
-  opacity?: number;
-}) {
-  const model = modelPath ? useGLTF(modelPath) : null;
+/**
+ * Custom hook: parse URDF XML built from config and load GLB meshes for each link visual.
+ * Returns the URDFRobot object (or null while loading).
+ */
+function useURDFFromConfig(
+  model: string,
+  modelRotations: Rotation[],
+  modelPosition: [number, number, number],
+  components: RobotConfigComponent[],
+  joints: RobotConfigJoint[],
+  color?: string,
+  opacity?: number,
+): URDFRobotModel | null {
+  const [robot, setRobot] = useState<URDFRobotModel | null>(null);
 
-  useMemo(() => {
-    if (model?.scene) {
-      adjustMaterials(model.scene as Group, color, opacity);
-    }
-  }, [model, color, opacity]);
+  // Derive the model directory from the model path (e.g. "/3d-models/Robot_X/model.glb" → "/3d-models/Robot_X")
+  const modelDir = useMemo(() => {
+    const idx = model.lastIndexOf('/');
+    return idx !== -1 ? model.substring(0, idx) : '';
+  }, [model]);
 
-  if (!model || !model.scene) {
-    return <DefaultRobotModel color={color} opacity={opacity} />;
-  }
+  // Serialised keys for deps (avoid re-running on every render)
+  const componentsKey = useMemo(() => JSON.stringify(components), [components]);
+  const jointsKey = useMemo(() => JSON.stringify(joints), [joints]);
 
-  return <primitive object={model.scene.clone()} />;
+  useEffect(() => {
+    const urdfXml = buildURDFXml(components, joints, modelDir, modelRotations, modelPosition);
+
+    const manager = new LoadingManager();
+    const loader = new URDFLoader(manager);
+    const gltfLoader = new GLTFLoader(manager);
+
+    // Custom mesh loader: load GLB files via GLTFLoader
+    loader.loadMeshCb = (url: string, _manager: LoadingManager, onComplete) => {
+      gltfLoader.load(
+        url,
+        (gltf) => {
+          const scene = gltf.scene;
+          adjustMaterials(scene, color, opacity);
+          onComplete(scene);
+        },
+        undefined,
+        (err) => {
+          console.error(`Failed to load mesh ${url}:`, err);
+          onComplete(new Object3D()); // empty placeholder
+        },
+      );
+    };
+
+    const parsed = loader.parse(urdfXml);
+    adjustMaterials(parsed, color, opacity);
+    setRobot(parsed);
+
+    return () => {
+      setRobot(null);
+    };
+  }, [componentsKey, jointsKey, modelDir, modelRotations, modelPosition, color, opacity]);
+
+  return robot;
 }
 
 export default function Robot({ object }: RobotProps) {
-  const { poses, model, components = [], visionTargets = [] } = object;
+  const {
+    poses, model, modelRotations, modelPosition,
+    components = [], joints, jointValues,
+  } = object;
   const color = object.type === 'ghost' ? object.color : undefined;
   const opacity = object.type === 'ghost' ? 0.5 : 1.0;
+
+  const robot = useURDFFromConfig(
+    model, modelRotations, modelPosition, components, joints ?? [], color, opacity,
+  );
+
+  // Apply joint values reactively
+  useEffect(() => {
+    if (!robot || !jointValues) return;
+    robot.setJointValues(jointValues);
+  }, [robot, jointValues]);
+
+  if (!robot) return null;
 
   return (
     <>
@@ -85,63 +208,10 @@ export default function Robot({ object }: RobotProps) {
             position={[x, y, z]}
             quaternion={[quaternion.x, quaternion.y, quaternion.z, quaternion.w]}
           >
-            <RobotModel modelPath={model} color={color} opacity={opacity} />
-
-            {/* Render articulated components */}
-            {components.map((compPose, compIndex) => {
-              const [cx, cy, cz] = compPose.translation;
-              const cQuaternion = rotation3dToQuaternion(compPose.rotation);
-
-              return (
-                <group
-                  key={`component-${compIndex}`}
-                  position={[cx, cy, cz]}
-                  quaternion={[cQuaternion.x, cQuaternion.y, cQuaternion.z, cQuaternion.w]}
-                >
-                  {/* Simple box for component */}
-                  <mesh castShadow receiveShadow>
-                    <boxGeometry args={[0.2, 0.2, 0.2]} />
-                    <meshStandardMaterial
-                      color={color || '#4caf50'}
-                      metalness={0}
-                      roughness={1}
-                      transparent={opacity < 1}
-                      opacity={opacity}
-                    />
-                  </mesh>
-                </group>
-              );
-            })}
-
-            {/* Render vision targets */}
-            {visionTargets.map((targetPose, targetIndex) => {
-              const [tx, ty, tz] = targetPose.translation;
-              const tQuaternion = rotation3dToQuaternion(targetPose.rotation);
-
-              return (
-                <group
-                  key={`vision-target-${targetIndex}`}
-                  position={[tx, ty, tz]}
-                  quaternion={[tQuaternion.x, tQuaternion.y, tQuaternion.z, tQuaternion.w]}
-                >
-                  {/* Small sphere for vision target */}
-                  <mesh>
-                    <sphereGeometry args={[0.05, 16, 16]} />
-                    <meshStandardMaterial
-                      color="#ff0000"
-                      metalness={0}
-                      roughness={1}
-                      emissive="#ff0000"
-                      emissiveIntensity={0.5}
-                    />
-                  </mesh>
-                </group>
-              );
-            })}
+            <primitive object={index === 0 ? robot : robot.clone()} />
           </group>
         );
       })}
     </>
   );
 }
-

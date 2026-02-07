@@ -5,7 +5,7 @@ This directory contains React Three Fiber components for rendering 3D objects on
 ## Components
 
 ### Robot
-Displays robot models with poses, articulated components, and vision targets.
+Displays robot models with poses and articulated components.
 
 ```typescript
 {
@@ -13,13 +13,12 @@ Displays robot models with poses, articulated components, and vision targets.
   model: '/models/robot.glb', // Path to GLB model (optional, uses default box if not provided)
   poses: [{ translation: [x, y, z], rotation: [{ axis: 'z', degrees: 90 }] }],
   components: [], // Articulated component poses (optional, loaded from config.json if not provided)
-  visionTargets: [], // Vision target poses (optional, loaded from cameras in config.json if not provided)
 }
 ```
 
 **Loading Robot Configs:**
 
-Use the `loadRobotFromConfig()` function to automatically load a robot's `config.json` file and create a complete RobotObj with components and vision targets:
+Use the `loadRobotFromConfig()` function to automatically load a robot's `config.json` file and create a complete RobotObj with components and cameras:
 
 ```typescript
 import { loadRobotFromConfig } from './field/components/robotConfigLoader';
@@ -43,7 +42,7 @@ The config.json file can include:
 - `components`: Articulated components (arms, elevators, etc.) with their zeroed positions and rotations
   - Component models are loaded from `model_0.glb`, `model_1.glb`, etc. in the same directory
   - Or from explicit `src` paths if specified in the component config
-- `cameras`: Camera positions that will be rendered as vision targets (red spheres)
+- `cameras`: Fixed camera viewpoints on the robot, selectable from a dropdown in the 3D viewer UI
 
 Example config.json structure:
 ```json
@@ -82,7 +81,6 @@ Semi-transparent robot poses for showing planned or historical positions.
   color: '#00ff00', // Required color
   poses: [{ translation: [x, y, z], rotation: [{ axis: 'z', degrees: 90 }] }],
   components: [],
-  visionTargets: [],
 }
 ```
 
@@ -156,9 +154,10 @@ const objects: FieldObject[] = [
   {
     type: 'robot',
     model: '',
+    modelRotations: [],
+    modelPosition: [0, 0, 0],
     poses: [{ translation: [2.0, 0.0, 0.0], rotation: [] }],
     components: [],
-    visionTargets: [],
   },
   {
     type: 'trajectory',

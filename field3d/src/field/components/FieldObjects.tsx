@@ -1,4 +1,3 @@
-import React from 'react';
 import { FieldObject } from './types';
 import Robot from './Robot';
 import GamePiece from './GamePiece';

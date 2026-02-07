@@ -24,20 +24,23 @@ export async function createExampleRobotWithConfig(): Promise<FieldObject> {
 export const exampleRobot: FieldObject = {
   type: 'robot',
   model: '/models/robot.glb', // Path to robot GLB model
+  modelRotations: [],
+  modelPosition: [0, 0, 0],
   poses: [
     {
       translation: [2.0, 0.0, 0.5], // x, y, z in meters
       rotation: [], // No rotation (identity)
     },
   ],
-  components: [], // Articulated components (e.g., arm, elevator)
-  visionTargets: [], // Vision target poses
+  components: [], // Articulated components (RobotConfigComponent[])
 };
 
 // Example: Ghost robot (semi-transparent)
 export const exampleGhost: FieldObject = {
   type: 'ghost',
   model: '/models/robot.glb',
+  modelRotations: [],
+  modelPosition: [0, 0, 0],
   color: '#00ff00', // Green ghost
   poses: [
     {
@@ -45,8 +48,7 @@ export const exampleGhost: FieldObject = {
       rotation: [],
     },
   ],
-  components: [],
-  visionTargets: [],
+  components: [], // RobotConfigComponent[]
 };
 
 // Example: Game pieces (2024 Crescendo Notes)

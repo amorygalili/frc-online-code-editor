@@ -72,6 +72,8 @@ function FieldModel({
     }
   }, [origin, fieldConfig]);
 
+  console.log("OBJECTS:", objects);
+
   return (
     <>
       {/* WPILib coordinate group - rotated to match WPILib coordinate system */}

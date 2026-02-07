@@ -2,10 +2,23 @@ import { Pose3d, Rotation } from '../field-interfaces';
 import { RobotObj } from './types';
 
 export interface RobotConfigComponent {
-  name?: string;
-  src?: string;
   zeroedRotations: Rotation[];
   zeroedPosition: [number, number, number];
+}
+
+export interface RobotConfigJoint {
+  type: 'prismatic' | 'continuous' | 'revolute' | 'fixed';
+  parent?: number;
+  child: number;
+  origin: {
+    rotations: Rotation[];
+    position: [number, number, number];
+  }
+  axis?: [x: number, y: number, z: number];
+  limit?: {
+    lower: number;
+    upper: number;
+  };
 }
 
 export interface RobotConfigCamera {
@@ -22,6 +35,7 @@ export interface RobotConfig {
   position: [number, number, number];
   cameras?: RobotConfigCamera[];
   components?: RobotConfigComponent[];
+  joints?: RobotConfigJoint[];
 }
 
 /**
@@ -55,17 +69,7 @@ export function componentToPose3d(component: RobotConfigComponent): Pose3d {
   };
 }
 
-/**
- * Convert robot config camera to Pose3d for rendering as vision target
- * @param camera - Robot config camera
- * @returns Pose3d for the camera
- */
-export function cameraToPose3d(camera: RobotConfigCamera): Pose3d {
-  return {
-    translation: camera.position,
-    rotation: camera.rotations,
-  };
-}
+
 
 /**
  * Get the base pose for the robot from its config
@@ -84,7 +88,7 @@ export function getBasePose(config: RobotConfig): Pose3d {
  * @param configPath - Path to the robot config.json file
  * @param config - Robot config (if null, creates a basic robot without components)
  * @param pose - Robot pose on the field
- * @returns RobotObj with components and vision targets from config
+ * @returns RobotObj with components and cameras from config
  */
 export function createRobotFromConfig(
   configPath: string,
@@ -99,24 +103,13 @@ export function createRobotFromConfig(
   const robot: RobotObj = {
     type: 'robot',
     model: modelPath,
+    modelRotations: config?.rotations ?? [],
+    modelPosition: config?.position ?? [0, 0, 0],
     poses: [pose],
-    components: [],
-    visionTargets: [],
+    components: config?.components ?? [],
+    cameras: config?.cameras,
+    joints: config?.joints,
   };
-
-  if (!config) {
-    return robot;
-  }
-
-  // Add components from config
-  if (config.components) {
-    robot.components = config.components.map(componentToPose3d);
-  }
-
-  // Add vision targets from cameras
-  if (config.cameras) {
-    robot.visionTargets = config.cameras.map(cameraToPose3d);
-  }
 
   return robot;
 }
