@@ -14,11 +14,13 @@ interface RobotProps {
 
 /**
  * Convert an array of axis-angle Rotation[] to URDF roll-pitch-yaw (RPY) string.
- * Composes all rotations into a quaternion, then extracts Euler angles in XYZ order.
+ * Composes all rotations into a quaternion, then extracts Euler angles in ZYX
+ * intrinsic order — matching the URDF convention used by urdf-loader's
+ * `applyRotation`, which interprets RPY with Euler order 'ZYX'.
  */
 function rotationsToRPY(rotations: Rotation[]): string {
   const q = rotation3dToQuaternion(rotations);
-  const euler = new Euler().setFromQuaternion(q, 'XYZ');
+  const euler = new Euler().setFromQuaternion(q, 'ZYX');
   return `${euler.x} ${euler.y} ${euler.z}`;
 }
 

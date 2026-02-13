@@ -1,0 +1,342 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, GizmoHelper, GizmoViewport } from '@react-three/drei';
+import {
+  ArrowHelper,
+  DoubleSide,
+  Euler,
+  Group,
+  LoadingManager,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  Object3D,
+  Quaternion,
+  SphereGeometry,
+  TorusGeometry,
+  Vector3,
+} from 'three';
+import { GLTFLoader } from 'three-stdlib';
+import URDFLoader from 'urdf-loader';
+import { URDFRobot as URDFRobotModel } from 'urdf-loader';
+import { rotation3dToQuaternion } from '../utils';
+import type { Rotation } from '../field/field-interfaces';
+import type { RobotConfigComponent, RobotConfigJoint } from '../field/components/robotConfigLoader';
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+/** Reset metalness/roughness so models render well without an environment map. */
+function adjustMaterials(obj: Object3D): void {
+  obj.traverse((node) => {
+    const mesh = node as Mesh;
+    if (mesh.isMesh && mesh.material instanceof MeshStandardMaterial) {
+      mesh.material.metalness = 0;
+      mesh.material.roughness = 1;
+    }
+  });
+}
+
+function rotationsToRPY(rotations: Rotation[]): string {
+  const q = rotation3dToQuaternion(rotations);
+  const euler = new Euler().setFromQuaternion(q, 'ZYX');
+  return `${euler.x} ${euler.y} ${euler.z}`;
+}
+
+/**
+ * Build URDF XML using a URL map instead of a directory path.
+ * `urlMap` maps logical names ("model", "model_0", …) to blob/object URLs.
+ */
+function buildEditorURDFXml(
+  components: RobotConfigComponent[],
+  joints: RobotConfigJoint[],
+  urlMap: Record<string, string>,
+  modelRotations: Rotation[],
+  modelPosition: [number, number, number],
+): string {
+  const baseRpy = rotationsToRPY(modelRotations);
+  const [bx, by, bz] = modelPosition;
+  const baseUrl = urlMap['model'] ?? '';
+
+  let linksXml = `
+  <link name="model">
+    <visual>
+      <origin xyz="${bx} ${by} ${bz}" rpy="${baseRpy}"/>
+      <geometry><mesh filename="${baseUrl}"/></geometry>
+    </visual>
+  </link>`;
+
+  components.forEach((comp, i) => {
+    const rpy = rotationsToRPY(comp.zeroedRotations);
+    const [x, y, z] = comp.zeroedPosition;
+    const url = urlMap[`model_${i}`] ?? '';
+    linksXml += `
+  <link name="model_${i}">
+    <visual>
+      <origin xyz="${x} ${y} ${z}" rpy="${rpy}"/>
+      <geometry><mesh filename="${url}"/></geometry>
+    </visual>
+  </link>`;
+  });
+
+  let jointsXml = '';
+  joints.forEach((j, i) => {
+    const parentLink = j.parent !== undefined ? `model_${j.parent}` : 'model';
+    const childLink = `model_${j.child}`;
+    const rpy = rotationsToRPY(j.origin.rotations);
+    const [x, y, z] = j.origin.position;
+    let extras = '';
+    if (j.axis) extras += `\n    <axis xyz="${j.axis[0]} ${j.axis[1]} ${j.axis[2]}"/>`;
+    if (j.limit) extras += `\n    <limit lower="${j.limit.lower}" upper="${j.limit.upper}" effort="0" velocity="0"/>`;
+    jointsXml += `
+  <joint name="joint_${i}" type="${j.type}">
+    <origin xyz="${x} ${y} ${z}" rpy="${rpy}"/>
+    <parent link="${parentLink}"/>
+    <child link="${childLink}"/>${extras}
+  </joint>`;
+  });
+
+  return `<?xml version="1.0"?>\n<robot name="robot">${linksXml}${jointsXml}\n</robot>`;
+}
+
+// ── hook ─────────────────────────────────────────────────────────────────────
+
+function useEditorURDF(
+  urlMap: Record<string, string>,
+  modelRotations: Rotation[],
+  modelPosition: [number, number, number],
+  components: RobotConfigComponent[],
+  joints: RobotConfigJoint[],
+): URDFRobotModel | null {
+  const [robot, setRobot] = useState<URDFRobotModel | null>(null);
+  const compKey = useMemo(() => JSON.stringify(components), [components]);
+  const jointKey = useMemo(() => JSON.stringify(joints), [joints]);
+  const urlKey = useMemo(() => JSON.stringify(urlMap), [urlMap]);
+
+  useEffect(() => {
+    if (!urlMap['model']) { setRobot(null); return; }
+    const xml = buildEditorURDFXml(components, joints, urlMap, modelRotations, modelPosition);
+    const manager = new LoadingManager();
+    const loader = new URDFLoader(manager);
+    const gltfLoader = new GLTFLoader(manager);
+    loader.loadMeshCb = (url: string, _mgr: LoadingManager, onComplete) => {
+      if (!url) { onComplete(new Object3D()); return; }
+      gltfLoader.load(url, (gltf) => {
+        adjustMaterials(gltf.scene);
+        onComplete(gltf.scene);
+      }, undefined, (err) => {
+        console.error('Mesh load error:', err);
+        onComplete(new Object3D());
+      });
+    };
+    const parsed = loader.parse(xml);
+    adjustMaterials(parsed);
+    setRobot(parsed);
+    return () => setRobot(null);
+  }, [compKey, jointKey, urlKey, modelRotations, modelPosition]);
+
+  return robot;
+}
+
+export { useEditorURDF, buildEditorURDFXml };
+
+// ── props ────────────────────────────────────────────────────────────────────
+
+export interface RobotPreview3dProps {
+  urlMap: Record<string, string>;
+  modelRotations: Rotation[];
+  modelPosition: [number, number, number];
+  components: RobotConfigComponent[];
+  joints: RobotConfigJoint[];
+  jointValues: Record<string, number>;
+  hiddenModels: Set<string>;
+  showJointHelpers?: boolean;
+}
+
+// ── joint helper colours ────────────────────────────────────────────────────
+const REVOLUTE_COLOR = 0xffcc00;   // yellow
+const PRISMATIC_COLOR = 0x00ccff;  // cyan
+const FIXED_COLOR = 0x888888;      // grey
+
+/** Size constants for joint visualisation helpers */
+const AXIS_LENGTH = 0.15;          // arrow length in metres
+const AXIS_HEAD = 0.03;            // arrow-head size
+const RING_RADIUS = 0.04;          // torus major radius
+const RING_TUBE = 0.003;           // torus tube radius
+const SPHERE_RADIUS = 0.008;       // origin-point sphere
+
+/**
+ * Build a Group containing visual helpers for every joint in the robot.
+ * Must be called whenever the robot reference or joint values change so
+ * world positions are up-to-date.
+ */
+function buildJointHelpers(robot: URDFRobotModel): Group {
+  const helpersGroup = new Group();
+  helpersGroup.name = '__jointHelpers';
+
+  const sphereGeo = new SphereGeometry(SPHERE_RADIUS, 12, 12);
+  const torusGeo = new TorusGeometry(RING_RADIUS, RING_TUBE, 16, 48);
+
+  for (const [name, joint] of Object.entries(robot.joints)) {
+    const jType = joint.jointType;
+    const color = (jType === 'revolute' || jType === 'continuous')
+      ? REVOLUTE_COLOR
+      : jType === 'prismatic'
+        ? PRISMATIC_COLOR
+        : FIXED_COLOR;
+
+    // Container positioned at the joint's world location
+    const container = new Group();
+    container.name = `helper_${name}`;
+
+    // World position of the joint
+    const worldPos = new Vector3();
+    joint.getWorldPosition(worldPos);
+    container.position.copy(worldPos);
+
+    // World-space axis direction
+    const axisDir = joint.axis.clone().normalize();
+    // Transform axis from joint-local to world (rotation only)
+    const worldQuat = joint.getWorldQuaternion(new Quaternion());
+    axisDir.applyQuaternion(worldQuat);
+
+    // 1. Origin sphere
+    const sphereMat = new MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.9 });
+    const sphere = new Mesh(sphereGeo, sphereMat);
+    sphere.renderOrder = 999;
+    container.add(sphere);
+
+    // 2. Axis arrow (both directions for prismatic)
+    if (jType !== 'fixed') {
+      const arrow = new ArrowHelper(axisDir, new Vector3(), AXIS_LENGTH, color, AXIS_HEAD, AXIS_HEAD * 0.6);
+      arrow.renderOrder = 999;
+      arrow.userData.__negative = false;
+      container.add(arrow);
+
+      if (jType === 'prismatic') {
+        // Second arrow in the opposite direction
+        const arrowNeg = new ArrowHelper(axisDir.clone().negate(), new Vector3(), AXIS_LENGTH, color, AXIS_HEAD, AXIS_HEAD * 0.6);
+        arrowNeg.renderOrder = 999;
+        arrowNeg.userData.__negative = true;
+        container.add(arrowNeg);
+      }
+    }
+
+    // 3. Rotation ring for revolute/continuous
+    if (jType === 'revolute' || jType === 'continuous') {
+      const torusMat = new MeshBasicMaterial({
+        color, side: DoubleSide, depthTest: false, transparent: true, opacity: 0.45,
+      });
+      const torus = new Mesh(torusGeo, torusMat);
+      torus.renderOrder = 999;
+      // Orient torus so its normal aligns with axisDir
+      torus.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), axisDir);
+      container.add(torus);
+    }
+
+    helpersGroup.add(container);
+  }
+
+  return helpersGroup;
+}
+
+/** Inner scene component (must be inside Canvas) */
+function RobotScene({ urlMap, modelRotations, modelPosition, components, joints, jointValues, hiddenModels, showJointHelpers }: RobotPreview3dProps) {
+  const robot = useEditorURDF(urlMap, modelRotations, modelPosition, components, joints);
+  const [helpersGroup, setHelpersGroup] = useState<Group | null>(null);
+
+  useEffect(() => {
+    if (!robot) return;
+    robot.setJointValues(jointValues);
+  }, [robot, jointValues]);
+
+  // Adjust material opacity: hidden → 0%, normal → 100%
+  useEffect(() => {
+    if (!robot) return;
+    const linkNames = ['model', ...components.map((_, i) => `model_${i}`)];
+    for (const name of linkNames) {
+      const link = robot.links[name];
+      if (!link) continue;
+      const opacity = hiddenModels.has(name) ? 0 : 1;
+      link.traverse((node) => {
+        const mesh = node as Mesh;
+        if (mesh.isMesh && mesh.material instanceof MeshStandardMaterial) {
+          mesh.material.transparent = opacity < 1;
+          mesh.material.opacity = opacity;
+          mesh.material.needsUpdate = true;
+        }
+      });
+    }
+  }, [robot, hiddenModels, components]);
+
+  // Create helpers group when robot changes
+  useEffect(() => {
+    if (!robot || Object.keys(robot.joints).length === 0) {
+      setHelpersGroup(null);
+      return;
+    }
+    robot.updateWorldMatrix(true, true);
+    setHelpersGroup(buildJointHelpers(robot));
+  }, [robot]);
+
+  // Update helper positions every frame so they track joint world transforms
+  useFrame(() => {
+    if (!helpersGroup || !robot) return;
+
+    helpersGroup.visible = !!showJointHelpers;
+    if (!showJointHelpers) return;
+
+    for (const container of helpersGroup.children) {
+      const jointName = container.name.replace('helper_', '');
+      const joint = robot.joints[jointName];
+      if (!joint) continue;
+
+      // Update container position to joint world position
+      joint.getWorldPosition(container.position);
+
+      // Compute world-space axis direction
+      const axisDir = joint.axis.clone().normalize();
+      const wq = joint.getWorldQuaternion(new Quaternion());
+      axisDir.applyQuaternion(wq);
+
+      // Update arrow directions and torus orientation
+      for (const sub of container.children) {
+        if (sub instanceof ArrowHelper) {
+          const dir = sub.userData.__negative ? axisDir.clone().negate() : axisDir.clone();
+          sub.setDirection(dir);
+        }
+        if (sub instanceof Mesh && sub.geometry instanceof TorusGeometry) {
+          sub.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), axisDir);
+        }
+      }
+    }
+  });
+
+  if (!robot) return null;
+  return (
+    <>
+      <primitive object={robot} />
+      {helpersGroup && <primitive object={helpersGroup} />}
+    </>
+  );
+}
+
+/** Standalone 3D preview canvas for the robot config editor. */
+export default function RobotPreview3d(props: RobotPreview3dProps) {
+  return (
+    <Canvas
+      camera={{ position: [1.5, 1.5, 1.5] as any, fov: 50, near: 0.01, far: 100, up: [0, 0, 1] as any }}
+      gl={{ antialias: true }}
+      style={{ background: '#1e1e1e' }}
+    >
+      <pointLight position={[0, 0, 10]} intensity={0.2} color={0xffffff} />
+      <hemisphereLight args={[0xffffff, 0x444444, 1]} position={[0, 0, 1]} />
+      <RobotScene {...props} />
+      <OrbitControls makeDefault />
+      <gridHelper args={[4, 20, '#555', '#333']} rotation={[Math.PI / 2, 0, 0]} />
+      <GizmoHelper alignment="bottom-right" margin={[60, 60]}>
+        <GizmoViewport axisColors={['red', 'green', 'blue']} labels={['X', 'Y', 'Z']} />
+      </GizmoHelper>
+    </Canvas>
+  );
+}
+
