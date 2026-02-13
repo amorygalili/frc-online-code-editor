@@ -40,8 +40,6 @@ export default function Trajectory({ object }: TrajectoryProps) {
         color={new Color(color).getHex()}
         lineWidth={lineWidth}
         dashed={false}
-        alphaWrite={true}
-        derivatives={false}
       />
       
       {/* Add small spheres at each pose for better visibility */}

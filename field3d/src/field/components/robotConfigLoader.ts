@@ -7,7 +7,7 @@ export interface RobotConfigComponent {
 }
 
 export interface RobotConfigJoint {
-  type: 'prismatic' | 'continuous' | 'revolute' | 'fixed';
+  type: 'prismatic' | 'revolute' | 'fixed';
   parent?: number;
   child: number;
   origin: {

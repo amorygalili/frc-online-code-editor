@@ -1,0 +1,134 @@
+{
+  "name": "New Robot",
+  "rotations": [
+    {
+      "axis": "x",
+      "degrees": 90
+    },
+    {
+      "axis": "z",
+      "degrees": -90
+    }
+  ],
+  "position": [
+    0,
+    0,
+    0
+  ],
+  "components": [
+    {
+      "zeroedRotations": [
+        {
+          "axis": "z",
+          "degrees": -90
+        },
+        {
+          "axis": "y",
+          "degrees": -90
+        }
+      ],
+      "zeroedPosition": [
+        0,
+        0,
+        -0.61
+      ]
+    },
+    {
+      "zeroedRotations": [
+        {
+          "axis": "z",
+          "degrees": -90
+        },
+        {
+          "axis": "y",
+          "degrees": -90
+        }
+      ],
+      "zeroedPosition": [
+        -0.012,
+        0,
+        -1.245
+      ]
+    },
+    {
+      "zeroedRotations": [
+        {
+          "axis": "z",
+          "degrees": -90
+        }
+      ],
+      "zeroedPosition": [
+        -0.45,
+        0,
+        0
+      ]
+    }
+  ],
+  "joints": [
+    {
+      "type": "revolute",
+      "child": 0,
+      "origin": {
+        "rotations": [],
+        "position": [
+          0,
+          0,
+          0.61
+        ]
+      },
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "limit": {
+        "lower": -3.14159,
+        "upper": 3.14159
+      }
+    },
+    {
+      "type": "revolute",
+      "child": 1,
+      "origin": {
+        "rotations": [],
+        "position": [
+          0,
+          0,
+          0.641
+        ]
+      },
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "limit": {
+        "lower": -3.14159,
+        "upper": 3.14159
+      },
+      "parent": 0
+    },
+    {
+      "type": "revolute",
+      "child": 2,
+      "origin": {
+        "rotations": [],
+        "position": [
+          0,
+          0,
+          -0.75
+        ]
+      },
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "limit": {
+        "lower": -3.14159,
+        "upper": 3.14159
+      },
+      "parent": 1
+    }
+  ]
+}

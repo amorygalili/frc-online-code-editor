@@ -12,13 +12,13 @@ import RobotPreview3d from './RobotPreview3d';
 /** Files held in memory (blob URLs). Key = "model" | "model_0" | "model_1" … */
 type GlbFileMap = Record<string, { file: File; url: string }>;
 
-const JOINT_TYPES: RobotConfigJoint['type'][] = ['revolute', 'continuous', 'prismatic', 'fixed'];
+const JOINT_TYPES: RobotConfigJoint['type'][] = ['revolute', 'prismatic', 'fixed'];
 
-/** Distinct colours used to visually identify models in the sidebar & (optionally) 3D view. */
-const MODEL_COLORS = [
-  '#42a5f5', // blue  – base model
+/** Distinct colours used to visually identify joints in the sidebar & 3D view. */
+const JOINT_COLORS = [
   '#ef5350', // red
   '#66bb6a', // green
+  '#42a5f5', // blue
   '#ffa726', // orange
   '#ab47bc', // purple
   '#26c6da', // cyan
@@ -26,10 +26,13 @@ const MODEL_COLORS = [
   '#d4e157', // lime
   '#8d6e63', // brown
   '#78909c', // blue-grey
+  '#ffeb3b', // yellow
+  '#ff7043', // deep orange
+  '#ec407a', // pink
 ];
-/** Return a stable colour for a model index (0 = base, 1+ = components). */
-function modelColor(index: number): string {
-  return MODEL_COLORS[index % MODEL_COLORS.length];
+/** Return a stable colour for a joint index. */
+function jointColor(index: number): string {
+  return JOINT_COLORS[index % JOINT_COLORS.length];
 }
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
@@ -374,7 +377,6 @@ export default function RobotConfigEditor() {
         {/* ── Base Model ── */}
         <div style={S.section}>
           <div style={{ ...S.row, marginBottom: 2 }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: modelColor(0), flexShrink: 0 }} />
             <span style={S.sectionTitle}>Base Model</span>
             <span style={{ flex: 1 }} />
             <button
@@ -404,7 +406,6 @@ export default function RobotConfigEditor() {
             return (
             <div key={idx} style={{ background: '#2a2a2a', borderRadius: 4, padding: 8, marginBottom: 4 }}>
               <div style={{ ...S.row, marginBottom: 4 }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: modelColor(idx + 1), flexShrink: 0 }} />
                 <span style={{ fontWeight: 600, fontSize: 12 }}>model_{idx}</span>
                 <span style={{ flex: 1, fontSize: 11, color: '#888', textAlign: 'right' as const }}>
                   {glbFiles[linkName] ? glbFiles[linkName].file.name : 'no file'}
@@ -434,15 +435,16 @@ export default function RobotConfigEditor() {
             <span style={S.sectionTitle}>Joints ({(config.joints ?? []).length})</span>
             <span style={{ flex: 1 }} />
             <button
-              style={{ ...S.btn, padding: '2px 6px', fontSize: 12, opacity: showJointHelpers ? 1 : 0.4 }}
+              style={{ ...S.btn, padding: '2px 6px', fontSize: 14, opacity: showJointHelpers ? 1 : 0.4 }}
               title={showJointHelpers ? 'Hide joint helpers' : 'Show joint helpers'}
               onClick={() => setShowJointHelpers((v) => !v)}
-            >{showJointHelpers ? '🔧' : '🔧'} Viz</button>
+            >{showJointHelpers ? '👁' : '🙈'}</button>
           </div>
           {(config.joints ?? []).map((joint, idx) => (
             <div key={idx} style={{ background: '#2a2a2a', borderRadius: 4, padding: 8, marginBottom: 4 }}>
               <div style={{ ...S.row, marginBottom: 4 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>joint_{idx}</span>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: jointColor(idx), flexShrink: 0 }} />
+                <span style={{ fontWeight: 600, fontSize: 12, marginLeft: 6 }}>joint_{idx}</span>
                 <span style={{ flex: 1 }} />
                 <button style={S.btnDanger} onClick={() => removeJoint(idx)}>✕</button>
               </div>
@@ -532,7 +534,8 @@ export default function RobotConfigEditor() {
               return (
                 <div key={idx}>
                   <div style={{ ...S.row, marginBottom: 2 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600 }}>{name}</span>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: jointColor(idx), flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 6 }}>{name}</span>
                     <span style={{ flex: 1 }} />
                     <span style={{ fontSize: 11, color: '#aaa' }}>{val.toFixed(3)}</span>
                   </div>
@@ -558,6 +561,7 @@ export default function RobotConfigEditor() {
           jointValues={jointValues}
           hiddenModels={hiddenModels}
           showJointHelpers={showJointHelpers}
+          jointColors={(config.joints ?? []).map((_, idx) => jointColor(idx))}
         />
       </div>
     </div>

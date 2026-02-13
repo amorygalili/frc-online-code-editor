@@ -150,12 +150,8 @@ export interface RobotPreview3dProps {
   jointValues: Record<string, number>;
   hiddenModels: Set<string>;
   showJointHelpers?: boolean;
+  jointColors: string[];  // Array of hex color strings, one per joint
 }
-
-// ── joint helper colours ────────────────────────────────────────────────────
-const REVOLUTE_COLOR = 0xffcc00;   // yellow
-const PRISMATIC_COLOR = 0x00ccff;  // cyan
-const FIXED_COLOR = 0x888888;      // grey
 
 /** Size constants for joint visualisation helpers */
 const AXIS_LENGTH = 0.15;          // arrow length in metres
@@ -169,7 +165,7 @@ const SPHERE_RADIUS = 0.008;       // origin-point sphere
  * Must be called whenever the robot reference or joint values change so
  * world positions are up-to-date.
  */
-function buildJointHelpers(robot: URDFRobotModel): Group {
+function buildJointHelpers(robot: URDFRobotModel, jointColors: string[]): Group {
   const helpersGroup = new Group();
   helpersGroup.name = '__jointHelpers';
 
@@ -178,11 +174,10 @@ function buildJointHelpers(robot: URDFRobotModel): Group {
 
   for (const [name, joint] of Object.entries(robot.joints)) {
     const jType = joint.jointType;
-    const color = (jType === 'revolute' || jType === 'continuous')
-      ? REVOLUTE_COLOR
-      : jType === 'prismatic'
-        ? PRISMATIC_COLOR
-        : FIXED_COLOR;
+    // Extract joint index from name (e.g., "joint_0" -> 0)
+    const jointIdx = parseInt(name.replace('joint_', ''), 10);
+    const colorHex = jointColors[jointIdx] ?? '#888888';
+    const color = parseInt(colorHex.replace('#', ''), 16);
 
     // Container positioned at the joint's world location
     const container = new Group();
@@ -221,8 +216,8 @@ function buildJointHelpers(robot: URDFRobotModel): Group {
       }
     }
 
-    // 3. Rotation ring for revolute/continuous
-    if (jType === 'revolute' || jType === 'continuous') {
+    // 3. Rotation ring for revolute
+    if (jType === 'revolute') {
       const torusMat = new MeshBasicMaterial({
         color, side: DoubleSide, depthTest: false, transparent: true, opacity: 0.45,
       });
@@ -240,7 +235,7 @@ function buildJointHelpers(robot: URDFRobotModel): Group {
 }
 
 /** Inner scene component (must be inside Canvas) */
-function RobotScene({ urlMap, modelRotations, modelPosition, components, joints, jointValues, hiddenModels, showJointHelpers }: RobotPreview3dProps) {
+function RobotScene({ urlMap, modelRotations, modelPosition, components, joints, jointValues, hiddenModels, showJointHelpers, jointColors }: RobotPreview3dProps) {
   const robot = useEditorURDF(urlMap, modelRotations, modelPosition, components, joints);
   const [helpersGroup, setHelpersGroup] = useState<Group | null>(null);
 
@@ -275,8 +270,8 @@ function RobotScene({ urlMap, modelRotations, modelPosition, components, joints,
       return;
     }
     robot.updateWorldMatrix(true, true);
-    setHelpersGroup(buildJointHelpers(robot));
-  }, [robot]);
+    setHelpersGroup(buildJointHelpers(robot, jointColors));
+  }, [robot, jointColors]);
 
   // Update helper positions every frame so they track joint world transforms
   useFrame(() => {

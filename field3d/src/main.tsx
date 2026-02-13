@@ -33,12 +33,16 @@ function FieldView() {
 
   useEffect(() => {
     loadRobotFromConfig(
-      '/3d-models/Robot_BananaSplitV4/config.json',
+      '/3d-models/robot2/config.json',
       {
         translation: [2.0, 2.0, 2],
         rotation: [],
       }
     ).then((robot) => {
+      robot.jointValues = {
+        joint_0: .4,
+        joint_1: .4,
+      };
       setObjects([robot, ...staticObjects]);
     });
   }, []);
