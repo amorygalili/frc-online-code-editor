@@ -18,7 +18,7 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three-stdlib';
 import URDFLoader from 'urdf-loader';
-import { URDFRobot as URDFRobotModel } from 'urdf-loader';
+import { URDFRobot as URDFRobotModel, URDFVisual } from 'urdf-loader';
 import { rotation3dToQuaternion } from '../utils';
 import type { Rotation } from '../field/field-interfaces';
 import type { RobotConfigComponent, RobotConfigJoint } from '../field/components/robotConfigLoader';
@@ -40,6 +40,24 @@ function rotationsToRPY(rotations: Rotation[]): string {
   const q = rotation3dToQuaternion(rotations);
   const euler = new Euler().setFromQuaternion(q, 'ZYX');
   return `${euler.x} ${euler.y} ${euler.z}`;
+}
+
+/**
+ * Apply RPY rotation to an Object3D, matching urdf-loader's `applyRotation`.
+ * Resets rotation to identity first, then applies rpy in ZYX intrinsic order.
+ */
+function applyRPY(obj: Object3D, rpy: [number, number, number]): void {
+  obj.rotation.set(0, 0, 0);
+  const euler = new Euler(rpy[0], rpy[1], rpy[2], 'ZYX');
+  const q = new Quaternion().setFromEuler(euler);
+  q.multiply(obj.quaternion);
+  obj.quaternion.copy(q);
+}
+
+/** Parse an RPY string "r p y" into a tuple. */
+function parseRPY(rpy: string): [number, number, number] {
+  const parts = rpy.trim().split(/\s+/).map(Number);
+  return [parts[0] || 0, parts[1] || 0, parts[2] || 0];
 }
 
 /**
@@ -65,14 +83,13 @@ function buildEditorURDFXml(
     </visual>
   </link>`;
 
-  components.forEach((comp, i) => {
-    const rpy = rotationsToRPY(comp.zeroedRotations);
-    const [x, y, z] = comp.zeroedPosition;
+  components.forEach((_comp, i) => {
     const url = urlMap[`model_${i}`] ?? '';
+    // Use placeholder origin — will be patched in-place by the property effect
     linksXml += `
   <link name="model_${i}">
     <visual>
-      <origin xyz="${x} ${y} ${z}" rpy="${rpy}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry><mesh filename="${url}"/></geometry>
     </visual>
   </link>`;
@@ -82,20 +99,117 @@ function buildEditorURDFXml(
   joints.forEach((j, i) => {
     const parentLink = j.parent !== undefined ? `model_${j.parent}` : 'model';
     const childLink = `model_${j.child}`;
-    const rpy = rotationsToRPY(j.origin.rotations);
-    const [x, y, z] = j.origin.position;
-    let extras = '';
-    if (j.axis) extras += `\n    <axis xyz="${j.axis[0]} ${j.axis[1]} ${j.axis[2]}"/>`;
-    if (j.limit) extras += `\n    <limit lower="${j.limit.lower}" upper="${j.limit.upper}" effort="0" velocity="0"/>`;
+    // Use placeholder origin/axis/limit — will be patched in-place by the property effect
     jointsXml += `
   <joint name="joint_${i}" type="${j.type}">
-    <origin xyz="${x} ${y} ${z}" rpy="${rpy}"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
     <parent link="${parentLink}"/>
-    <child link="${childLink}"/>${extras}
+    <child link="${childLink}"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14159" upper="3.14159" effort="0" velocity="0"/>
   </joint>`;
   });
 
   return `<?xml version="1.0"?>\n<robot name="robot">${linksXml}${jointsXml}\n</robot>`;
+}
+
+// ── structural key ──────────────────────────────────────────────────────────
+
+/**
+ * Compute a key that changes only when the scene-graph *structure* changes:
+ * number of components, number of joints, joint types, parent/child topology,
+ * and mesh URLs. Property-only changes (positions, rotations, axes, limits)
+ * are excluded — those are applied in-place.
+ */
+function computeStructuralKey(
+  components: RobotConfigComponent[],
+  joints: RobotConfigJoint[],
+  urlMap: Record<string, string>,
+): string {
+  const structure = {
+    numComponents: components.length,
+    joints: joints.map((j) => ({
+      type: j.type,
+      parent: j.parent,
+      child: j.child,
+    })),
+    urls: urlMap,
+  };
+  return JSON.stringify(structure);
+}
+
+// ── in-place property patching ──────────────────────────────────────────────
+
+/**
+ * Mutate the existing URDFRobot in-place to reflect current property values
+ * (visual origins, joint origins, axes, limits) without rebuilding the scene graph.
+ */
+function patchRobotProperties(
+  robot: URDFRobotModel,
+  components: RobotConfigComponent[],
+  joints: RobotConfigJoint[],
+  modelRotations: Rotation[],
+  modelPosition: [number, number, number],
+): void {
+  // ── Patch base model visual origin ──
+  const baseLink = robot.links['model'] ?? robot;
+  const baseVisual = findVisual(baseLink);
+  if (baseVisual) {
+    const [bx, by, bz] = modelPosition;
+    baseVisual.position.set(bx, by, bz);
+    const baseRpy = parseRPY(rotationsToRPY(modelRotations));
+    applyRPY(baseVisual, baseRpy);
+  }
+
+  // ── Patch component visual origins ──
+  components.forEach((comp, i) => {
+    const link = robot.links[`model_${i}`];
+    if (!link) return;
+    const visual = findVisual(link);
+    if (!visual) return;
+    const [x, y, z] = comp.zeroedPosition;
+    visual.position.set(x, y, z);
+    const rpy = parseRPY(rotationsToRPY(comp.zeroedRotations));
+    applyRPY(visual, rpy);
+  });
+
+  // ── Patch joint properties ──
+  joints.forEach((j, i) => {
+    const joint = robot.joints[`joint_${i}`];
+    if (!joint) return;
+
+    // Origin position + rotation
+    const [x, y, z] = j.origin.position;
+    joint.position.set(x, y, z);
+    const rpy = parseRPY(rotationsToRPY(j.origin.rotations));
+    applyRPY(joint, rpy);
+
+    // Reset origPosition/origQuaternion so setJointValue works from the new origin.
+    // These properties exist at runtime but are not in the TS type definitions.
+    (joint as any).origPosition = joint.position.clone();
+    (joint as any).origQuaternion = joint.quaternion.clone();
+
+    // Axis
+    if (j.axis) {
+      joint.axis.set(j.axis[0], j.axis[1], j.axis[2]).normalize();
+    }
+
+    // Limits
+    if (j.limit) {
+      joint.limit.lower = j.limit.lower;
+      joint.limit.upper = j.limit.upper;
+    }
+  });
+
+  robot.updateWorldMatrix(true, true);
+}
+
+/** Find the first URDFVisual child of a link. */
+function findVisual(link: Object3D): URDFVisual | null {
+  for (const child of link.children) {
+    if ((child as URDFVisual).isURDFVisual) return child as URDFVisual;
+  }
+  return null;
 }
 
 // ── hook ─────────────────────────────────────────────────────────────────────
@@ -108,10 +222,17 @@ function useEditorURDF(
   joints: RobotConfigJoint[],
 ): URDFRobotModel | null {
   const [robot, setRobot] = useState<URDFRobotModel | null>(null);
-  const compKey = useMemo(() => JSON.stringify(components), [components]);
-  const jointKey = useMemo(() => JSON.stringify(joints), [joints]);
-  const urlKey = useMemo(() => JSON.stringify(urlMap), [urlMap]);
+  // Counter bumped after every successful parse so the property-patch effect
+  // runs once the new robot is in state.
+  const [parseGeneration, setParseGeneration] = useState(0);
 
+  // Key that changes only on structural changes (topology + mesh URLs)
+  const structuralKey = useMemo(
+    () => computeStructuralKey(components, joints, urlMap),
+    [components, joints, urlMap],
+  );
+
+  // ── Effect 1: full reparse on structural changes ──
   useEffect(() => {
     if (!urlMap['model']) { setRobot(null); return; }
     const xml = buildEditorURDFXml(components, joints, urlMap, modelRotations, modelPosition);
@@ -130,9 +251,20 @@ function useEditorURDF(
     };
     const parsed = loader.parse(xml);
     adjustMaterials(parsed);
+    // Apply current property values immediately so the first render is correct
+    patchRobotProperties(parsed, components, joints, modelRotations, modelPosition);
     setRobot(parsed);
+    setParseGeneration((g) => g + 1);
     return () => setRobot(null);
-  }, [compKey, jointKey, urlKey, modelRotations, modelPosition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [structuralKey]);
+
+  // ── Effect 2: in-place property patch (no reparse) ──
+  useEffect(() => {
+    if (!robot) return;
+    patchRobotProperties(robot, components, joints, modelRotations, modelPosition);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [robot, parseGeneration, components, joints, modelRotations, modelPosition]);
 
   return robot;
 }
