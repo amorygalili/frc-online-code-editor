@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
-import { AprilTagObj, AprilTagBuiltInObj, AprilTagVariant } from './types';
+import { AprilTagObj, AprilTagVariant } from './types';
 import { rotation3dToQuaternion } from '../../../utils';
 
-interface AprilTagProps {
-  object: AprilTagObj | AprilTagBuiltInObj;
-}
+type AprilTagProps = Omit<AprilTagObj, 'type'>;
 
 // Get tag size based on variant
 function getTagSize(variant: AprilTagVariant): number {
@@ -26,8 +24,7 @@ function getTagSize(variant: AprilTagVariant): number {
   }
 }
 
-export default function AprilTag({ object }: AprilTagProps) {
-  const { poses, variant } = object;
+export default function AprilTag({ poses, variant }: AprilTagProps) {
   
   const tagSize = useMemo(() => getTagSize(variant), [variant]);
   const borderSize = tagSize * 1.25; // White border around tag

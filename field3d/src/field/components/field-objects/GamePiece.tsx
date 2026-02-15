@@ -1,9 +1,7 @@
 import { GamePieceObj } from './types';
 import { rotation3dToQuaternion } from '../../../utils';
 
-interface GamePieceProps {
-  object: GamePieceObj;
-}
+type GamePieceProps = Omit<GamePieceObj, 'type'>;
 
 // Default game piece models based on variant
 function DefaultGamePiece({ variant }: { variant: string }) {
@@ -84,9 +82,7 @@ function DefaultGamePiece({ variant }: { variant: string }) {
   }
 }
 
-export default function GamePiece({ object }: GamePieceProps) {
-  const { variant, poses } = object;
-
+export default function GamePiece({ variant, poses }: GamePieceProps) {
   return (
     <>
       {poses.map((pose, index) => {

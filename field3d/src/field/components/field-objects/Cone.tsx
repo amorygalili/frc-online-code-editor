@@ -2,17 +2,14 @@ import { useMemo } from 'react';
 import { ConeObj } from './types';
 import { rotation3dToQuaternion } from '../../../utils';
 
-interface ConeProps {
-  object: ConeObj;
-}
+type ConeProps = Omit<ConeObj, 'type'>;
 
-export default function VisionCone({ object }: ConeProps) {
-  const { poses, color, position } = object;
-  
+export default function VisionCone({ poses, color, position }: ConeProps) {
+
   // Default cone parameters
   const coneLength = 2.0; // meters
   const coneAngle = 30; // degrees
-  
+
   const coneRadius = useMemo(() => {
     return coneLength * Math.tan((coneAngle * Math.PI) / 180);
   }, [coneLength, coneAngle]);
@@ -53,7 +50,7 @@ export default function VisionCone({ object }: ConeProps) {
                 side={2} // DoubleSide
               />
             </mesh>
-            
+
             {/* Wireframe outline for better visibility */}
             <mesh
               position={[offsetX + coneLength / 2, 0, 0]}

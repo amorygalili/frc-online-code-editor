@@ -3,13 +3,9 @@ import { Line } from '@react-three/drei';
 import { TrajectoryObj } from './types';
 import { Color, Vector3 } from 'three';
 
-interface TrajectoryProps {
-  object: TrajectoryObj;
-}
+type TrajectoryProps = Omit<TrajectoryObj, 'type'>;
 
-export default function Trajectory({ object }: TrajectoryProps) {
-  const { poses, color, size } = object;
-
+export default function Trajectory({ poses, color, size }: TrajectoryProps) {
   // Convert poses to points for the line
   const points = useMemo(() => {
     return poses.map((pose) => new Vector3(...pose.translation));
@@ -41,7 +37,7 @@ export default function Trajectory({ object }: TrajectoryProps) {
         lineWidth={lineWidth}
         dashed={false}
       />
-      
+
       {/* Add small spheres at each pose for better visibility */}
       {poses.map((pose, index) => {
         const [x, y, z] = pose.translation;

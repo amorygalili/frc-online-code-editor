@@ -3,14 +3,12 @@ import { Euler, LoadingManager, Mesh, MeshStandardMaterial, Object3D } from 'thr
 import { GLTFLoader } from 'three-stdlib';
 import URDFLoader from 'urdf-loader';
 import { URDFRobot as URDFRobotModel } from 'urdf-loader';
-import { RobotObj, GhostObj } from './types';
+import { RobotObj } from './types';
 import { RobotConfigComponent, RobotConfigJoint, getValidJointIndices } from '../../robotConfigLoader';
 import { rotation3dToQuaternion } from '../../../utils';
 import { Rotation } from '../../field-interfaces';
 
-interface RobotProps {
-  object: RobotObj | GhostObj;
-}
+type RobotProps = Omit<RobotObj, 'type'>;
 
 /**
  * Convert an array of axis-angle Rotation[] to URDF roll-pitch-yaw (RPY) string.
@@ -197,13 +195,7 @@ function useURDFFromConfig(
   return robot;
 }
 
-export default function Robot({ object }: RobotProps) {
-  const {
-    poses, model, modelRotations, modelPosition,
-    components = [], joints, jointValues,
-  } = object;
-  const color = object.type === 'ghost' ? object.color : undefined;
-  const opacity = object.type === 'ghost' ? 0.5 : 1.0;
+export default function Robot({ poses, model, modelRotations, modelPosition, components = [], joints, jointValues, color, opacity = 1.0 }: RobotProps) {
 
   const robot = useURDFFromConfig(
     model, modelRotations, modelPosition, components, joints ?? [], color, opacity,

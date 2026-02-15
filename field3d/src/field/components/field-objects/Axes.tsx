@@ -1,19 +1,19 @@
 import { AxesObj } from './types';
 import { rotation3dToQuaternion } from '../../../utils';
 
-interface AxesProps {
-  object: AxesObj;
-  size?: number; // Size of axes in meters, default 0.5
-}
+type AxesProps = Omit<AxesObj, 'type'> & {
+  // Size of axes in meters, default 0.5
+  size?: number
+};
 
 // Single axis arrow
-function AxisArrow({ 
-  color, 
-  length, 
-  rotation 
-}: { 
-  color: string; 
-  length: number; 
+function AxisArrow({
+  color,
+  length,
+  rotation
+}: {
+  color: string;
+  length: number;
   rotation?: [number, number, number];
 }) {
   const shaftRadius = length * 0.02;
@@ -32,7 +32,7 @@ function AxisArrow({
           roughness={1}
         />
       </mesh>
-      
+
       {/* Cone tip */}
       <mesh position={[shaftLength + coneHeight / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
         <coneGeometry args={[coneRadius, coneHeight, 8]} />
@@ -46,8 +46,7 @@ function AxisArrow({
   );
 }
 
-export default function Axes({ object, size = 0.5 }: AxesProps) {
-  const { poses } = object;
+export default function Axes({ poses, size = 0.5 }: AxesProps) {
 
   return (
     <>
@@ -63,10 +62,10 @@ export default function Axes({ object, size = 0.5 }: AxesProps) {
           >
             {/* X axis - Red */}
             <AxisArrow color="#ff0000" length={size} />
-            
+
             {/* Y axis - Green */}
             <AxisArrow color="#00ff00" length={size} rotation={[0, 0, Math.PI / 2]} />
-            
+
             {/* Z axis - Blue */}
             <AxisArrow color="#0000ff" length={size} rotation={[0, -Math.PI / 2, 0]} />
           </group>

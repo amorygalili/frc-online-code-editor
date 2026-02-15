@@ -1,11 +1,11 @@
 // Export all 3D field components
-export { default as Robot } from './field-objects/Robot';
-export { default as GamePiece } from './field-objects/GamePiece';
-export { default as Trajectory } from './field-objects/Trajectory';
-export { default as Axes } from './field-objects/Axes';
-export { default as AprilTag } from './field-objects/AprilTag';
-export { default as VisionCone } from './field-objects/Cone';
+export { default as Robot } from './components/field-objects/Robot';
+export { default as GamePiece } from './components/field-objects/GamePiece';
+export { default as Trajectory } from './components/field-objects/Trajectory';
+export { default as Axes } from './components/field-objects/Axes';
+export { default as AprilTag } from './components/field-objects/AprilTag';
+export { default as VisionCone } from './components/field-objects/Cone';
 
 // Export types
-export * from './field-objects/types';
+export * from './components/field-objects/types';
 

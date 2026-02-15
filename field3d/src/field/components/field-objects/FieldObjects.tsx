@@ -18,24 +18,23 @@ export default function FieldObjects({ objects }: FieldObjectsProps) {
         
         switch (object.type) {
           case 'robot':
-          case 'ghost':
-            return <Robot key={key} object={object} />;
+            return <Robot key={key} {...object} />;
           
           case 'gamePiece':
-            return <GamePiece key={key} object={object} />;
+            return <GamePiece key={key} {...object} />;
           
           case 'trajectory':
-            return <Trajectory key={key} object={object} />;
+            return <Trajectory key={key} {...object} />;
           
           case 'axes':
-            return <Axes key={key} object={object} />;
+            return <Axes key={key} {...object} />;
           
           case 'aprilTag':
           case 'aprilTagBuiltIn':
-            return <AprilTag key={key} object={object} />;
+            return <AprilTag key={key} {...object} />;
           
           case 'cone':
-            return <VisionCone key={key} object={object} />;
+            return <VisionCone key={key} {...object} />;
           
           case 'heatmap':
             // Heatmap would require more complex implementation

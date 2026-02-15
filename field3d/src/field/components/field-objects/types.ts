@@ -29,12 +29,9 @@ export interface GenericRobotObj {
 }
 
 export interface RobotObj extends GenericRobotObj {
-  type: 'robot';
-}
-
-export interface GhostObj extends GenericRobotObj {
-  type: 'ghost';
-  color: string;
+  type: 'robot' | 'ghost';
+  color?: string;
+  opacity?: number;
 }
 
 export interface GamePieceObj {
@@ -81,7 +78,6 @@ export interface ConeObj {
 
 export type FieldObject =
   | RobotObj
-  | GhostObj
   | GamePieceObj
   | TrajectoryObj
   | HeatmapObj
