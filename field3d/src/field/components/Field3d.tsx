@@ -11,6 +11,7 @@ import { convert } from '../../units';
 import CameraController, { resolveCamera, ResolvedCamera } from './CameraController';
 import type { RobotConfigCamera } from '../robotConfigLoader';
 import { Rotation } from '../field-interfaces';
+import { extractFieldObjectsFromChildren } from './extractFieldObjects';
 
 interface Field3dProps {
   game?: string;
@@ -18,6 +19,7 @@ interface Field3dProps {
   backgroundColor?: string;
   style?: React.CSSProperties;
   objects?: FieldObject[];
+  children?: React.ReactNode;
 }
 
 
@@ -59,6 +61,7 @@ export default function Field3d({
   backgroundColor = 'black',
   style,
   objects = [],
+  children,
 }: Field3dProps) {
   const orbitControlsRef = useRef<OrbitControlsImpl | null>(null);
   const [selectedCameraIndex, setSelectedCameraIndex] = useState<number>(-1); // -1 = orbit
@@ -70,6 +73,12 @@ export default function Field3d({
       : fieldConfigs[0];
     return config ?? fieldConfigs[0];
   }, [game]);
+
+  // Merge objects from props and children
+  const allObjects = useMemo(() => {
+    const childObjects = extractFieldObjectsFromChildren(children);
+    return [...objects, ...childObjects];
+  }, [objects, children]);
 
   // Default camera position and target
   const ORBIT_FIELD_DEFAULT_POSITION = useMemo(() => new Vector3(0, 6, -12), []);
@@ -101,7 +110,7 @@ export default function Field3d({
   }, [origin, fieldConfig]);
 
   // Collect cameras from objects
-  const cameraEntries = useMemo(() => collectCameras(objects), [objects]);
+  const cameraEntries = useMemo(() => collectCameras(allObjects), [allObjects]);
 
   // Resolve the selected camera to world space
   const activeCamera: ResolvedCamera | null = useMemo(() => {
@@ -179,7 +188,7 @@ export default function Field3d({
         style={{ background: backgroundColor }}
       >
         <Lights />
-        <FieldModel fieldConfig={fieldConfig} origin={origin} objects={objects} />
+        <FieldModel fieldConfig={fieldConfig} origin={origin} objects={allObjects} />
         <OrbitControls
           ref={orbitControlsRef}
           target={ORBIT_FIELD_DEFAULT_TARGET}

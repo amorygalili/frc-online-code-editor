@@ -1,3 +1,6 @@
+// Export main Field3d component
+export { default as Field3d } from './components/Field3d';
+
 // Export all 3D field components
 export { default as Robot } from './components/field-objects/Robot';
 export { default as GamePiece } from './components/field-objects/GamePiece';

@@ -4,6 +4,7 @@ import Field3d from "./field/components/Field3d.tsx";
 import { FieldObject } from "./field/components/field-objects/types.ts";
 import { loadRobotFromConfig } from "./field/robotConfigLoader.ts";
 import RobotConfigEditor from "./editor/RobotConfigEditor";
+import { Axes, GamePiece } from "./field/index.tsx";
 
 // Static field objects
 const staticObjects: FieldObject[] = [
@@ -19,13 +20,13 @@ const staticObjects: FieldObject[] = [
       { translation: [3.0, 1.0, 0.0], rotation: [] },
     ],
   },
-  // Coordinate axes at origin
-  {
-    type: 'axes',
-    poses: [
-      { translation: [0.0, 0.0, 0.0], rotation: [] },
-    ],
-  },
+  // // Coordinate axes at origin
+  // {
+  //   type: 'axes',
+  //   poses: [
+  //     { translation: [0.0, 0.0, 0.0], rotation: [] },
+  //   ],
+  // },
 ];
 
 function FieldView() {
@@ -55,7 +56,13 @@ function FieldView() {
         backgroundColor="#1a1a1a"
         style={{ width: '100%', height: '100vh' }}
         objects={objects}
-      />
+      >
+        <GamePiece
+          variant="note"
+          poses={[{ translation: [1.0, 1.0, 0.0], rotation: [] }]}
+        />
+        <Axes poses={[{ translation: [3.0, 1.0, 2], rotation: [] }]} />
+      </Field3d >
     </div>
   );
 }

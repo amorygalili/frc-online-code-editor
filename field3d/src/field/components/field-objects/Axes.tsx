@@ -23,8 +23,8 @@ function AxisArrow({
 
   return (
     <group rotation={rotation}>
-      {/* Shaft */}
-      <mesh position={[shaftLength / 2, 0, 0]}>
+      {/* Shaft - cylinder is along Y-axis by default, rotate to X-axis */}
+      <mesh position={[shaftLength / 2, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[shaftRadius, shaftRadius, shaftLength, 8]} />
         <meshStandardMaterial
           color={color}
@@ -33,7 +33,7 @@ function AxisArrow({
         />
       </mesh>
 
-      {/* Cone tip */}
+      {/* Cone tip - cone points up along Y-axis by default, rotate to point along X-axis */}
       <mesh position={[shaftLength + coneHeight / 2, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
         <coneGeometry args={[coneRadius, coneHeight, 8]} />
         <meshStandardMaterial

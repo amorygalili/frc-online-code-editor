@@ -146,6 +146,8 @@ Vision cones for camera field of view visualization.
 
 ## Usage
 
+### Using the `objects` prop (array-based)
+
 ```typescript
 import Field3d from './field/Field3d';
 import { FieldObject } from './field/components/types';
@@ -178,6 +180,49 @@ function MyComponent() {
       origin="blue"
       objects={objects}
     />
+  );
+}
+```
+
+### Using children components (JSX-based)
+
+You can also pass field objects as JSX children for a more declarative API:
+
+```typescript
+import Field3d, { GamePiece, Trajectory, Axes } from './field';
+
+function MyComponent() {
+  return (
+    <Field3d game="Evergreen" origin="red">
+      <GamePiece
+        variant="note"
+        poses={[{ translation: [1.0, 1.0, 0.0], rotation: [] }]}
+      />
+      <Trajectory
+        color="#00ff00"
+        size="medium"
+        poses={[
+          { translation: [0.0, 0.0, 0.0], rotation: [] },
+          { translation: [1.0, 0.5, 0.0], rotation: [] },
+          { translation: [2.0, 1.0, 0.0], rotation: [] },
+        ]}
+      />
+      <Axes poses={[{ translation: [0.0, 0.0, 0.0], rotation: [] }]} />
+    </Field3d>
+  );
+}
+```
+
+You can also mix both approaches - objects from the `objects` prop and children will be combined:
+
+```typescript
+function MyComponent() {
+  const dynamicObjects = [/* ... */];
+
+  return (
+    <Field3d game="Evergreen" origin="red" objects={dynamicObjects}>
+      <GamePiece variant="note" poses={[{ translation: [1.0, 1.0, 0.0], rotation: [] }]} />
+    </Field3d>
   );
 }
 ```
