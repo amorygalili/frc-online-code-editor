@@ -39,6 +39,64 @@ export interface RobotConfig {
 }
 
 /**
+ * Returns the set of joint indices whose topology is safe to include in URDF
+ * (no self-references, no out-of-range indices, no duplicate children, no cycles).
+ * Joints are evaluated in order; the first joint claiming a child link wins.
+ */
+export function getValidJointIndices(
+  joints: RobotConfigJoint[],
+  numComponents: number,
+): Set<number> {
+  const valid = new Set<number>();
+  const claimedChildren = new Set<string>();
+  // Adjacency built incrementally: parentLink → set of childLinks
+  const adj = new Map<string, Set<string>>();
+
+  for (let i = 0; i < joints.length; i++) {
+    const j = joints[i];
+    const parentLink = j.parent !== undefined ? `model_${j.parent}` : 'model';
+    const childLink = `model_${j.child}`;
+
+    // Out-of-range child
+    if (j.child < 0 || j.child >= numComponents) continue;
+    // Out-of-range parent
+    if (j.parent !== undefined && (j.parent < 0 || j.parent >= numComponents)) continue;
+    // Self-reference (parent === child)
+    if (parentLink === childLink) continue;
+    // Child already claimed by an earlier joint
+    if (claimedChildren.has(childLink)) continue;
+    // Would adding parentLink → childLink create a cycle?
+    if (isReachable(childLink, parentLink, adj)) continue;
+
+    claimedChildren.add(childLink);
+    if (!adj.has(parentLink)) adj.set(parentLink, new Set());
+    adj.get(parentLink)!.add(childLink);
+    valid.add(i);
+  }
+
+  return valid;
+}
+
+/** BFS: is `target` reachable from `start` via the adjacency map? */
+function isReachable(
+  start: string,
+  target: string,
+  adj: Map<string, Set<string>>,
+): boolean {
+  const visited = new Set<string>();
+  const stack = [start];
+  while (stack.length > 0) {
+    const cur = stack.pop()!;
+    if (cur === target) return true;
+    if (visited.has(cur)) continue;
+    visited.add(cur);
+    const kids = adj.get(cur);
+    if (kids) for (const k of kids) stack.push(k);
+  }
+  return false;
+}
+
+/**
  * Load and parse a robot config.json file
  * @param configPath - Path to the robot config.json file (e.g., '/3d-models/Robot_BananaSplitV4/config.json')
  * @returns Promise that resolves to the parsed robot config or null if not found

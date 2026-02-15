@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three-stdlib';
 import URDFLoader from 'urdf-loader';
 import { URDFRobot as URDFRobotModel } from 'urdf-loader';
 import { RobotObj, GhostObj } from './types';
-import { RobotConfigComponent, RobotConfigJoint } from './robotConfigLoader';
+import { RobotConfigComponent, RobotConfigJoint, getValidJointIndices } from './robotConfigLoader';
 import { rotation3dToQuaternion } from '../../utils';
 import { Rotation } from '../field-interfaces';
 
@@ -70,9 +70,14 @@ function buildURDFXml(
   </link>`;
   });
 
-  // Build <joint> elements
+  // Build <joint> elements (skip invalid topology to avoid scene-graph cycles)
   let jointsXml = '';
+  const validJoints = getValidJointIndices(joints, components.length);
+  // Track which components are claimed as children by valid joints
+  const claimedChildren = new Set<number>();
   joints.forEach((j, i) => {
+    if (!validJoints.has(i)) return;
+    claimedChildren.add(j.child);
     const jointName = `joint_${i}`;
     const parentLink = j.parent !== undefined ? `model_${j.parent}` : 'model';
     const childLink = `model_${j.child}`;
@@ -91,6 +96,20 @@ function buildURDFXml(
     <parent link="${parentLink}"/>
     <child link="${childLink}"/>${extras}
   </joint>`;
+  });
+
+  // Add implicit fixed joints for orphan components (not claimed as a child
+  // by any valid joint) so every link is connected to the kinematic tree and
+  // "model" remains the single URDF root.
+  components.forEach((_comp, i) => {
+    if (!claimedChildren.has(i)) {
+      jointsXml += `
+  <joint name="__auto_fixed_${i}" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="model"/>
+    <child link="model_${i}"/>
+  </joint>`;
+    }
   });
 
   return `<?xml version="1.0"?>

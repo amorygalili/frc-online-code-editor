@@ -21,6 +21,7 @@ import URDFLoader from 'urdf-loader';
 import { URDFRobot as URDFRobotModel, URDFVisual } from 'urdf-loader';
 import { rotation3dToQuaternion } from '../utils';
 import type { Rotation } from '../field/field-interfaces';
+import { getValidJointIndices } from '../field/components/robotConfigLoader';
 import type { RobotConfigComponent, RobotConfigJoint } from '../field/components/robotConfigLoader';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -96,7 +97,12 @@ function buildEditorURDFXml(
   });
 
   let jointsXml = '';
+  const validJoints = getValidJointIndices(joints, components.length);
+  // Track which components are claimed as children by valid joints
+  const claimedChildren = new Set<number>();
   joints.forEach((j, i) => {
+    if (!validJoints.has(i)) return; // skip invalid topology
+    claimedChildren.add(j.child);
     const parentLink = j.parent !== undefined ? `model_${j.parent}` : 'model';
     const childLink = `model_${j.child}`;
     // Use placeholder origin/axis/limit — will be patched in-place by the property effect
@@ -108,6 +114,20 @@ function buildEditorURDFXml(
     <axis xyz="0 1 0"/>
     <limit lower="-3.14159" upper="3.14159" effort="0" velocity="0"/>
   </joint>`;
+  });
+
+  // Add implicit fixed joints for orphan components (not claimed as a child
+  // by any valid joint) so every link is connected to the kinematic tree and
+  // "model" remains the single URDF root.
+  components.forEach((_comp, i) => {
+    if (!claimedChildren.has(i)) {
+      jointsXml += `
+  <joint name="__auto_fixed_${i}" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="model"/>
+    <child link="model_${i}"/>
+  </joint>`;
+    }
   });
 
   return `<?xml version="1.0"?>\n<robot name="robot">${linksXml}${jointsXml}\n</robot>`;
@@ -215,16 +235,16 @@ function findVisual(link: Object3D): URDFVisual | null {
 // ── hook ─────────────────────────────────────────────────────────────────────
 
 function useEditorURDF(
-  urlMap: Record<string, string>,
-  modelRotations: Rotation[],
-  modelPosition: [number, number, number],
-  components: RobotConfigComponent[],
-  joints: RobotConfigJoint[],
-): URDFRobotModel | null {
+urlMap: Record<string, string>, modelRotations: Rotation[], modelPosition: [number, number, number], components: RobotConfigComponent[], joints: RobotConfigJoint[], jointValues: Record<string, number>,
+): { robot: URDFRobotModel | null; meshesLoaded: number } {
   const [robot, setRobot] = useState<URDFRobotModel | null>(null);
   // Counter bumped after every successful parse so the property-patch effect
   // runs once the new robot is in state.
   const [parseGeneration, setParseGeneration] = useState(0);
+  // Counter bumped when all meshes finish loading (async GLTF loads).
+  // Downstream effects (e.g. hidden-model opacity) depend on this so they
+  // re-run after the mesh materials are actually available.
+  const [meshesLoaded, setMeshesLoaded] = useState(0);
 
   // Key that changes only on structural changes (topology + mesh URLs)
   const structuralKey = useMemo(
@@ -235,10 +255,16 @@ function useEditorURDF(
   // ── Effect 1: full reparse on structural changes ──
   useEffect(() => {
     if (!urlMap['model']) { setRobot(null); return; }
+    let cancelled = false;
     const xml = buildEditorURDFXml(components, joints, urlMap, modelRotations, modelPosition);
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
     const gltfLoader = new GLTFLoader(manager);
+    // When all meshes finish loading, bump meshesLoaded so downstream effects
+    // (hidden-model opacity, helpers, etc.) re-run with the real materials.
+    manager.onLoad = () => {
+      if (!cancelled) setMeshesLoaded((n) => n + 1);
+    };
     loader.loadMeshCb = (url: string, _mgr: LoadingManager, onComplete) => {
       if (!url) { onComplete(new Object3D()); return; }
       gltfLoader.load(url, (gltf) => {
@@ -255,7 +281,7 @@ function useEditorURDF(
     patchRobotProperties(parsed, components, joints, modelRotations, modelPosition);
     setRobot(parsed);
     setParseGeneration((g) => g + 1);
-    return () => setRobot(null);
+    return () => { cancelled = true; setRobot(null); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [structuralKey]);
 
@@ -263,10 +289,17 @@ function useEditorURDF(
   useEffect(() => {
     if (!robot) return;
     patchRobotProperties(robot, components, joints, modelRotations, modelPosition);
+    // Add random offset to joint values to force update
+    const updatedJointValues: Record<string, number> = {};
+    for (const [name, value] of Object.entries(jointValues)) {
+      updatedJointValues[name] = value + Math.random() * .001;
+    }
+    robot.setJointValues(updatedJointValues);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [robot, parseGeneration, components, joints, modelRotations, modelPosition]);
 
-  return robot;
+  return { robot, meshesLoaded };
 }
 
 export { useEditorURDF, buildEditorURDFXml };
@@ -305,6 +338,8 @@ function buildJointHelpers(robot: URDFRobotModel, jointColors: string[]): Group 
   const torusGeo = new TorusGeometry(RING_RADIUS, RING_TUBE, 16, 48);
 
   for (const [name, joint] of Object.entries(robot.joints)) {
+    // Skip auto-generated fixed joints for orphan components
+    if (name.startsWith('__auto_fixed_')) continue;
     const jType = joint.jointType;
     // Extract joint index from name (e.g., "joint_0" -> 0)
     const jointIdx = parseInt(name.replace('joint_', ''), 10);
@@ -368,7 +403,7 @@ function buildJointHelpers(robot: URDFRobotModel, jointColors: string[]): Group 
 
 /** Inner scene component (must be inside Canvas) */
 function RobotScene({ urlMap, modelRotations, modelPosition, components, joints, jointValues, hiddenModels, showJointHelpers, jointColors }: RobotPreview3dProps) {
-  const robot = useEditorURDF(urlMap, modelRotations, modelPosition, components, joints);
+  const { robot, meshesLoaded } = useEditorURDF(urlMap, modelRotations, modelPosition, components, joints, jointValues);
   const [helpersGroup, setHelpersGroup] = useState<Group | null>(null);
 
   useEffect(() => {
@@ -377,6 +412,7 @@ function RobotScene({ urlMap, modelRotations, modelPosition, components, joints,
   }, [robot, jointValues]);
 
   // Adjust material opacity: hidden → 0%, normal → 100%
+  // Depends on meshesLoaded so it re-runs after async GLTF meshes arrive.
   useEffect(() => {
     if (!robot) return;
     const linkNames = ['model', ...components.map((_, i) => `model_${i}`)];
@@ -393,7 +429,7 @@ function RobotScene({ urlMap, modelRotations, modelPosition, components, joints,
         }
       });
     }
-  }, [robot, hiddenModels, components]);
+  }, [robot, meshesLoaded, hiddenModels, components]);
 
   // Create helpers group when robot changes
   useEffect(() => {
