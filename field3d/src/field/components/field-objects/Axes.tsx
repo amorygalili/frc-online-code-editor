@@ -1,5 +1,5 @@
 import { AxesObj } from './types';
-import { rotation3dToQuaternion } from '../../utils';
+import { rotation3dToQuaternion } from '../../../utils';
 
 interface AxesProps {
   object: AxesObj;

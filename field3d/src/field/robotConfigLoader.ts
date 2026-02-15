@@ -1,5 +1,5 @@
-import { Pose3d, Rotation } from '../field-interfaces';
-import { RobotObj } from './types';
+import { Pose3d, Rotation } from './field-interfaces';
+import { RobotObj } from './components/field-objects/types';
 
 export interface RobotConfigComponent {
   zeroedRotations: Rotation[];

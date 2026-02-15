@@ -1,8 +1,8 @@
 import { createRoot } from "react-dom/client";
 import { useEffect, useState } from "react";
-import Field3d from "./field/Field3d.tsx";
-import { FieldObject } from "./field/components/types";
-import { loadRobotFromConfig } from "./field/components/robotConfigLoader";
+import Field3d from "./field/components/Field3d.tsx";
+import { FieldObject } from "./field/components/field-objects/types.ts";
+import { loadRobotFromConfig } from "./field/robotConfigLoader.ts";
 import RobotConfigEditor from "./editor/RobotConfigEditor";
 
 // Static field objects

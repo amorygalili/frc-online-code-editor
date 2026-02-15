@@ -3,13 +3,14 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import { Quaternion, Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import fieldConfigs from './field-configs';
+import fieldConfigs from '../field-configs';
 import FieldModel from './FieldModel';
-import { FieldObject } from './components/types';
-import { rotation3dToQuaternion } from '../utils';
-import { convert } from '../units';
+import { FieldObject } from './field-objects/types';
+import { rotation3dToQuaternion } from '../../utils';
+import { convert } from '../../units';
 import CameraController, { resolveCamera, ResolvedCamera } from './CameraController';
-import type { RobotConfigCamera } from './components/robotConfigLoader';
+import type { RobotConfigCamera } from '../robotConfigLoader';
+import { Rotation } from '../field-interfaces';
 
 interface Field3dProps {
   game?: string;
@@ -34,8 +35,8 @@ function Lights() {
 }
 
 /** Collect all cameras from robot/ghost objects, paired with their parent robot's first pose. */
-function collectCameras(objects: FieldObject[]): { camera: RobotConfigCamera; robotTranslation: [number, number, number]; robotRotation: import('./field-interfaces').Rotation[] }[] {
-  const result: { camera: RobotConfigCamera; robotTranslation: [number, number, number]; robotRotation: import('./field-interfaces').Rotation[] }[] = [];
+function collectCameras(objects: FieldObject[]): { camera: RobotConfigCamera; robotTranslation: [number, number, number]; robotRotation: Rotation[] }[] {
+  const result: { camera: RobotConfigCamera; robotTranslation: [number, number, number]; robotRotation: Rotation[] }[] = [];
   for (const obj of objects) {
     if ((obj.type === 'robot' || obj.type === 'ghost') && obj.cameras && obj.cameras.length > 0 && obj.poses.length > 0) {
       const pose = obj.poses[0];

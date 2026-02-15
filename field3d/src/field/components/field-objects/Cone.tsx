@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ConeObj } from './types';
-import { rotation3dToQuaternion } from '../../utils';
+import { rotation3dToQuaternion } from '../../../utils';
 
 interface ConeProps {
   object: ConeObj;

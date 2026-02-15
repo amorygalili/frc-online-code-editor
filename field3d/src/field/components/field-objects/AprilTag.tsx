@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { AprilTagObj, AprilTagBuiltInObj, AprilTagVariant } from './types';
-import { rotation3dToQuaternion } from '../../utils';
+import { rotation3dToQuaternion } from '../../../utils';
 
 interface AprilTagProps {
   object: AprilTagObj | AprilTagBuiltInObj;

@@ -1,5 +1,5 @@
 import { GamePieceObj } from './types';
-import { rotation3dToQuaternion } from '../../utils';
+import { rotation3dToQuaternion } from '../../../utils';
 
 interface GamePieceProps {
   object: GamePieceObj;

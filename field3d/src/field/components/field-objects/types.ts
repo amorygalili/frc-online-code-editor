@@ -1,5 +1,5 @@
-import { Pose3d, Rotation } from '../field-interfaces';
-import type { RobotConfigCamera, RobotConfigComponent, RobotConfigJoint } from './robotConfigLoader';
+import { Pose3d, Rotation } from '../../field-interfaces';
+import type { RobotConfigCamera, RobotConfigComponent, RobotConfigJoint } from '../../robotConfigLoader';
 
 // Base types for 3D components based on AdvantageScope Field3dRenderer types
 

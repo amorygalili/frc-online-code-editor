@@ -4,9 +4,9 @@ import { GLTFLoader } from 'three-stdlib';
 import URDFLoader from 'urdf-loader';
 import { URDFRobot as URDFRobotModel } from 'urdf-loader';
 import { RobotObj, GhostObj } from './types';
-import { RobotConfigComponent, RobotConfigJoint, getValidJointIndices } from './robotConfigLoader';
-import { rotation3dToQuaternion } from '../../utils';
-import { Rotation } from '../field-interfaces';
+import { RobotConfigComponent, RobotConfigJoint, getValidJointIndices } from '../../robotConfigLoader';
+import { rotation3dToQuaternion } from '../../../utils';
+import { Rotation } from '../../field-interfaces';
 
 interface RobotProps {
   object: RobotObj | GhostObj;

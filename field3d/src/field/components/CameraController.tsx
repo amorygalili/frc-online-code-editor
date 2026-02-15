@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import { Quaternion, Vector3 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import { rotation3dToQuaternion } from '../utils';
-import { Rotation } from './field-interfaces';
+import { rotation3dToQuaternion } from '../../utils';
+import { Rotation } from '../field-interfaces';
 
 export interface ResolvedCamera {
   name: string;

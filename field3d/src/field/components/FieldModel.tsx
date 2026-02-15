@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
-import { rotation3dToQuaternion } from '../utils';
-import { convert } from '../units';
-import { FieldConfig } from './field-configs';
-import { FieldObject } from './components/types';
-import FieldObjects from './components/FieldObjects';
+import { rotation3dToQuaternion } from '../../utils';
+import { convert } from '../../units';
+import { FieldConfig } from '../field-configs';
+import { FieldObject } from './field-objects/types';
+import FieldObjects from './field-objects/FieldObjects';
 
 
 // Component to load and display the field model
@@ -71,8 +71,6 @@ function FieldModel({
       );
     }
   }, [origin, fieldConfig]);
-
-  console.log("OBJECTS:", objects);
 
   return (
     <>

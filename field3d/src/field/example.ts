@@ -5,7 +5,7 @@
  * based on the AdvantageScope Field3dRenderer API.
  */
 
-import { FieldObject } from './types';
+import { FieldObject } from './components/field-objects/types';
 import { loadRobotFromConfig } from './robotConfigLoader';
 
 // Example: Load robot with config.json (recommended approach)

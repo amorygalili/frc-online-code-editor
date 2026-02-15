@@ -4,7 +4,7 @@ import type {
   RobotConfig,
   RobotConfigComponent,
   RobotConfigJoint,
-} from '../field/components/robotConfigLoader';
+} from '../field/robotConfigLoader';
 import RobotPreview3d from './RobotPreview3d';
 
 // ── Types ────────────────────────────────────────────────────────────────────

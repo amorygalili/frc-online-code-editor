@@ -21,8 +21,8 @@ import URDFLoader from 'urdf-loader';
 import { URDFRobot as URDFRobotModel, URDFVisual } from 'urdf-loader';
 import { rotation3dToQuaternion } from '../utils';
 import type { Rotation } from '../field/field-interfaces';
-import { getValidJointIndices } from '../field/components/robotConfigLoader';
-import type { RobotConfigComponent, RobotConfigJoint } from '../field/components/robotConfigLoader';
+import { getValidJointIndices } from '../field/robotConfigLoader';
+import type { RobotConfigComponent, RobotConfigJoint } from '../field/robotConfigLoader';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
