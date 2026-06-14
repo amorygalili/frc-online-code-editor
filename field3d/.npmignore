@@ -1,0 +1,31 @@
+# Source files
+src/
+public/
+
+# Development files
+*.html
+vite.config.ts
+tsconfig.json
+tsconfig.node.json
+.eslintrc.cjs
+
+# Editor-specific files
+src/editor/
+src/main.tsx
+src/main-editor.tsx
+
+# Build artifacts (keep only dist/)
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Misc
+*.log
+.DS_Store
+
